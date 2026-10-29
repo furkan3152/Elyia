@@ -1,32 +1,30 @@
-import React from "react";
+import React, { useLayoutEffect } from "react";
 
-import { AuroraBackdrop } from "../../motion/AuroraBackdrop";
+import { TopoDefs } from "../../topo/TopoDefs";
+import { setThemeSurface } from "../state/documentSync";
+import { AppFooter } from "./SiteFooter";
 import { MobileBar } from "./MobileBar";
-import { Rail } from "./Rail";
 import { TopBar } from "./TopBar";
 
 /**
- * The deck's frame: top bar, left rail (collapsible; a bottom bar on phones),
- * a quiet aurora and the page outlet. Pages render inside `<main>` with
- * `Page` (src/app/shell/Page.tsx) for consistent padding and width.
+ * The deck's frame: the map-sheet header (nav, Where to?, switches, wallet,
+ * margin strip with the layer altimeter), the page outlet, a title-block
+ * footer, and signpost tabs on phones. Pages render inside `<main>` with
+ * `Page` (src/app/shell/Page.tsx).
  */
 export function AppShell({ children }: { readonly children: React.ReactNode }) {
+  useLayoutEffect(() => setThemeSurface("app"), []);
   return (
-    <div className="relative min-h-[100dvh] bg-bg-0">
-      <AuroraBackdrop variant="app" position="fixed" />
-      <a
-        href="#main-content"
-        className="sr-only z-[100] rounded-lg bg-violet-fill px-4 py-2 text-ink-violet focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
-      >
+    <div className="relative min-h-[100dvh] bg-paper">
+      <TopoDefs />
+      <a href="#main-content" className="sr-only z-[100] border-2 border-rule bg-signal px-4 py-2 font-bold text-signal-ink focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
         Skip to content
       </a>
       <TopBar />
-      <div className="relative flex">
-        <Rail />
-        <main id="main-content" tabIndex={-1} className="relative min-w-0 flex-1 pb-24 outline-none md:pb-12">
-          {children}
-        </main>
-      </div>
+      <main id="main-content" tabIndex={-1} className="relative min-w-0 pb-24 outline-none md:pb-6">
+        {children}
+      </main>
+      <AppFooter />
       <MobileBar />
     </div>
   );

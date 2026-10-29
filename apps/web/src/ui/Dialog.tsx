@@ -19,7 +19,7 @@ export interface DialogProps {
 
 const SIZES = { sm: "sm:max-w-sm", md: "sm:max-w-lg", lg: "sm:max-w-2xl" } as const;
 
-/** Modal dialog: focus trapped, Esc and backdrop close, focus returns to the opener. Bottom sheet on phones. */
+/** Modal dialog (a card laid on the map): focus trapped, Esc and backdrop close, focus returns to the opener. Bottom sheet on phones. */
 export function Dialog({ open, onClose, title, description, footer, size = "md", initialFocusRef, children }: DialogProps) {
   const id = useId();
   return (
@@ -31,25 +31,25 @@ export function Dialog({ open, onClose, title, description, footer, size = "md",
       initialFocusRef={initialFocusRef}
       placement="center"
       panelClassName={cx(
-        "flex max-h-[92dvh] w-full animate-dialog-in flex-col overflow-hidden rounded-t-3xl border border-line-strong bg-bg-1 shadow-raised sm:rounded-3xl",
+        "flex max-h-[92dvh] w-full animate-dialog-in flex-col overflow-hidden border-2 border-rule bg-card shadow-hard-xl",
         SIZES[size],
       )}
     >
-      <div className="flex items-start justify-between gap-4 border-b border-line px-6 pb-4 pt-5">
+      <div className="flex items-start justify-between gap-4 border-b-2 border-rule px-5 pb-3.5 pt-4 sm:px-6">
         <div className="min-w-0">
-          <h2 id={`${id}-title`} className="font-display text-2xl leading-tight text-text-0">
+          <h2 id={`${id}-title`} className="text-[22px] font-bold leading-tight tracking-[-0.02em] text-ink">
             {title}
           </h2>
           {description ? (
-            <p id={`${id}-desc`} className="mt-1 text-sm text-text-1">
+            <p id={`${id}-desc`} className="mt-1 text-sm text-ink-2">
               {description}
             </p>
           ) : null}
         </div>
-        <IconButton label="Close" icon={<X className="h-4 w-4" aria-hidden="true" />} size="sm" onClick={onClose} />
+        <IconButton label="Close" icon={<X className="h-4 w-4" aria-hidden="true" />} size="sm" variant="ink" onClick={onClose} />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
-      {footer ? <div className="safe-bottom flex flex-wrap justify-end gap-2 border-t border-line px-6 py-4">{footer}</div> : null}
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+      {footer ? <div className="safe-bottom flex flex-wrap justify-end gap-2.5 border-t-2 border-dashed border-rule/60 bg-paper-2/50 px-5 py-4 sm:px-6">{footer}</div> : null}
     </ModalLayer>
   );
 }

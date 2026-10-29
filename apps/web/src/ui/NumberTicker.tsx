@@ -27,7 +27,7 @@ interface TickState {
 }
 
 /**
- * A live figure that flashes once on change: mint up, rose down. It never
+ * A live figure whose digits tint once on change: up green, down red. It never
  * tweens through intermediate values (an invented in-between price is false
  * data), and the flash is a single colour fade on the digits only, so it can
  * update at block rate without flashing the screen.

@@ -20,6 +20,7 @@ export type RouteId =
   | "landing"
   | "elysium"
   | "developers"
+  | "system"
   | "kit"
   | "deck"
   | "trade"
@@ -54,7 +55,7 @@ export interface RouteDefinition {
   readonly load: () => Promise<PageModule>;
 }
 
-const BRAND_TITLE = "Elyia — the lyre of Elysium";
+const BRAND_TITLE = "Elyia — your money, surveyed like a mountain";
 const BRAND_DESCRIPTION =
   "Elyia is the command deck for Elysium: say what you want in one sentence, trade HyperCore perps, swap, earn and bridge across Elysium and HyperEVM, and see one portfolio across all three layers. Non-custodial, testnet first.";
 const PRIVATE_ROBOTS = "noindex,nofollow";
@@ -84,15 +85,24 @@ export const ROUTES: Readonly<Record<RouteId, RouteDefinition>> = Object.freeze(
     description: "The Elyia API, MCP server and SDK snippets for Elysium, HyperEVM and HyperCore.",
     load: () => import("../../pages/developers/DevelopersPage"),
   },
+  system: {
+    id: "system",
+    pattern: "/system",
+    kind: "site",
+    title: "Map key",
+    description: "The Elyia map key: the Survey system's tokens, primitives and every drawn artifact in its states, with sample data.",
+    robots: PRIVATE_ROBOTS,
+    load: () => import("../../pages/kit/SystemPage"),
+  },
   kit: {
     id: "kit",
     pattern: "/kit",
     kind: "site",
     title: "Kit",
-    description: "The Elyia interface kit: tokens, components, motion and signature visuals.",
+    description: "The Elyia interface kit (dev alias of /system).",
     robots: PRIVATE_ROBOTS,
     devOnly: true,
-    load: () => import("../../pages/kit/KitPage"),
+    load: () => import("../../pages/kit/SystemPage"),
   },
   deck: {
     id: "deck",
@@ -218,6 +228,7 @@ const ORDER: readonly RouteId[] = [
   "landing",
   "elysium",
   "developers",
+  "system",
   "kit",
   "deck",
   "trade",

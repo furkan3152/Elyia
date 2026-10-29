@@ -1,9 +1,12 @@
 /**
  * Tailwind maps every colour to a CSS custom property from src/styles/tokens.css,
- * so one class follows both themes ("Night of the fields" dark, "Dawn" light).
- * The palette is replaced, not extended: only Elyia tokens exist, which keeps
- * pages on-palette. Channel variables (`--violet: 139 92 246`) allow alpha
- * modifiers such as `bg-violet/20`.
+ * so one class follows both sheets (DAY paper map, NIGHT headlamp). The palette
+ * is replaced, not extended: only Survey tokens exist. Channel variables
+ * (`--ink: 22 32 27`) allow alpha modifiers such as `border-ink/20`.
+ *
+ * The "Lumine" names below the Survey ones (bg-*, text-*, violet, gold, mint,
+ * rose, sky, line) are aliases onto Survey tokens for pages not rebuilt yet.
+ * New code uses the Survey names.
  */
 const channel = (name) => `rgb(var(--${name}) / <alpha-value>)`;
 
@@ -17,6 +20,35 @@ export default {
       inherit: "inherit",
       white: "#FFFFFF",
       black: "#000000",
+
+      // Survey
+      paper: { DEFAULT: channel("paper"), 2: channel("paper-2"), 3: channel("paper-3") },
+      card: channel("card"),
+      ink: {
+        DEFAULT: channel("ink"),
+        2: channel("ink-2"),
+        3: channel("ink-3"),
+        // legacy "on colour" inks
+        gold: channel("on-gold"),
+        violet: channel("on-violet"),
+        mint: channel("on-mint"),
+        rose: channel("on-rose"),
+      },
+      rule: channel("rule"),
+      contour: channel("contour"),
+      signal: { DEFAULT: channel("signal"), ink: channel("on-signal") },
+      accent: { DEFAULT: channel("accent"), line: channel("accent-line"), ink: channel("on-accent") },
+      floor: channel("floor"),
+      ridge: channel("ridge"),
+      summit: { DEFAULT: channel("summit"), ink: channel("summit-ink") },
+      up: channel("up"),
+      down: channel("down"),
+      "blaze-red": channel("blaze-red"),
+      "blaze-blue": channel("blaze-blue"),
+      water: channel("water"),
+      warn: { DEFAULT: channel("warn"), ink: channel("warn-ink"), on: channel("on-warn") },
+
+      // Legacy aliases
       "bg-0": channel("bg-0"),
       "bg-1": channel("bg-1"),
       "bg-2": channel("bg-2"),
@@ -30,85 +62,90 @@ export default {
       mint: { DEFAULT: channel("mint"), fill: channel("mint-fill") },
       rose: { DEFAULT: channel("rose"), fill: channel("rose-fill") },
       sky: { DEFAULT: channel("sky") },
-      ink: {
-        gold: channel("on-gold"),
-        violet: channel("on-violet"),
-        mint: channel("on-mint"),
-        rose: channel("on-rose"),
-      },
     },
     fontFamily: {
-      display: ['"Instrument Serif"', "Georgia", "Times New Roman", "serif"],
-      sans: ['"Inter Variable"', "Inter", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
-      mono: ['"JetBrains Mono Variable"', "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
-      numeral: ['"Fraunces Variable"', '"Instrument Serif"', "Georgia", "serif"],
+      sans: ['"Space Grotesk Variable"', '"Space Grotesk"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+      sign: ['"Space Grotesk Variable"', '"Space Grotesk"', "system-ui", "sans-serif"],
+      mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      map: ['"Instrument Serif"', "Georgia", "Times New Roman", "serif"],
+      // legacy: display headings are Space Grotesk now; numerals are mono.
+      display: ['"Space Grotesk Variable"', '"Space Grotesk"', "system-ui", "sans-serif"],
+      numeral: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
+    },
+    borderRadius: {
+      none: "0",
+      sm: "1px",
+      DEFAULT: "2px",
+      md: "2px",
+      lg: "2px",
+      xl: "3px",
+      "2xl": "3px",
+      "3xl": "4px",
+      full: "9999px",
     },
     extend: {
       fontSize: {
         // 12 px floor for anything a person must read.
-        micro: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.16em" }],
-        "display-xl": ["clamp(3.25rem, 8vw, 6.5rem)", { lineHeight: "0.95", letterSpacing: "-0.01em" }],
-        "display-lg": ["clamp(2.5rem, 5.5vw, 4rem)", { lineHeight: "1", letterSpacing: "-0.005em" }],
-        "display-md": ["clamp(2rem, 4vw, 3.25rem)", { lineHeight: "1.05" }],
-        "display-sm": ["clamp(1.6rem, 2.6vw, 2rem)", { lineHeight: "1.1" }],
+        micro: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.14em" }],
+        "display-xl": ["clamp(3rem, 7vw, 5rem)", { lineHeight: "1", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "display-lg": ["clamp(2.5rem, 5vw, 4rem)", { lineHeight: "1.02", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "display-md": ["clamp(2rem, 3.6vw, 2.75rem)", { lineHeight: "1.05", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "display-sm": ["clamp(1.75rem, 2.6vw, 2.25rem)", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
       },
-      borderRadius: {
-        sm: "6px",
-        DEFAULT: "8px",
-        md: "10px",
-        lg: "12px",
-        xl: "16px",
-        "2xl": "20px",
-        "3xl": "24px",
+      borderWidth: {
+        DEFAULT: "1px",
+        1.5: "1.5px",
+        2: "2px",
+        3: "3px",
       },
       boxShadow: {
-        panel: "0 1px 0 0 rgb(255 255 255 / 0.03) inset, 0 24px 60px -24px var(--shadow-strong)",
-        raised: "0 1px 0 0 rgb(255 255 255 / 0.05) inset, 0 18px 50px -20px var(--shadow-strong)",
-        "glow-violet": "0 0 0 1px rgb(var(--violet-glow) / 0.35), 0 0 0 6px rgb(var(--violet) / 0.08), 0 24px 60px var(--shadow-soft)",
-        "glow-gold": "0 0 24px rgb(var(--gold) / 0.35)",
-        focus: "0 0 0 2px rgb(var(--bg-0)), 0 0 0 4px rgb(var(--violet-glow))",
+        hard: "3px 3px 0 rgb(var(--shadow-ink))",
+        "hard-sm": "2px 2px 0 rgb(var(--shadow-ink))",
+        "hard-lg": "4px 4px 0 rgb(var(--shadow-ink))",
+        "hard-xl": "6px 6px 0 rgb(var(--shadow-ink))",
+        none: "none",
+        // legacy names, now hard shadows
+        panel: "3px 3px 0 rgb(var(--shadow-ink))",
+        raised: "4px 4px 0 rgb(var(--shadow-ink))",
+        "glow-violet": "4px 4px 0 rgb(var(--shadow-ink))",
+        "glow-gold": "0 0 0 2px rgb(var(--signal))",
+        sm: "2px 2px 0 rgb(var(--shadow-ink))",
+        focus: "0 0 0 2px rgb(var(--paper)), 0 0 0 4px rgb(var(--accent-line))",
       },
       transitionTimingFunction: {
-        pluck: "cubic-bezier(.2,.9,.1,1)",
+        draw: "cubic-bezier(.2,.8,.2,1)",
+        spring: "cubic-bezier(.34,1.56,.64,1)",
+        out: "cubic-bezier(.16,1,.3,1)",
         standard: "cubic-bezier(.2,0,0,1)",
+        pluck: "cubic-bezier(.16,1,.3,1)",
       },
       transitionDuration: {
-        fast: "120ms",
-        base: "220ms",
-        slow: "600ms",
+        instant: "90ms",
+        fast: "150ms",
+        base: "240ms",
+        slow: "420ms",
+        draw: "1200ms",
       },
       keyframes: {
-        "aurora-a": {
-          "0%, 100%": { transform: "translate3d(0, 0, 0) scale(1)" },
-          "50%": { transform: "translate3d(-4%, 3%, 0) scale(1.06)" },
-        },
-        "aurora-b": {
-          "0%, 100%": { transform: "translate3d(0, 0, 0) scale(1)" },
-          "50%": { transform: "translate3d(5%, -4%, 0) scale(0.96)" },
-        },
         breathe: {
           "0%, 100%": { opacity: "0.55" },
-          "50%": { opacity: "0.9" },
+          "50%": { opacity: "1" },
         },
         heartbeat: {
-          "0%": { transform: "scale(1)", boxShadow: "0 0 0 0 rgb(var(--gold) / 0.55)" },
-          "35%": { transform: "scale(1.35)", boxShadow: "0 0 0 5px rgb(var(--gold) / 0)" },
-          "100%": { transform: "scale(1)", boxShadow: "0 0 0 0 rgb(var(--gold) / 0)" },
+          "0%": { transform: "scale(1)" },
+          "35%": { transform: "scale(1.35)" },
+          "100%": { transform: "scale(1)" },
         },
         "flash-up": {
-          "0%": { color: "rgb(var(--mint))", textShadow: "0 0 12px rgb(var(--mint) / 0.45)" },
-          "100%": { color: "inherit", textShadow: "none" },
+          "0%": { color: "rgb(var(--up))" },
+          "100%": { color: "inherit" },
         },
         "flash-down": {
-          "0%": { color: "rgb(var(--rose))", textShadow: "0 0 12px rgb(var(--rose) / 0.45)" },
-          "100%": { color: "inherit", textShadow: "none" },
-        },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
+          "0%": { color: "rgb(var(--down))" },
+          "100%": { color: "inherit" },
         },
         "rise-in": {
-          "0%": { opacity: "0", transform: "translate3d(0, 12px, 0)" },
+          "0%": { opacity: "0", transform: "translate3d(0, 8px, 0)" },
           "100%": { opacity: "1", transform: "translate3d(0, 0, 0)" },
         },
         "fade-in": {
@@ -124,8 +161,8 @@ export default {
           "100%": { transform: "translate3d(0, 0, 0)" },
         },
         "dialog-in": {
-          "0%": { opacity: "0", transform: "translate3d(0, 8px, 0) scale(0.98)" },
-          "100%": { opacity: "1", transform: "translate3d(0, 0, 0) scale(1)" },
+          "0%": { opacity: "0", transform: "translate3d(0, 10px, 0)" },
+          "100%": { opacity: "1", transform: "translate3d(0, 0, 0)" },
         },
         caret: {
           "0%, 49%": { opacity: "1" },
@@ -136,26 +173,33 @@ export default {
           "60%": { transform: "scaleX(0.7)" },
           "100%": { transform: "scaleX(0.92)" },
         },
+        // legacy loops, slowed and made quiet
+        "aurora-a": { "0%, 100%": { opacity: "1" } },
+        "aurora-b": { "0%, 100%": { opacity: "1" } },
+        shimmer: {
+          "0%, 100%": { opacity: "0.55" },
+          "50%": { opacity: "1" },
+        },
         twinkle: {
           "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.45" },
+          "50%": { opacity: "0.6" },
         },
       },
       animation: {
-        "aurora-a": "aurora-a 22s ease-in-out infinite",
-        "aurora-b": "aurora-b 28s ease-in-out infinite",
-        breathe: "breathe 6s ease-in-out infinite",
-        heartbeat: "heartbeat 900ms cubic-bezier(.2,.9,.1,1) 1",
+        breathe: "breathe 4s ease-in-out infinite",
+        heartbeat: "heartbeat 900ms cubic-bezier(.16,1,.3,1) 1",
         "flash-up": "flash-up 900ms ease-out 1",
         "flash-down": "flash-down 900ms ease-out 1",
-        shimmer: "shimmer 1.8s linear infinite",
-        "rise-in": "rise-in 600ms cubic-bezier(.2,.9,.1,1) both",
-        "fade-in": "fade-in 220ms ease-out both",
-        "sheet-in-right": "sheet-in-right 260ms cubic-bezier(.2,.9,.1,1) both",
-        "sheet-in-bottom": "sheet-in-bottom 260ms cubic-bezier(.2,.9,.1,1) both",
-        "dialog-in": "dialog-in 200ms cubic-bezier(.2,.9,.1,1) both",
-        caret: "caret 1s steps(1) infinite",
-        "pending-bar": "pending-bar 2.4s cubic-bezier(.2,.9,.1,1) forwards",
+        "rise-in": "rise-in 420ms cubic-bezier(.16,1,.3,1) both",
+        "fade-in": "fade-in 240ms ease-out both",
+        "sheet-in-right": "sheet-in-right 280ms cubic-bezier(.16,1,.3,1) both",
+        "sheet-in-bottom": "sheet-in-bottom 280ms cubic-bezier(.16,1,.3,1) both",
+        "dialog-in": "dialog-in 240ms cubic-bezier(.16,1,.3,1) both",
+        caret: "caret 1.1s steps(1) infinite",
+        "pending-bar": "pending-bar 2.4s cubic-bezier(.16,1,.3,1) forwards",
+        "aurora-a": "aurora-a 1s linear 1",
+        "aurora-b": "aurora-b 1s linear 1",
+        shimmer: "shimmer 2.4s ease-in-out infinite",
         twinkle: "twinkle 3.2s ease-in-out infinite",
       },
     },

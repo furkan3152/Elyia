@@ -44,18 +44,18 @@ export function AddressPill({ address, network, label, head = 4, tail = 4, class
   };
 
   return (
-    <span className={cx("inline-flex min-w-0 items-center gap-0.5 rounded-lg border border-line bg-bg-2/60 py-0.5 pl-2.5 pr-0.5", className)}>
-      {label ? <span className="mr-1.5 truncate text-xs text-text-2">{label}</span> : null}
-      <span className="tnum truncate font-mono text-xs text-text-0" title={address}>
+    <span className={cx("inline-flex min-w-0 items-center gap-0.5 border-1.5 border-rule/50 bg-card py-0.5 pl-2.5 pr-0.5", className)}>
+      {label ? <span className="mr-1.5 truncate font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">{label}</span> : null}
+      <span className="tnum truncate font-mono text-xs text-ink" title={address}>
         {shortAddress(address, head, tail)}
       </span>
       <button
         type="button"
         onClick={() => void copy()}
         aria-label={`Copy address ${address}`}
-        className={cx("ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md text-text-2 transition-colors hover:bg-text-0/[0.06] hover:text-text-0", FOCUS_RING)}
+        className={cx("ml-1 inline-flex h-6 w-6 items-center justify-center text-ink-3 transition-colors hover:bg-ink hover:text-paper", FOCUS_RING)}
       >
-        {copied ? <Check className="h-3.5 w-3.5 text-mint" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+        {copied ? <Check className="h-3.5 w-3.5 text-up" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
       </button>
       {network ? (
         url ? (
@@ -64,12 +64,12 @@ export function AddressPill({ address, network, label, head = 4, tail = 4, class
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Open ${shortAddress(address)} in the explorer (new tab)`}
-            className={cx("inline-flex h-6 w-6 items-center justify-center rounded-md text-text-2 transition-colors hover:bg-text-0/[0.06] hover:text-violet-soft", FOCUS_RING)}
+            className={cx("inline-flex h-6 w-6 items-center justify-center text-ink-3 transition-colors hover:bg-ink hover:text-paper", FOCUS_RING)}
           >
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </a>
         ) : (
-          <span className="px-1.5 text-xs text-text-2" title="This network has no public explorer yet">
+          <span className="px-1.5 font-mono text-[11px] text-ink-3" title="This network has no public explorer yet">
             no explorer
           </span>
         )

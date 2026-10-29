@@ -21,10 +21,10 @@ const VALUE_SIZE = { sm: "text-lg", md: "text-2xl", lg: "text-[2rem] leading-non
 /** Label + figure + hint: the unit of every stat strip. */
 export function Stat({ label, value, hint, tone = "neutral", size = "md", framed = true, className }: StatProps) {
   return (
-    <div className={cx("flex min-w-0 flex-col gap-1.5", framed && "rounded-2xl border border-line bg-bg-1/80 p-4 sm:p-5", className)}>
-      <span className="label-caps truncate">{label}</span>
-      <span className={cx("tnum truncate font-mono", VALUE_SIZE[size], tone === "neutral" ? "text-text-0" : TEXT_TONE[tone])}>{value}</span>
-      {hint ? <span className="text-xs leading-snug text-text-2">{hint}</span> : null}
+    <div className={cx("flex min-w-0 flex-col gap-1.5", framed && "border-2 border-rule bg-card p-4 shadow-hard sm:p-5", className)}>
+      <span className="caption truncate">{label}</span>
+      <span className={cx("tnum truncate font-mono font-semibold", VALUE_SIZE[size], tone === "neutral" ? "text-ink" : TEXT_TONE[tone])}>{value}</span>
+      {hint ? <span className="text-[13px] leading-snug text-ink-3">{hint}</span> : null}
     </div>
   );
 }

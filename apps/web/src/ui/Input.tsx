@@ -27,7 +27,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
   return (
     <Field id={inputId} label={label} hint={hint} error={error} aside={aside} className={containerClassName}>
       <div className={fieldBoxClasses({ invalid: Boolean(error), size, disabled })}>
-        {leftSlot ? <span className="flex shrink-0 items-center text-text-2">{leftSlot}</span> : null}
+        {leftSlot ? <span className="flex shrink-0 items-center text-ink-3">{leftSlot}</span> : null}
         <input
           ref={ref}
           id={inputId}
@@ -35,13 +35,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
           aria-invalid={error ? true : undefined}
           aria-describedby={described}
           className={cx(
-            "h-full min-w-0 flex-1 bg-transparent text-text-0 outline-none placeholder:text-text-2 disabled:cursor-not-allowed",
+            "h-full min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-ink-3 disabled:cursor-not-allowed",
             mono && "tnum font-mono",
             className,
           )}
           {...rest}
         />
-        {rightSlot ? <span className="flex shrink-0 items-center text-text-2">{rightSlot}</span> : null}
+        {rightSlot ? <span className="flex shrink-0 items-center text-ink-3">{rightSlot}</span> : null}
       </div>
     </Field>
   );

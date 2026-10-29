@@ -107,7 +107,7 @@ describe("matchRoute", () => {
   });
 
   it("titles and robots", () => {
-    assert.equal(documentTitle(ROUTES.landing), "Elyia — the lyre of Elysium");
+    assert.equal(documentTitle(ROUTES.landing), "Elyia — your money, surveyed like a mountain");
     assert.equal(documentTitle(ROUTES.trade), "Trade · Elyia");
     assert.equal(robotsFor(ROUTES.portfolio), "noindex,nofollow");
     assert.equal(robotsFor(ROUTES.elysium), "index,follow");

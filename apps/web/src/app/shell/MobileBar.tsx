@@ -1,93 +1,82 @@
-import { Ellipsis } from "lucide-react";
 import { useState } from "react";
 
+import { useOracleStore } from "../../oracle/oracleStore";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { Sheet } from "../../ui/Sheet";
 import { Link } from "../routes/Link";
 import { useRoute } from "../routes/useRoute";
-import { Badge } from "../../ui/Badge";
-import { useUiStore } from "../state/uiStore";
 import { MotionSwitch } from "./MotionToggle";
-import { NAV_ITEMS, SETTINGS_ITEM } from "./navItems";
+import { MORE_NAV, PRIMARY_NAV, SETTINGS_ITEM } from "./navItems";
 import { ThemeToggle } from "./ThemeToggle";
 
-const PRIMARY = NAV_ITEMS.filter((item) => item.primaryOnMobile);
-const MORE = [...NAV_ITEMS.filter((item) => !item.primaryOnMobile), SETTINGS_ITEM];
+const TAB = "flex h-full flex-1 items-center justify-center font-sans text-[11px] font-bold uppercase tracking-[0.06em]";
 
-/** Phone navigation: four destinations and "More" (a bottom sheet with the rest). */
+/**
+ * Phone navigation: signpost tabs along the bottom edge. The current page's
+ * tab is the yellow blade ("you are here"); MORE opens the rest, the
+ * Where-to signpost and the sheet switches.
+ */
 export function MobileBar() {
   const [open, setOpen] = useState(false);
   const { location } = useRoute();
-  const mode = useUiStore((state) => state.mode);
-  const moreActive = MORE.some((item) => location.pathname === item.href || (item.match !== "exact" && location.pathname.startsWith(`${item.href}/`)));
+  const more = [...MORE_NAV, SETTINGS_ITEM];
+  const moreActive = more.some((item) => location.pathname === item.href || location.pathname.startsWith(`${item.href}/`));
   return (
     <>
-      <nav aria-label="Deck" className="glass safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line md:hidden">
-        <ul className="mx-auto flex h-16 max-w-lg items-stretch justify-around px-2">
-          {PRIMARY.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li key={item.id} className="flex flex-1">
-                <Link
-                  to={item.href}
-                  match={item.match ?? "prefix"}
-                  className={cx(
-                    "group flex flex-1 flex-col items-center justify-center gap-1 rounded-xl text-[11.5px] text-text-2 transition-colors aria-[current=page]:text-text-0",
-                    FOCUS_RING,
-                  )}
-                >
-                  <Icon className="h-5 w-5 group-aria-[current=page]:text-violet-soft" aria-hidden="true" strokeWidth={1.75} />
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-          <li className="flex flex-1">
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              aria-haspopup="dialog"
-              className={cx("flex flex-1 flex-col items-center justify-center gap-1 rounded-xl text-[11.5px] transition-colors", moreActive ? "text-text-0" : "text-text-2", FOCUS_RING)}
-            >
-              <Ellipsis className={cx("h-5 w-5", moreActive && "text-violet-soft")} aria-hidden="true" />
-              More
+      <nav aria-label="Deck" className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t-2 border-rule bg-paper md:hidden">
+        <ul className="flex h-14 items-stretch gap-1 px-1.5 py-1.5">
+          {PRIMARY_NAV.map((item) => (
+            <li key={item.id} className="flex min-w-0 flex-1">
+              <Link
+                to={item.href}
+                match={item.match ?? "prefix"}
+                className={cx(
+                  TAB,
+                  "relative border-2 border-transparent text-ink-2 aria-[current=page]:border-rule aria-[current=page]:bg-signal aria-[current=page]:text-signal-ink",
+                  FOCUS_RING,
+                )}
+              >
+                {item.label}
+              </Link>
+            </li>
+          ))}
+          <li className="flex min-w-0 flex-1">
+            <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" className={cx(TAB, "border-2", moreActive ? "border-rule bg-signal text-signal-ink" : "border-rule bg-card text-ink", FOCUS_RING)}>
+              More ▴
             </button>
           </li>
         </ul>
       </nav>
-      <Sheet open={open} onClose={() => setOpen(false)} side="bottom" title="Everything in Elyia">
+      <Sheet open={open} onClose={() => setOpen(false)} side="bottom" title="Where to?">
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            useOracleStore.getState().openOracle();
+          }}
+          className={cx("mb-4 flex h-12 w-full items-stretch border-2 border-rule bg-card text-left shadow-hard", FOCUS_RING)}
+        >
+          <span className="el-blade flex items-center bg-ink pl-3 pr-6 font-sans text-sm font-bold uppercase tracking-[0.06em] text-paper">Where to?</span>
+          <span className="flex items-center truncate px-3 font-mono text-[13px] text-ink-3">a page, a market, a sentence</span>
+        </button>
         <ul className="grid grid-cols-2 gap-2">
-          {MORE.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li key={item.id}>
-                <Link
-                  to={item.href}
-                  match={item.match ?? "prefix"}
-                  onClick={() => setOpen(false)}
-                  className={cx(
-                    "flex h-full items-start gap-3 rounded-2xl border border-line bg-bg-2/50 p-3 transition-colors hover:border-violet-glow/30 aria-[current=page]:border-violet-glow/40",
-                    FOCUS_RING,
-                  )}
-                >
-                  <Icon className="mt-0.5 h-5 w-5 shrink-0 text-violet-soft" aria-hidden="true" strokeWidth={1.75} />
-                  <span className="min-w-0">
-                    <span className="block text-sm text-text-0">{item.label}</span>
-                    <span className="block text-xs text-text-2">{item.hint}</span>
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
+          {more.map((item) => (
+            <li key={item.id}>
+              <Link
+                to={item.href}
+                match={item.match ?? "prefix"}
+                onClick={() => setOpen(false)}
+                className={cx("flex h-full flex-col gap-0.5 border-2 border-rule bg-card p-2.5 aria-[current=page]:bg-signal/50", FOCUS_RING)}
+              >
+                <span className="text-sm font-bold uppercase tracking-[0.06em] text-ink">{item.label}</span>
+                <span className="text-xs leading-snug text-ink-3">{item.hint}</span>
+              </Link>
+            </li>
+          ))}
         </ul>
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line p-3">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-2 border-rule p-3">
           <MotionSwitch />
-          <div className="flex items-center gap-1.5">
-            <Badge tone={mode === "testnet" ? "mint" : "gold"} dot>
-              {mode === "testnet" ? "Testnet" : "Mainnet"}
-            </Badge>
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
         </div>
       </Sheet>
     </>

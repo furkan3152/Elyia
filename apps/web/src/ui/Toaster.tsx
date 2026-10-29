@@ -1,17 +1,25 @@
-import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { usePageVisible } from "../motion/usePageVisible";
 import { cx, FOCUS_RING } from "./cx";
 import { getToasts, MAX_VISIBLE_TOASTS, subscribeToasts, toast as toastApi, type ToastRecord, type ToastTone } from "./toast";
 
-const TONES: Readonly<Record<ToastTone, { icon: typeof Info; iconClass: string; edge: string; label: string }>> = {
-  success: { icon: CircleCheck, iconClass: "text-mint", edge: "before:bg-mint", label: "Success" },
-  error: { icon: CircleAlert, iconClass: "text-rose", edge: "before:bg-rose", label: "Error" },
-  info: { icon: Info, iconClass: "text-sky", edge: "before:bg-sky", label: "Info" },
-  warning: { icon: TriangleAlert, iconClass: "text-gold", edge: "before:bg-gold", label: "Warning" },
+const TONES: Readonly<Record<ToastTone, { mark: string; markClass: string; label: string }>> = {
+  success: { mark: "◉", markClass: "text-up", label: "Done" },
+  error: { mark: "✕", markClass: "text-down", label: "Alert" },
+  info: { mark: "●", markClass: "text-summit-ink", label: "Note" },
+  warning: { mark: "▲", markClass: "text-warn-ink", label: "Caution" },
 };
 
+function clock(at: number | undefined): string {
+  if (at === undefined) return "";
+  const date = new Date(at);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+/** One radio message from base camp: a timestamped call sign line, then the message in plain words. */
 function ToastItem({ item, pageVisible }: { readonly item: ToastRecord; readonly pageVisible: boolean }) {
   const [held, setHeld] = useState(false);
   const persistent = item.duration === "persistent";
@@ -20,7 +28,6 @@ function ToastItem({ item, pageVisible }: { readonly item: ToastRecord; readonly
   const remainingRef = useRef(duration);
   const revisionRef = useRef(item.revision);
   const tone = TONES[item.tone];
-  const Icon = tone.icon;
 
   useEffect(() => {
     if (revisionRef.current !== item.revision) {
@@ -43,19 +50,33 @@ function ToastItem({ item, pageVisible }: { readonly item: ToastRecord; readonly
       onFocus={() => setHeld(true)}
       onBlur={() => setHeld(false)}
       className={cx(
-        "pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-2xl border border-line-strong bg-bg-1/95 py-3.5 pl-4 pr-3 shadow-raised backdrop-blur",
-        "before:absolute before:inset-y-0 before:left-0 before:w-[3px]",
-        tone.edge,
+        "pointer-events-auto relative w-full border-2 border-rule bg-card shadow-hard-lg",
         item.leaving ? "opacity-0 transition-opacity duration-fast" : "animate-rise-in",
       )}
     >
-      <Icon className={cx("mt-0.5 h-4 w-4 shrink-0", tone.iconClass)} aria-hidden="true" />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-text-0">
+      <div className="flex items-center gap-2 border-b-1.5 border-dashed border-rule/50 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-2">
+        <span aria-hidden="true" className={tone.markClass}>
+          {tone.mark}
+        </span>
+        <span className="tnum">{clock(item.at)}</span>
+        <span aria-hidden="true">·</span>
+        <span className="font-semibold text-ink">{item.from ?? "BASE"}</span>
+        <span aria-hidden="true">→ YOU</span>
+        <button
+          type="button"
+          aria-label="Dismiss message"
+          onClick={() => toastApi.dismiss(item.id)}
+          className={cx("-mr-1 ml-auto inline-flex h-6 w-6 items-center justify-center text-ink-3 transition-colors hover:bg-ink hover:text-paper", FOCUS_RING)}
+        >
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="px-3 pb-3 pt-2">
+        <p className="text-sm font-bold text-ink">
           <span className="sr-only">{tone.label}: </span>
           {item.title}
         </p>
-        {item.description ? <p className="mt-0.5 text-[13px] text-text-1">{item.description}</p> : null}
+        {item.description ? <p className="mt-0.5 text-[13px] leading-snug text-ink-2">{item.description}</p> : null}
         {item.action ? (
           <button
             type="button"
@@ -63,27 +84,19 @@ function ToastItem({ item, pageVisible }: { readonly item: ToastRecord; readonly
               item.action?.onClick();
               toastApi.dismiss(item.id);
             }}
-            className={cx("mt-2 text-[13px] font-semibold text-violet-soft underline-offset-4 hover:underline", FOCUS_RING)}
+            className={cx("mt-2 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-summit-ink underline decoration-2 underline-offset-4 hover:text-ink", FOCUS_RING)}
           >
-            {item.action.label}
+            {item.action.label} →
           </button>
         ) : null}
       </div>
-      <button
-        type="button"
-        aria-label="Dismiss notification"
-        onClick={() => toastApi.dismiss(item.id)}
-        className={cx("rounded-md p-1 text-text-2 transition-colors hover:text-text-0", FOCUS_RING)}
-      >
-        <X className="h-4 w-4" aria-hidden="true" />
-      </button>
     </li>
   );
 }
 
 const serverEmpty = (): readonly ToastRecord[] => [];
 
-/** Renders the toast queue: bottom-right on desktop, above the bottom bar on phones. Polite for info, assertive for errors. */
+/** Renders the radio messages: bottom-right on desktop, above the bottom bar on phones. Polite for info, assertive for errors. */
 export function Toaster() {
   const items = useSyncExternalStore(subscribeToasts, getToasts, serverEmpty);
   const pageVisible = usePageVisible();

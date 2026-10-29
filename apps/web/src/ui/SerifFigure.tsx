@@ -13,9 +13,9 @@ export interface SerifFigureProps {
  * changes: the face has no tabular figures, so every digit sits in a box of
  * one fixed width. Use it for live heroes (the Sun's block height, net worth).
  */
-export function SerifFigure({ text, digitWidth = 0.5, className }: SerifFigureProps) {
+export function SerifFigure({ text, digitWidth = 0.6, className }: SerifFigureProps) {
   return (
-    <span className={cx("inline-flex items-baseline whitespace-nowrap font-display", className)}>
+    <span className={cx("inline-flex items-baseline whitespace-nowrap font-mono font-semibold", className)}>
       <span className="sr-only">{text}</span>
       {[...text].map((char, index) => (
         <span

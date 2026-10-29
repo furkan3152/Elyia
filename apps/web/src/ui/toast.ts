@@ -23,6 +23,8 @@ export interface ToastOptions {
   readonly duration?: number | "persistent";
   /** Same id replaces the existing toast instead of stacking. */
   readonly id?: string;
+  /** Who is on the radio ("BASE", "GUIDE", "FLOOR"). Default: BASE. */
+  readonly from?: string;
 }
 
 export interface ToastRecord {
@@ -35,6 +37,9 @@ export interface ToastRecord {
   /** Increments when a toast with the same id is replaced (restarts its timer). */
   readonly revision: number;
   readonly leaving: boolean;
+  readonly from?: string;
+  /** Wall clock (ms) when it was sent; shown as the radio timestamp. */
+  readonly at?: number;
 }
 
 export const DEFAULT_TOAST_DURATION: Readonly<Record<ToastTone, number>> = Object.freeze({
@@ -59,7 +64,7 @@ function emit() {
 }
 
 /** Pure: builds a record from options. */
-export function createToastRecord(options: ToastOptions, id: string, revision = 0): ToastRecord {
+export function createToastRecord(options: ToastOptions, id: string, revision = 0, at?: number): ToastRecord {
   const tone = options.tone ?? "info";
   const duration =
     options.duration === "persistent"
@@ -67,7 +72,7 @@ export function createToastRecord(options: ToastOptions, id: string, revision = 
       : typeof options.duration === "number" && Number.isFinite(options.duration) && options.duration > 0
         ? options.duration
         : DEFAULT_TOAST_DURATION[tone];
-  return { id, title: options.title, description: options.description, tone, action: options.action, duration, revision, leaving: false };
+  return { id, title: options.title, description: options.description, tone, action: options.action, duration, revision, leaving: false, from: options.from, at };
 }
 
 /** Pure: inserts `record`, replacing (in place) a toast with the same id. */
@@ -97,7 +102,7 @@ function show(options: ToastOptions): string {
     clearTimeout(pending);
     removals.delete(id);
   }
-  toasts = upsertToast(toasts, createToastRecord(options, id));
+  toasts = upsertToast(toasts, createToastRecord(options, id, 0, Date.now()));
   emit();
   return id;
 }

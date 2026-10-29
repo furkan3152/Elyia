@@ -14,7 +14,7 @@ export interface ToggleProps {
   readonly className?: string;
 }
 
-/** On/off switch (role="switch"). */
+/** On/off switch (role="switch"): an ink slot with a yellow nub that slides across; ON fills the slot with ink. */
 export function Toggle({ checked, onChange, label, description, disabled, hideLabel = false, size = "md", className }: ToggleProps) {
   const id = useId();
   const small = size === "sm";
@@ -29,27 +29,27 @@ export function Toggle({ checked, onChange, label, description, disabled, hideLa
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cx(
-          "relative inline-flex shrink-0 items-center rounded-full border transition-[background-color,border-color] duration-base ease-pluck disabled:cursor-not-allowed disabled:opacity-50",
+          "relative inline-flex shrink-0 items-center border-2 border-rule transition-[background-color] duration-base ease-standard disabled:cursor-not-allowed disabled:opacity-50",
           small ? "h-5 w-9" : "h-6 w-11",
-          checked ? "border-violet-glow/60 bg-violet-fill" : "border-line-strong bg-bg-2",
+          checked ? "bg-ink" : "bg-paper-2",
           FOCUS_RING,
         )}
       >
         <span
           aria-hidden="true"
           className={cx(
-            "inline-block rounded-full bg-white shadow transition-transform duration-base ease-pluck",
-            small ? "h-3.5 w-3.5" : "h-4 w-4",
-            checked ? (small ? "translate-x-[18px]" : "translate-x-[22px]") : "translate-x-[3px]",
+            "inline-block border-2 border-rule transition-transform duration-base ease-spring",
+            small ? "h-3 w-3" : "h-4 w-4",
+            checked ? cx("bg-signal", small ? "translate-x-[18px]" : "translate-x-[22px]") : "translate-x-[1px] bg-card",
           )}
         />
       </button>
       <span className={cx("flex min-w-0 flex-col", hideLabel && "sr-only")}>
-        <span id={`${id}-label`} className="text-sm text-text-0">
+        <span id={`${id}-label`} className="text-sm font-medium text-ink">
           {label}
         </span>
         {description ? (
-          <span id={`${id}-desc`} className="text-xs text-text-2">
+          <span id={`${id}-desc`} className="text-xs text-ink-3">
             {description}
           </span>
         ) : null}

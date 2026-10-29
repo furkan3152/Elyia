@@ -1,11 +1,8 @@
-import { Pause, Sparkles } from "lucide-react";
-
 import { useMotionToggle } from "../../motion/useReducedMotion";
-import { buttonClasses } from "../../ui/buttonStyles";
-import { cx } from "../../ui/cx";
+import { cx, FOCUS_RING } from "../../ui/cx";
 import { Toggle } from "../../ui/Toggle";
 
-/** Top-bar Motion button: stops rays, strings and aurora (never turns motion on against the OS setting). */
+/** Header Motion switch: stops every loop (contours, needles, flutter) and shows end states. Never turns motion on against the OS. */
 export function MotionToggle({ className }: { readonly className?: string }) {
   const motion = useMotionToggle();
   return (
@@ -16,9 +13,16 @@ export function MotionToggle({ className }: { readonly className?: string }) {
       title={motion.description}
       disabled={motion.disabled}
       onClick={() => motion.setOn(!motion.checked)}
-      className={cx(buttonClasses({ variant: "ghost", size: "md", iconOnly: true }), className)}
+      className={cx(
+        "inline-flex h-9 shrink-0 items-center gap-1.5 border-2 border-rule px-2 font-mono text-[11px] font-semibold tracking-[0.1em] text-ink disabled:opacity-50",
+        FOCUS_RING,
+        className,
+      )}
     >
-      {motion.checked ? <Sparkles className="h-[18px] w-[18px]" aria-hidden="true" /> : <Pause className="h-[18px] w-[18px]" aria-hidden="true" />}
+      <svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true">
+        <path d="M1 7c2-4 4-4 6 0s4 4 6 0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeDasharray={motion.checked ? undefined : "2 2"} />
+      </svg>
+      {motion.checked ? "MOTION" : "STILL"}
     </button>
   );
 }

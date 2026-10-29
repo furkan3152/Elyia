@@ -29,12 +29,21 @@ export interface SparklineProps {
 }
 
 const STROKE: Readonly<Record<Tone, string>> = {
-  violet: "rgb(var(--violet-glow))",
-  gold: "rgb(var(--gold))",
-  mint: "rgb(var(--mint))",
-  rose: "rgb(var(--rose))",
-  sky: "rgb(var(--sky))",
-  neutral: "rgb(var(--text-2))",
+  violet: "rgb(var(--summit))",
+  accent: "rgb(var(--summit))",
+  gold: "rgb(var(--warn))",
+  signal: "rgb(var(--signal))",
+  mint: "rgb(var(--up))",
+  up: "rgb(var(--up))",
+  rose: "rgb(var(--down))",
+  down: "rgb(var(--down))",
+  sky: "rgb(var(--water))",
+  water: "rgb(var(--water))",
+  warn: "rgb(var(--warn))",
+  neutral: "rgb(var(--ink-3))",
+  floor: "rgb(var(--floor))",
+  ridge: "rgb(var(--ridge))",
+  summit: "rgb(var(--summit))",
 };
 
 /** Small SVG chart for a series: trend lines in tables, block intervals on /elysium. */
@@ -88,7 +97,7 @@ export function Sparkline({
         <>
           <defs>
             <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+              <stop offset="0%" stopColor={color} stopOpacity="0.16" />
               <stop offset="100%" stopColor={color} stopOpacity="0" />
             </linearGradient>
           </defs>
@@ -103,13 +112,12 @@ export function Sparkline({
           y={bar.y}
           width={bar.width}
           height={bar.height}
-          rx={Math.min(2, bar.width / 2)}
           fill={highlightFrom !== undefined && bar.value >= highlightFrom ? STROKE[highlightTone] : color}
           opacity={highlightFrom !== undefined && bar.value >= highlightFrom ? 1 : 0.85}
         />
       ))}
       {referenceY !== null ? (
-        <line x1="0" x2={width} y1={referenceY} y2={referenceY} stroke="rgb(var(--text-2))" strokeOpacity="0.6" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
+        <line x1="0" x2={width} y1={referenceY} y2={referenceY} stroke="rgb(var(--ink))" strokeOpacity="0.5" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
       ) : null}
     </svg>
   );

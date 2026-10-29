@@ -30,6 +30,15 @@ const CHANNEL: Readonly<Record<Tone, string>> = {
   rose: "--rose",
   sky: "--sky",
   neutral: "--text-1",
+  accent: "--accent-line",
+  signal: "--signal",
+  up: "--up",
+  down: "--down",
+  warn: "--warn",
+  water: "--water",
+  floor: "--floor",
+  ridge: "--ridge",
+  summit: "--summit",
 };
 
 function rgb(tone: Tone, alpha = 1) {

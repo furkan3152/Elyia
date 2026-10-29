@@ -8,12 +8,12 @@ export interface KbdProps {
   readonly className?: string;
 }
 
-/** One key cap. */
+/** One key cap: a small ink-bordered block with a hard 2 px shadow. */
 export function Kbd({ children, className }: KbdProps) {
   return (
     <kbd
       className={cx(
-        "inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-line-strong bg-bg-2/80 px-1.5 font-mono text-xs leading-none text-text-1 shadow-[0_1px_0_0_var(--line-strong)]",
+        "inline-flex h-6 min-w-6 items-center justify-center border-1.5 border-rule bg-card px-1.5 font-mono text-[11px] font-semibold leading-none text-ink shadow-hard-sm",
         className,
       )}
     >
@@ -36,7 +36,7 @@ export function KbdCombo({ keys, joiner = "plus", className }: KbdComboProps) {
     <span className={cx("inline-flex items-center gap-1", className)}>
       {keys.map((key, index) => (
         <span key={`${key}-${index}`} className="inline-flex items-center gap-1">
-          {index > 0 && joiner === "then" ? <span className="text-xs text-text-2">then</span> : null}
+          {index > 0 && joiner === "then" ? <span className="font-mono text-[11px] text-ink-3">then</span> : null}
           <Kbd>{key === "mod" ? (apple ? "⌘" : "Ctrl") : key}</Kbd>
         </span>
       ))}

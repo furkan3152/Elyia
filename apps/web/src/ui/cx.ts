@@ -8,5 +8,5 @@ export function cx(...parts: ReadonlyArray<string | false | null | undefined | 0
   return out;
 }
 
-/** Focus ring for custom controls (buttons already get it from the base layer). */
-export const FOCUS_RING = "focus-visible:outline-none focus-visible:shadow-focus";
+/** Focus ring for custom controls: a square glacier outline, offset from the ink border. */
+export const FOCUS_RING = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-line";

@@ -1,5 +1,7 @@
 import React, { useId } from "react";
 
+import { Blaze } from "../topo/Blaze";
+import type { Grade } from "../topo/geometry/conditions";
 import { cx, FOCUS_RING } from "./cx";
 
 export interface SliderProps {
@@ -18,6 +20,11 @@ export interface SliderProps {
   /** Values at or above this render the value in rose (risky leverage). */
   readonly dangerFrom?: number;
   readonly disabled?: boolean;
+  /**
+   * The grade slider: maps a value to its route grade (T1-T6). Ticks and the
+   * value carry the matching trail blaze, so risk reads before the number.
+   */
+  readonly gradeOf?: (value: number) => Grade;
   readonly id?: string;
   readonly className?: string;
 }
@@ -42,6 +49,7 @@ export function Slider({
   aside,
   dangerFrom,
   disabled,
+  gradeOf,
   id,
   className,
 }: SliderProps) {
@@ -55,13 +63,16 @@ export function Slider({
     <div className={cx("flex flex-col gap-1", className)}>
       <div className="flex items-baseline justify-between gap-3">
           {label ? (
-            <label htmlFor={inputId} className="text-[13px] font-medium text-text-1">
+            <label htmlFor={inputId} className="caption !text-ink-2">
               {label}
             </label>
           ) : (
             <span />
           )}
-          <span className={cx("tnum font-mono text-sm", risky ? "text-rose" : "text-text-0")}>{aside ?? format(value)}</span>
+          <span className={cx("tnum inline-flex items-center gap-1.5 font-mono text-sm font-semibold", risky ? "text-down" : "text-ink")}>
+            {gradeOf ? <Blaze grade={gradeOf(value)} size={13} /> : null}
+            {aside ?? format(value)}
+          </span>
       </div>
       <input
         id={inputId}
@@ -77,7 +88,7 @@ export function Slider({
         style={{ "--el-range-fill": `${fill}%` } as React.CSSProperties}
       />
       {ticks && ticks.length > 0 ? (
-        <div className="relative h-6" aria-hidden="true">
+        <div className={cx("relative", gradeOf ? "h-9" : "h-6")} aria-hidden="true">
           {ticks.map((tick, index) => {
             const left = ((clamp(tick, min, max) - min) / span) * 100;
             const active = value >= tick;
@@ -92,14 +103,15 @@ export function Slider({
                 disabled={disabled}
                 onClick={() => onChange(tick)}
                 className={cx(
-                  "absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1 font-mono text-xs transition-colors duration-fast",
-                  active ? "text-text-1" : "text-text-2",
+                  "absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1 font-mono text-[11px] transition-colors duration-fast",
+                  active ? "text-ink" : "text-ink-3",
                   FOCUS_RING,
                 )}
                 style={{ left: `calc(${left}% + ${(0.5 - left / 100) * 18}px)` }}
               >
-                <span className={cx("h-1.5 w-px", active ? "bg-violet-glow" : "bg-text-2/50")} />
+                <span className={cx("h-2 w-0.5", active ? "bg-ink" : "bg-ink/30")} />
                 {labelled ? format(tick) : <span className="sr-only">{format(tick)}</span>}
+                {gradeOf && labelled ? <Blaze grade={gradeOf(tick)} size={10} label={null} /> : null}
               </button>
             );
           })}

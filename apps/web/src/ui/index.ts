@@ -1,18 +1,20 @@
 /**
- * The Elyia interface kit. Import from here in feature code:
+ * The Elyia interface kit (Survey). Import from here in feature code:
  *
- *   import { Button, Panel, PanelHeader, DataTable, NumberTicker } from "../../ui";
+ *   import { Button, Panel, PanelHeader, DataTable, Tag } from "../../ui";
  *
- * Live reference with every component and its props: the dev-only /kit route
- * (src/pages/kit/KitPage.tsx). Conventions: variants come from props; use
- * `className` only for layout (margin, width, grid placement). Every number is
- * tabular (`tnum`), money never tweens, colours are tokens (tailwind.config.js).
+ * Drawn artifacts (Relief, Rope, RouteCard, HutStamp ...) live in src/topo.
+ * Live reference with every component in its states: /system (the map key,
+ * src/pages/kit/SystemPage.tsx). Conventions: variants come from props; use
+ * `className` only for layout. Every number is tabular (`tnum`), money never
+ * tweens, colours are tokens (tailwind.config.js).
  */
 export { AddressPill, type AddressPillProps } from "./AddressPill";
-export { Badge, Chip, type BadgeProps, type ChipProps } from "./Badge";
+export { Badge, Chip, GradeChip, LayerChip, Tag, type BadgeProps, type ChipProps, type GradeChipProps, type LayerChipProps, type TagProps } from "./Badge";
 export { Button, ButtonLink, type ButtonLinkProps, type ButtonProps } from "./Button";
 export { buttonClasses, type ButtonSize, type ButtonVariant } from "./buttonStyles";
 export { copyText } from "./clipboard";
+export { ContourLoader, type ContourLoaderProps } from "./ContourLoader";
 export { cx, FOCUS_RING } from "./cx";
 export { DataTable, type DataColumn, type DataTableProps } from "./DataTable";
 export { Dialog, type DialogProps } from "./Dialog";
@@ -24,11 +26,11 @@ export { Input, type InputProps } from "./Input";
 export { Kbd, KbdCombo, type KbdComboProps, type KbdProps } from "./Kbd";
 export { NetworkBadge, type NetworkBadgeProps } from "./NetworkBadge";
 export { NetworkGlyph, type NetworkGlyphProps } from "./NetworkGlyph";
-export { networkView, REALMS, type NetworkView, type RealmMeta } from "./networkMeta";
-export { NumberInput, type NumberInputProps } from "./NumberInput";
+export { LAYER_FAMILY, networkView, REALMS, type NetworkView, type RealmMeta } from "./networkMeta";
+export { NumberField, NumberInput, type NumberFieldProps, type NumberInputProps } from "./NumberInput";
 export { exceedsMax, fromScaled, percentOf, sanitizeDecimalInput, toScaled } from "./numberInput";
 export { NumberTicker, type NumberTickerProps } from "./NumberTicker";
-export { Card, Panel, PanelHeader, type PanelHeaderProps, type PanelPadding, type PanelProps, type PanelVariant } from "./Panel";
+export { Card, Panel, PanelHeader, SectionHeader, type PanelHeaderProps, type PanelPadding, type PanelProps, type PanelVariant, type SectionHeaderProps } from "./Panel";
 export { isApplePlatform, modShortcutLabel } from "./platform";
 export { Popover, type PopoverProps, type PopoverTriggerProps } from "./Popover";
 export { ProgressRing, type ProgressRingProps } from "./ProgressRing";
@@ -47,3 +49,4 @@ export { Toggle, type ToggleProps } from "./Toggle";
 export { DOT_TONE, OUTLINE_TONE, signTone, SOFT_TONE, SOLID_TONE, TEXT_TONE, type Tone } from "./tones";
 export { Tooltip, type TooltipProps } from "./Tooltip";
 export { useToast } from "./useToast";
+export { WhereToInput, type WhereToInputProps } from "./WhereToInput";

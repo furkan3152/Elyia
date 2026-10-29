@@ -22,22 +22,22 @@ export function Field({ id, label, hint, error, aside, className, children }: Fi
       {label || aside ? (
         <div className="flex items-baseline justify-between gap-3">
           {label ? (
-            <label htmlFor={id} className="text-[13px] font-medium text-text-1">
+            <label htmlFor={id} className="caption !text-ink-2">
               {label}
             </label>
           ) : (
             <span />
           )}
-          {aside ? <span className="tnum text-xs text-text-2">{aside}</span> : null}
+          {aside ? <span className="tnum font-mono text-[11px] text-ink-3">{aside}</span> : null}
         </div>
       ) : null}
       {children}
       {error ? (
-        <p id={`${id}-error`} className="text-xs text-rose">
+        <p id={`${id}-error`} className="text-[13px] font-medium text-down">
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-xs text-text-2">
+        <p id={`${id}-hint`} className="text-[13px] text-ink-3">
           {hint}
         </p>
       ) : null}

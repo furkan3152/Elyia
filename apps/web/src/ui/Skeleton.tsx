@@ -6,18 +6,13 @@ export interface SkeletonProps {
   readonly round?: boolean;
 }
 
-/** Loading placeholder: Elyia shows shape, never a spinner, while data arrives. */
+/**
+ * Loading placeholder: faint contour lines where the data will stand, never
+ * a spinner. It breathes slowly (one breath per 2.4 s) and stops under
+ * reduced motion.
+ */
 export function Skeleton({ className, round = false }: SkeletonProps) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cx(
-        "el-loop block animate-shimmer bg-[length:200%_100%] bg-[linear-gradient(90deg,rgb(var(--text-0)/0.04)_0%,rgb(var(--text-0)/0.1)_50%,rgb(var(--text-0)/0.04)_100%)]",
-        round ? "rounded-full" : "rounded-md",
-        className,
-      )}
-    />
-  );
+  return <span aria-hidden="true" className={cx("el-skeleton el-loop block", round && "rounded-full", className)} />;
 }
 
 export interface SkeletonTextProps {

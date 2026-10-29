@@ -78,7 +78,7 @@ export function Tabs<V extends string = string>({
         aria-label={label}
         className={cx(
           "scrollbar-none flex items-center overflow-x-auto",
-          variant === "underline" ? "gap-1 border-b border-line" : "gap-1 rounded-xl border border-line bg-bg-2/50 p-1",
+          variant === "underline" ? "gap-1 border-b-1.5 border-rule/30" : "gap-0 border-2 border-rule bg-card",
         )}
       >
         {items.map((item, index) => {
@@ -113,19 +113,19 @@ export function Tabs<V extends string = string>({
                 }
               }}
               className={cx(
-                "relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-medium transition-colors duration-fast disabled:opacity-40",
-                size === "sm" ? "h-8 px-2.5 text-xs" : "h-10 px-3 text-[13px]",
+                "relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-sans font-bold uppercase tracking-[0.08em] transition-colors duration-fast disabled:opacity-40",
+                size === "sm" ? "h-8 px-2.5 text-[11px]" : "h-10 px-3 text-xs",
                 variant === "underline"
                   ? cx(
-                      "-mb-px border-b-2",
-                      selected ? "border-violet-glow text-text-0" : "border-transparent text-text-2 hover:text-text-1",
+                      "-mb-[1.5px] border-b-[3px]",
+                      selected ? "border-accent-line text-ink" : "border-transparent text-ink-3 hover:text-ink",
                     )
-                  : cx("rounded-lg", selected ? "bg-bg-1 text-text-0 shadow-sm" : "text-text-2 hover:text-text-1"),
+                  : cx("border-r-1.5 border-rule last:border-r-0", selected ? "bg-ink text-paper" : "text-ink-2 hover:bg-paper-2 hover:text-ink"),
                 FOCUS_RING,
               )}
             >
               {item.label}
-              {item.badge !== undefined ? <span className="tnum rounded-full bg-text-0/[0.07] px-1.5 font-mono text-xs text-text-1">{item.badge}</span> : null}
+              {item.badge !== undefined ? <span className="tnum border-1.5 border-current px-1 font-mono text-[10px] font-semibold tracking-normal opacity-80">{item.badge}</span> : null}
             </button>
           );
         })}
@@ -136,7 +136,7 @@ export function Tabs<V extends string = string>({
           id={`${baseId}-panel-${activeItem.id}`}
           aria-labelledby={`${baseId}-tab-${activeItem.id}`}
           tabIndex={0}
-          className={cx("pt-4 outline-none", panelClassName)}
+          className={cx("pt-4 outline-none focus-visible:outline-none", panelClassName)}
         >
           {activeItem.content}
         </div>

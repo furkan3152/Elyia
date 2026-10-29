@@ -7,7 +7,7 @@ export interface ShortcutDoc {
   readonly label: string;
 }
 
-/** Every global binding: the Oracle, the shortcuts sheet and "g <key>" navigation. */
+/** Every global binding: Where to? (⌘K), the shortcuts sheet and "g <key>" navigation. */
 export const GLOBAL_BINDINGS: readonly KeyBinding[] = [
   { id: "oracle", keys: "mod+k" },
   { id: "oracle", keys: "/" },
@@ -17,8 +17,8 @@ export const GLOBAL_BINDINGS: readonly KeyBinding[] = [
 
 /** What the "?" sheet lists. */
 export const SHORTCUT_DOCS: readonly ShortcutDoc[] = [
-  { keys: ["mod", "K"], joiner: "plus", label: "Speak your intent (the Oracle)" },
-  { keys: ["/"], joiner: "plus", label: "Open the Oracle" },
+  { keys: ["mod", "K"], joiner: "plus", label: "Where to? (pages, markets, sentences)" },
+  { keys: ["/"], joiner: "plus", label: "Where to?" },
   { keys: ["?"], joiner: "plus", label: "Show these shortcuts" },
   { keys: ["Esc"], joiner: "plus", label: "Close a dialog or sheet" },
   ...[...NAV_ITEMS, SETTINGS_ITEM]

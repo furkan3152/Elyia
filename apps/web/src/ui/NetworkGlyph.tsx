@@ -7,27 +7,25 @@ export interface NetworkGlyphProps {
 }
 
 /**
- * Elyia's own realm glyphs (never the networks' logos): Elysium a small sun,
- * HyperEVM a hexagon (a contract cell), HyperCore a cut diamond (the book).
- * Colour comes from `currentColor`.
+ * Altitude glyphs (never the networks' logos): the Summit a peak with a
+ * glacier cap (Elysium), the Ridge a rock ridge line (HyperEVM), the Floor
+ * lake water lines (HyperCore). Colour comes from `currentColor`.
  */
 export function NetworkGlyph({ family, size = 14, className }: NetworkGlyphProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="square">
       {family === "elysium" ? (
         <>
-          <circle cx="8" cy="8" r="3" fill="currentColor" stroke="none" />
-          <path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" />
+          <path d="M1.5 14 8 2.5 14.5 14Z" />
+          <path d="M5.6 6.8 8 2.5l2.4 4.3-1.2-.7L8 7.2l-1.2-1.1Z" fill="currentColor" />
         </>
       ) : family === "hyperevm" ? (
-        <>
-          <path d="M8 1.75 13.4 4.9v6.2L8 14.25 2.6 11.1V4.9Z" />
-          <path d="M8 5.6 10.1 6.8v2.4L8 10.4 5.9 9.2V6.8Z" fill="currentColor" stroke="none" />
-        </>
+        <path d="M1 13 5 6.5 7.6 9.6 10.6 4 15 13Z" />
       ) : (
         <>
-          <path d="M8 1.75 14.25 8 8 14.25 1.75 8Z" />
-          <path d="M8 5.2 10.8 8 8 10.8 5.2 8Z" fill="currentColor" stroke="none" />
+          <path d="M1.5 6.2c1.7-1.3 3.3-1.3 5 0s3.3 1.3 5 0 2.2-1 3 0" />
+          <path d="M1.5 10.4c1.7-1.3 3.3-1.3 5 0s3.3 1.3 5 0 2.2-1 3 0" />
+          <path d="M1.5 14h13" />
         </>
       )}
     </svg>

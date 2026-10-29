@@ -14,8 +14,17 @@ export type ResolvedTheme = "dark" | "light";
 export type MotionSetting = "on" | "off";
 export type NetworkMode = NetworkEnvironment;
 
-/** Browser chrome colour per theme: the page background (bg-0). */
-export const THEME_COLORS: Readonly<Record<ResolvedTheme, string>> = Object.freeze({ dark: "#07060D", light: "#FBF8F2" });
+/** Browser chrome colour per theme: the page paper (DAY #F3F0E8, NIGHT #0E1512). */
+export const THEME_COLORS: Readonly<Record<ResolvedTheme, string>> = Object.freeze({ dark: "#0E1512", light: "#F3F0E8" });
+
+/** The sheet names painted on <html data-theme>: DAY (paper map) and NIGHT (headlamp). */
+export const THEME_SHEET: Readonly<Record<ResolvedTheme, "day" | "night">> = Object.freeze({ dark: "night", light: "day" });
+
+/** Where the visitor is: the site defaults to DAY; the deck (/app, /tg) follows the system. */
+export type ThemeSurface = "site" | "app";
+
+/** localStorage key mirroring an explicit choice ("day" | "night"), read by index.html before paint. */
+export const THEME_STORAGE_KEY = "elyia.theme";
 
 export function isThemePreference(value: unknown): value is ThemePreference {
   return value === "system" || value === "dark" || value === "light";
@@ -29,15 +38,19 @@ export function isNetworkMode(value: unknown): value is NetworkMode {
   return value === "testnet" || value === "mainnet";
 }
 
-/** The theme to paint: an explicit choice wins, else the system preference (dark when unknown). */
-export function resolveTheme(preference: ThemePreference, systemPrefersLight: boolean | null): ResolvedTheme {
+/**
+ * The theme to paint: an explicit choice wins. Otherwise the site is the DAY
+ * sheet, and the deck follows the system (NIGHT on dark systems, DAY when unknown).
+ */
+export function resolveTheme(preference: ThemePreference, systemPrefersLight: boolean | null, surface: ThemeSurface = "app"): ResolvedTheme {
   if (preference !== "system") return preference;
-  return systemPrefersLight === true ? "light" : "dark";
+  if (surface === "site") return "light";
+  return systemPrefersLight === false ? "dark" : "light";
 }
 
 /** The next explicit theme when the toggle is pressed (system resolves first). */
-export function nextTheme(preference: ThemePreference, systemPrefersLight: boolean | null): ResolvedTheme {
-  return resolveTheme(preference, systemPrefersLight) === "dark" ? "light" : "dark";
+export function nextTheme(preference: ThemePreference, systemPrefersLight: boolean | null, surface: ThemeSurface = "app"): ResolvedTheme {
+  return resolveTheme(preference, systemPrefersLight, surface) === "dark" ? "light" : "dark";
 }
 
 export interface ModeAvailability {

@@ -1,5 +1,3 @@
-import { ChevronDown } from "lucide-react";
-
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { Popover } from "../../ui/Popover";
 import { SegmentedControl } from "../../ui/SegmentedControl";
@@ -7,11 +5,12 @@ import { modeAvailability, type NetworkMode } from "../state/uiPrefs";
 import { useUiStore } from "../state/uiStore";
 
 /**
- * The Testnet badge and network-mode switch. Mainnet stays disabled, with the
- * reason in plain words, until Elysium mainnet is live and public; testnet
- * and mainnet capital never share an intent.
+ * The network-mode chip: "PRACTICE WALL · TESTNET" (separate capital, like
+ * a climbing wall) or "MAINNET". Mainnet stays disabled, with the reason in
+ * plain words, until Elysium mainnet is live and public; testnet and mainnet
+ * capital never share an intent.
  */
-export function ModeBadge({ className }: { readonly className?: string }) {
+export function ModeBadge({ className, compact = false }: { readonly className?: string; readonly compact?: boolean }) {
   const mode = useUiStore((state) => state.mode);
   const setMode = useUiStore((state) => state.setMode);
   const mainnet = modeAvailability("mainnet");
@@ -23,37 +22,36 @@ export function ModeBadge({ className }: { readonly className?: string }) {
           type="button"
           {...props}
           className={cx(
-            "inline-flex h-8 items-center gap-2 rounded-full border px-3 font-mono text-xs transition-colors",
-            mode === "testnet" ? "border-mint/35 text-mint hover:bg-mint/[0.08]" : "border-gold/40 text-gold hover:bg-gold/[0.08]",
+            "inline-flex h-7 shrink-0 items-center gap-2 border-2 border-rule px-2 font-mono text-[11px] font-semibold tracking-[0.1em]",
+            mode === "testnet" ? "bg-signal text-signal-ink" : "bg-ink text-paper",
             FOCUS_RING,
             className,
           )}
         >
-          <span aria-hidden="true" className={cx("el-loop h-1.5 w-1.5 animate-breathe rounded-full", mode === "testnet" ? "bg-mint" : "bg-gold")} />
-          {mode === "testnet" ? "Testnet" : "Mainnet"}
-          <ChevronDown className="h-3 w-3 opacity-70" aria-hidden="true" />
+          {mode === "testnet" ? (compact ? "TESTNET" : "PRACTICE WALL · TESTNET") : "MAINNET"}
+          <span aria-hidden="true">▾</span>
         </button>
       )}
     >
       {() => (
-        <div className="flex w-[280px] flex-col gap-3">
-          <p className="label-caps">Network mode</p>
+        <div className="flex w-[290px] flex-col gap-3">
+          <p className="caption !text-ink">Network mode</p>
           <SegmentedControl<NetworkMode>
             label="Network mode"
             value={mode}
             onChange={(next) => setMode(next)}
             fullWidth
             options={[
-              { value: "testnet", label: "Testnet" },
+              { value: "testnet", label: "Practice wall" },
               { value: "mainnet", label: "Mainnet", disabled: !mainnet.available, hint: mainnet.reason ?? undefined },
             ]}
           />
-          <p className="text-xs leading-relaxed text-text-2">
+          <p className="text-[13px] leading-relaxed text-ink-2">
             {mainnet.available
-              ? "Mainnet uses real funds. Testnet and mainnet never share an intent."
+              ? "Mainnet uses real funds. The practice wall and mainnet never share an intent."
               : (mainnet.reason ?? "Mainnet is not available yet.")}
           </p>
-          <p className="font-mono text-xs text-text-1">Elysium 99801 · HyperEVM 998 · HyperCore testnet</p>
+          <p className="font-mono text-[11px] text-ink-3">Elysium 99801 · HyperEVM 998 · HyperCore testnet · separate capital</p>
         </div>
       )}
     </Popover>

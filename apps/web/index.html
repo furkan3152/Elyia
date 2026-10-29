@@ -3,58 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <title>Elyia — the lyre of Elysium</title>
+    <title>Elyia — your money, surveyed like a mountain</title>
     <meta
       name="description"
-      content="Elyia is the command deck for Elysium: say what you want in one sentence, trade HyperCore perps, swap, earn and bridge across Elysium and HyperEVM, see one portfolio across all three layers and watch Elysium's 115 ms blocks live. Non-custodial, testnet first."
+      content="Elyia is the trading, DeFi and portfolio deck for Elysium, HyperEVM and HyperCore: one sentence becomes a route card, every position is a rope, your portfolio is a relief map. Non-custodial, testnet first."
     />
-    <meta name="theme-color" content="#07060D" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#FBF8F2" media="(prefers-color-scheme: light)" />
-    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#F3F0E8" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="robots" content="index,follow" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Elyia" />
-    <meta property="og:title" content="Elyia — the lyre of Elysium" />
+    <meta property="og:title" content="Elyia — your money, surveyed like a mountain" />
     <meta
       property="og:description"
-      content="Speak, and Elysium answers: one sentence becomes verified, wallet-signed steps across Elysium, HyperEVM and HyperCore."
+      content="Trade HyperCore, move across HyperEVM and Elysium, and read your risk the way a guide reads terrain."
     />
     <meta name="twitter:card" content="summary" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!--
-      Pre-paint: apply the stored theme and motion choice (src/app/state/uiPrefs.ts,
-      key "elyia-ui") before any script module runs, so the first frame is already
-      in the visitor's theme. The ui store takes over once the entry loads.
+      Pre-paint: choose the sheet before any module runs. An explicit choice
+      ("elyia.theme" = day | night, mirrored by src/app/state/documentSync.ts)
+      wins; otherwise the site is DAY and the deck (/app, /tg) follows the
+      system. The ui store takes over once the entry loads.
     -->
     <script>
       (function () {
         var root = document.documentElement;
-        var theme = "system";
+        var sheet = null;
         var motion = "on";
         try {
+          var stored = localStorage.getItem("elyia.theme");
+          if (stored === "day" || stored === "night") sheet = stored;
           var raw = localStorage.getItem("elyia-ui");
-          var stored = raw ? JSON.parse(raw) : null;
-          var state = stored && stored.state ? stored.state : null;
-          if (state && (state.theme === "dark" || state.theme === "light" || state.theme === "system")) theme = state.theme;
+          var state = raw ? JSON.parse(raw).state : null;
+          if (!sheet && state && state.theme === "dark") sheet = "night";
+          if (!sheet && state && state.theme === "light") sheet = "day";
           if (state && state.motion === "off") motion = "off";
         } catch (error) {
-          theme = "system";
+          sheet = null;
         }
-        if (theme === "system") {
+        if (!sheet) {
+          var deck = /^\/(app|tg)(\/|$)/.test(location.pathname);
+          var dark = false;
           try {
-            theme = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+            dark = matchMedia("(prefers-color-scheme: dark)").matches;
           } catch (error) {
-            theme = "dark";
+            dark = false;
           }
+          sheet = deck && dark ? "night" : "day";
         }
-        root.setAttribute("data-theme", theme);
-        root.style.colorScheme = theme;
+        root.setAttribute("data-theme", sheet);
+        root.style.colorScheme = sheet === "night" ? "dark" : "light";
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", sheet === "night" ? "#0E1512" : "#F3F0E8");
         if (motion === "off") root.setAttribute("data-motion", "off");
       })();
     </script>
     <style>
-      html { background-color: #07060d; }
-      html[data-theme="light"] { background-color: #fbf8f2; }
+      html { background-color: #f3f0e8; }
+      html[data-theme="night"] { background-color: #0e1512; }
     </style>
     <!--
       Latin web fonts, fetched while the entry loads so headings paint in their
@@ -63,10 +70,9 @@
       cannot serve them at these paths, so nothing is preloaded under it.
     -->
     <template id="el-font-preloads">
-      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2" />
-      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2" />
-      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2" />
-      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2" />
+      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2" />
+      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2" />
+      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-600-normal.woff2" />
     </template>
     <script>
       (function () {
@@ -78,7 +84,7 @@
     </script>
   </head>
   <body>
-    <noscript>Elyia needs JavaScript to show the live Elysium pulse and to plan and sign intents in your own wallet.</noscript>
+    <noscript>Elyia needs JavaScript to draw your relief map, read the chain live and let you sign routes in your own wallet.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

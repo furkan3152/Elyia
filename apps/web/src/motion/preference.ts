@@ -23,7 +23,7 @@ export interface MotionToggleView {
 export function motionToggleView(setting: MotionSetting, systemReduced: boolean): MotionToggleView {
   if (systemReduced) return { checked: false, disabled: true, description: "Off: your device asks for reduced motion" };
   return setting === "on"
-    ? { checked: true, disabled: false, description: "On: rays, strings and aurora move" }
+    ? { checked: true, disabled: false, description: "On: contours draw, needles tick, stamps land" }
     : { checked: false, disabled: false, description: "Off: Elyia stays still" };
 }
 

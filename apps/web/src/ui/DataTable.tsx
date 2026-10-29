@@ -78,7 +78,7 @@ export function DataTable<T>({
   const cellPad = dense ? "px-3 py-2" : "px-4 py-3";
 
   return (
-    <div className={cx("relative min-w-0 overflow-auto", className)} style={maxHeight ? { maxHeight } : undefined}>
+    <div className={cx("el-logbook relative min-w-0 overflow-auto", className)} style={maxHeight ? { maxHeight } : undefined}>
       <table className="w-full border-separate border-spacing-0 text-[13px]">
         <caption className="sr-only">{caption}</caption>
         <thead>
@@ -94,10 +94,10 @@ export function DataTable<T>({
                   aria-sort={ariaSort}
                   style={column.width ? { width: column.width } : undefined}
                   className={cx(
-                    "label-caps whitespace-nowrap border-b border-line font-normal",
+                    "whitespace-nowrap border-b-2 border-rule font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-ink-2",
                     cellPad,
                     ALIGN[align],
-                    stickyHeader && "sticky top-0 z-[1] bg-bg-1/95 backdrop-blur",
+                    stickyHeader && "sticky top-0 z-[1] bg-card",
                   )}
                 >
                   {column.sortValue ? (
@@ -105,8 +105,8 @@ export function DataTable<T>({
                       type="button"
                       onClick={() => setSort((current) => nextSort(current, column.id, column.firstSort))}
                       className={cx(
-                        "inline-flex items-center gap-1 rounded uppercase tracking-[inherit] transition-colors hover:text-text-1",
-                        active && "text-text-1",
+                        "inline-flex items-center gap-1 uppercase tracking-[inherit] transition-colors hover:text-ink",
+                        active && "text-ink",
                         align === "right" && "flex-row-reverse",
                         FOCUS_RING,
                       )}
@@ -135,7 +135,7 @@ export function DataTable<T>({
             ? Array.from({ length: loadingRows }, (_, index) => (
                 <tr key={`loading-${index}`}>
                   {columns.map((column) => (
-                    <td key={column.id} className={cx("border-b border-line", cellPad)}>
+                    <td key={column.id} className={cx("border-b border-rule/15", cellPad)}>
                       <Skeleton className={cx("h-3", column.align === "right" ? "ml-auto w-14" : "w-20")} />
                     </td>
                   ))}
@@ -161,8 +161,8 @@ export function DataTable<T>({
                     }
                     className={cx(
                       "transition-colors duration-fast",
-                      onRowClick && "cursor-pointer hover:bg-text-0/[0.03] focus-visible:bg-violet/10 focus-visible:outline-none",
-                      highlighted && "bg-gold/[0.07]",
+                      onRowClick && "cursor-pointer hover:bg-paper-2/70 focus-visible:bg-paper-2 focus-visible:outline-none",
+                      highlighted && "bg-signal/30",
                       muted && "opacity-55",
                     )}
                   >
@@ -173,11 +173,11 @@ export function DataTable<T>({
                         <td
                           key={column.id}
                           className={cx(
-                            "whitespace-nowrap border-b border-line text-text-0",
+                            "whitespace-nowrap border-b border-rule/15 text-ink",
                             cellPad,
                             ALIGN[align],
                             numeric && "tnum font-mono",
-                            highlighted && "first:text-gold",
+                            highlighted && "first:font-semibold",
                             column.className,
                           )}
                         >

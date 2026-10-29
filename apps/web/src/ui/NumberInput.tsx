@@ -89,9 +89,9 @@ export function NumberInput({
           aria-invalid={shownError ? true : undefined}
           aria-describedby={described}
           onChange={(event) => apply(event.target.value)}
-          className="tnum h-full min-w-0 flex-1 bg-transparent font-mono text-text-0 outline-none placeholder:text-text-2"
+          className="tnum h-full min-w-0 flex-1 bg-transparent font-mono text-ink outline-none placeholder:text-ink-3"
         />
-        {unit ? <span className="shrink-0 font-mono text-xs text-text-1">{unit}</span> : null}
+        {unit ? <span className="-mr-3 flex h-full shrink-0 items-center border-l-2 border-rule bg-paper-2 px-3 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-ink">{unit}</span> : null}
       </div>
       {max !== undefined && presets.length > 0 ? (
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Amount presets">
@@ -105,7 +105,7 @@ export function NumberInput({
                 if (next !== null) onChange(next);
               }}
               className={cx(
-                "h-7 rounded-md border border-line-strong px-2.5 font-mono text-xs text-text-1 transition-colors duration-fast hover:border-violet-glow/40 hover:text-text-0 disabled:opacity-45",
+                "h-7 border-1.5 border-rule/50 bg-card px-2.5 font-mono text-[11px] font-semibold text-ink-2 transition-colors duration-fast hover:border-rule hover:bg-ink hover:text-paper disabled:opacity-45",
                 FOCUS_RING,
               )}
             >
@@ -117,3 +117,7 @@ export function NumberInput({
     </Field>
   );
 }
+
+/** Survey name for the amount field with a unit. */
+export const NumberField = NumberInput;
+export type NumberFieldProps = NumberInputProps;

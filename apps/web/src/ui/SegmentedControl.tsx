@@ -24,10 +24,10 @@ export interface SegmentedControlProps<V extends string> {
 }
 
 const SELECTED: Readonly<Record<NonNullable<SegmentedControlProps<string>["tone"]>, string>> = {
-  violet: "bg-violet-fill text-ink-violet shadow-sm",
-  mint: "bg-mint-fill text-ink-mint shadow-sm",
-  rose: "bg-rose-fill text-ink-rose shadow-sm",
-  gold: "bg-gold-fill text-ink-gold shadow-sm",
+  violet: "bg-ink text-paper",
+  mint: "bg-up text-card",
+  rose: "bg-down text-card",
+  gold: "bg-signal text-signal-ink",
 };
 
 /** One choice out of a few (radiogroup with arrow-key navigation). */
@@ -60,7 +60,7 @@ export function SegmentedControl<V extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cx("inline-flex rounded-lg border border-line-strong bg-bg-2/60 p-0.5", fullWidth && "flex w-full", className)}
+      className={cx("inline-flex border-2 border-rule bg-card", fullWidth && "flex w-full", className)}
     >
       {options.map((option, index) => {
         const selected = option.value === value;
@@ -88,10 +88,10 @@ export function SegmentedControl<V extends string>({
               }
             }}
             className={cx(
-              "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-[background-color,color] duration-fast ease-pluck disabled:cursor-not-allowed disabled:opacity-45",
-              size === "sm" ? "h-7 px-2.5 text-xs" : "h-8 px-3.5 text-[13px]",
+              "inline-flex items-center justify-center gap-1.5 whitespace-nowrap border-r-1.5 border-rule font-sans font-bold uppercase tracking-[0.06em] transition-[background-color,color] duration-fast ease-standard last:border-r-0 disabled:cursor-not-allowed disabled:opacity-45",
+              size === "sm" ? "h-7 px-2.5 text-[11px]" : "h-9 px-3.5 text-xs",
               fullWidth && "flex-1",
-              selected ? SELECTED[tone] : "text-text-1 hover:text-text-0",
+              selected ? SELECTED[tone] : "text-ink-2 hover:bg-paper-2 hover:text-ink",
               FOCUS_RING,
             )}
           >

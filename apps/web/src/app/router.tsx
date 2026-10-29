@@ -21,7 +21,7 @@ const loadAppLayout = () => import("./shell/AppLayout");
 const SiteLayout = React.lazy(loadSiteLayout);
 const AppLayout = React.lazy(loadAppLayout);
 const Toaster = React.lazy(() => import("../ui/Toaster").then((module) => ({ default: module.Toaster })));
-const OracleDialog = React.lazy(() => import("../oracle/OracleDialog").then((module) => ({ default: module.OracleDialog })));
+const WhereTo = React.lazy(() => import("./shell/WhereTo").then((module) => ({ default: module.WhereTo })));
 
 /*
  * Route pages. Unlike React.lazy (which suspends on its first render even when
@@ -150,20 +150,20 @@ function PendingBar({ pending }: { readonly pending: boolean }) {
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none fixed inset-x-0 top-0 z-[100] h-[2px] origin-left bg-gradient-to-r from-violet-glow via-gold to-violet-glow transition-opacity duration-base ${
+      className={`pointer-events-none fixed inset-x-0 top-0 z-[100] h-[3px] origin-left bg-accent-line transition-opacity duration-base ${
         pending ? "animate-pending-bar opacity-100" : "scale-x-0 opacity-0"
       }`}
     />
   );
 }
 
-/** Mounts the Oracle dialog chunk the first time the Oracle opens, then keeps it. */
+/** Mounts the "Where to?" command signpost chunk the first time ⌘K opens it, then keeps it. */
 function OracleMount() {
   const everOpened = useOracleStore((state) => state.everOpened);
   if (!everOpened) return null;
   return (
     <React.Suspense fallback={null}>
-      <OracleDialog />
+      <WhereTo />
     </React.Suspense>
   );
 }

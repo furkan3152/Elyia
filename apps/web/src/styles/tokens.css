@@ -1,157 +1,197 @@
 /*
- * Elyia design tokens — "Lumine Purpureo".
- * Dark "Night of the fields" is the default; light "Dawn" applies with
- * html[data-theme="light"] (set pre-paint by index.html and kept by the ui
- * store) or, without a stored choice and without scripts, from
- * prefers-color-scheme.
+ * Elyia design tokens: "Survey".
  *
- * Colours used with alpha are RGB channels (`rgb(var(--violet) / 0.2)`);
- * Tailwind maps them in tailwind.config.js. A few light values are a touch
- * deeper than the original palette so 12 px text keeps WCAG AA (4.5:1) on
- * both page and panel backgrounds: gold, mint, rose, sky and text-2.
+ * Two sheets:
+ *   DAY   (paper map)  html[data-theme="day"]   default on the site
+ *   NIGHT (headlamp)   html[data-theme="night"] default in /app on dark systems
+ *
+ * Colours that take alpha are RGB channels ("243 240 232"), so Tailwind can
+ * write `bg-paper/80` (tailwind.config.js maps every name). Text-safe
+ * variants (`*-ink`) exist wherever the graphic colour is below WCAG AA for
+ * small text on paper; use them for words, the plain token for lines and fills.
+ *
+ * The old "Lumine" names (bg-0, text-0, violet, gold, mint, rose, sky, line)
+ * are kept at the bottom as aliases onto these tokens, so pages that are not
+ * rebuilt yet still land on the Survey palette.
  */
 
 :root,
-:root[data-theme="dark"] {
-  color-scheme: dark;
+:root[data-theme="day"],
+:root[data-theme="light"],
+.el-day {
+  color-scheme: light;
 
-  --bg-0: 7 6 13; /* #07060D page */
-  --bg-1: 14 12 24; /* #0E0C18 panel */
-  --bg-2: 22 19 40; /* #161328 raised */
-  --bg-3: 31 27 56; /* #1F1B38 hover on raised */
-  --line: rgba(196, 181, 253, 0.11);
-  --line-strong: rgba(196, 181, 253, 0.22);
+  /* Paper and ink */
+  --paper: 243 240 232; /* #F3F0E8 page */
+  --card: 251 250 245; /* #FBFAF5 sheets, cards */
+  --paper-2: 233 228 215; /* #E9E4D7 folds, wells, hover */
+  --paper-3: 221 214 196; /* #DDD6C4 pressed */
+  --ink: 22 32 27; /* #16201B text, borders */
+  --ink-2: 62 74 68; /* #3E4A44 secondary text */
+  --ink-3: 94 106 99; /* #5E6A63 tertiary (AA on paper) */
+  --rule: 22 32 27; /* borders and hard shadows */
+  --shadow-ink: 22 32 27;
 
-  --text-0: 244 241 255; /* #F4F1FF */
-  --text-1: 185 179 214; /* #B9B3D6 */
-  --text-2: 124 118 153; /* #7C7699 */
+  /* Survey colours */
+  --contour: 122 82 48; /* #7A5230 contour ink, used at 0.4-0.9 */
+  --signal: 242 194 0; /* #F2C200 highlight, "you are here" */
+  --on-signal: 22 32 27;
+  --accent: 24 127 148; /* #187F94 primary fill (glacier, AA with white) */
+  --accent-line: 30 143 166; /* #1E8FA6 glacier lines, underline */
+  --on-accent: 255 255 255;
 
-  --violet: 139 92 246; /* #8B5CF6 purple light, brand */
-  --violet-glow: 167 139 250; /* #A78BFA */
-  --violet-soft: 201 184 255; /* #C9B8FF italic display */
-  --violet-fill: 139 92 246;
-  --on-violet: 255 255 255;
+  /* Layers = altitudes */
+  --floor: 45 115 136; /* #2D7388 HyperCore, glacial lake */
+  --ridge: 138 90 43; /* #8A5A2B HyperEVM, rock ochre */
+  --summit: 30 143 166; /* #1E8FA6 Elysium, glacier aqua */
+  --summit-ink: 23 120 140; /* #17788C summit words */
 
-  --gold: 245 198 107; /* #F5C66B their own sun */
-  --gold-deep: 224 169 59; /* #E0A93B */
-  --gold-fill: 245 198 107;
-  --on-gold: 28 23 48;
+  /* Signs */
+  --up: 31 122 76; /* #1F7A4C */
+  --down: 198 45 31; /* #C62D1F */
+  --blaze-red: 215 38 30; /* #D7261E */
+  --blaze-blue: 30 90 168; /* #1E5AA8 */
+  --water: 39 108 148; /* #276C94 */
+  --warn: 217 130 43; /* #D9822B caution fill */
+  --warn-ink: 162 86 26; /* #A2561A caution words */
+  --on-warn: 22 32 27;
 
-  --mint: 94 242 196; /* #5EF2C4 up / long */
-  --mint-fill: 94 242 196;
-  --on-mint: 4 36 26;
+  /* Surfaces for canvases and SVG (raw values) */
+  --grain-opacity: 0.06;
+  --overlay: rgba(22, 32, 27, 0.42);
+  --scrollbar: rgba(22, 32, 27, 0.28);
 
-  --rose: 255 107 139; /* #FF6B8B down / short */
-  --rose-fill: 255 107 139;
-  --on-rose: 43 7 18;
+  /* Shape */
+  --border: 2px;
+  --border-thin: 1.5px;
+  --shadow-hard: 3px 3px 0 rgb(var(--shadow-ink));
+  --shadow-hard-lg: 4px 4px 0 rgb(var(--shadow-ink));
+  --shadow-hard-xl: 6px 6px 0 rgb(var(--shadow-ink));
 
-  --sky: 124 196 255; /* #7CC4FF info */
-
-  --glass: rgba(14, 12, 24, 0.72);
-  --glass-strong: rgba(14, 12, 24, 0.88);
-  --overlay: rgba(4, 3, 9, 0.66);
-  --scrollbar: rgba(196, 181, 253, 0.18);
-  --aurora-violet: rgba(139, 92, 246, 0.3);
-  --aurora-gold: rgba(245, 198, 107, 0.12);
-  --aurora-sky: rgba(124, 196, 255, 0.06);
-
-  --ray: 245 198 107; /* Sun rays */
-  --lyre-frame: 245 198 107;
-  --lyre-base: 224 169 59;
-  --shadow-strong: rgba(0, 0, 0, 0.55);
-  --shadow-soft: rgba(0, 0, 0, 0.45);
-
-  --ease-pluck: cubic-bezier(0.2, 0.9, 0.1, 1);
+  /* Motion */
+  --dur-instant: 90ms;
+  --dur-fast: 150ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+  --dur-draw: 1200ms;
+  --ease-draw: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --dur-fast: 120ms;
-  --dur: 220ms;
-  --dur-slow: 600ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* Layout */
+  --header-h: 60px;
+  --topbar-h: 60px;
   --rail-w: 88px;
   --rail-w-expanded: 232px;
-  --topbar-h: 64px;
 }
 
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    color-scheme: light;
-    --bg-0: 251 248 242;
-    --bg-1: 255 255 255;
-    --bg-2: 243 238 228;
-    --bg-3: 234 227 214;
-    --line: rgba(28, 23, 48, 0.1);
-    --line-strong: rgba(28, 23, 48, 0.18);
-    --text-0: 28 23 48;
-    --text-1: 74 67 102;
-    --text-2: 110 103 135;
-    --violet: 109 63 224;
-    --violet-glow: 139 92 246;
-    --violet-soft: 91 47 208;
-    --violet-fill: 109 63 224;
-    --on-violet: 255 255 255;
-    --gold: 143 100 16;
-    --gold-deep: 122 82 10;
-    --gold-fill: 245 198 107;
-    --on-gold: 28 23 48;
-    --mint: 8 120 92;
-    --mint-fill: 10 127 97;
-    --on-mint: 255 255 255;
-    --rose: 199 50 90;
-    --rose-fill: 199 50 90;
-    --on-rose: 255 255 255;
-    --sky: 31 108 192;
-    --glass: rgba(255, 255, 255, 0.78);
-    --glass-strong: rgba(255, 255, 255, 0.92);
-    --overlay: rgba(28, 23, 48, 0.36);
-    --scrollbar: rgba(28, 23, 48, 0.18);
-    --aurora-violet: rgba(139, 92, 246, 0.16);
-    --aurora-gold: rgba(245, 198, 107, 0.22);
-    --aurora-sky: rgba(124, 196, 255, 0.1);
-    --ray: 200 146 40;
-    --lyre-frame: 205 152 50;
-    --lyre-base: 168 116 24;
-    --shadow-strong: rgba(28, 23, 48, 0.12);
-    --shadow-soft: rgba(28, 23, 48, 0.08);
+    color-scheme: dark;
+    --paper: 14 21 18;
+    --card: 20 32 25;
+    --paper-2: 27 42 34;
+    --paper-3: 36 54 44;
+    --ink: 236 231 218;
+    --ink-2: 180 189 180;
+    --ink-3: 140 151 143;
+    --rule: 207 201 187;
+    --shadow-ink: 0 0 0;
+    --contour: 201 146 90;
+    --signal: 242 194 0;
+    --on-signal: 14 21 18;
+    --accent: 111 211 227;
+    --accent-line: 111 211 227;
+    --on-accent: 14 21 18;
+    --floor: 95 176 196;
+    --ridge: 201 146 90;
+    --summit: 111 211 227;
+    --summit-ink: 111 211 227;
+    --up: 95 211 154;
+    --down: 255 107 94;
+    --blaze-red: 255 90 78;
+    --blaze-blue: 126 174 255;
+    --water: 107 184 227;
+    --warn: 242 166 90;
+    --warn-ink: 242 166 90;
+    --on-warn: 14 21 18;
+    --grain-opacity: 0.07;
+    --overlay: rgba(0, 0, 0, 0.6);
+    --scrollbar: rgba(236, 231, 218, 0.24);
   }
 }
 
-:root[data-theme="light"] {
-  color-scheme: light;
-  --bg-0: 251 248 242; /* #FBF8F2 */
-  --bg-1: 255 255 255;
-  --bg-2: 243 238 228; /* #F3EEE4 */
-  --bg-3: 234 227 214;
-  --line: rgba(28, 23, 48, 0.1);
-  --line-strong: rgba(28, 23, 48, 0.18);
-  --text-0: 28 23 48; /* #1C1730 */
-  --text-1: 74 67 102; /* #4A4366 */
-  --text-2: 110 103 135; /* #6E6787 */
-  --violet: 109 63 224; /* #6D3FE0 */
-  --violet-glow: 139 92 246;
-  --violet-soft: 91 47 208;
-  --violet-fill: 109 63 224;
-  --on-violet: 255 255 255;
-  --gold: 143 100 16; /* #8F6410 text; fills keep the sun gold */
-  --gold-deep: 122 82 10;
-  --gold-fill: 245 198 107;
-  --on-gold: 28 23 48;
-  --mint: 8 120 92; /* #08785C */
-  --mint-fill: 10 127 97;
-  --on-mint: 255 255 255;
-  --rose: 199 50 90; /* #C7325A */
-  --rose-fill: 199 50 90;
-  --on-rose: 255 255 255;
-  --sky: 31 108 192; /* #1F6CC0 */
-  --glass: rgba(255, 255, 255, 0.78);
-  --glass-strong: rgba(255, 255, 255, 0.92);
-  --overlay: rgba(28, 23, 48, 0.36);
-  --scrollbar: rgba(28, 23, 48, 0.18);
-  --aurora-violet: rgba(139, 92, 246, 0.16);
-  --aurora-gold: rgba(245, 198, 107, 0.22);
-  --aurora-sky: rgba(124, 196, 255, 0.1);
-  --ray: 200 146 40;
-  --lyre-frame: 205 152 50;
-  --lyre-base: 168 116 24;
-  --shadow-strong: rgba(28, 23, 48, 0.12);
-  --shadow-soft: rgba(28, 23, 48, 0.08);
+:root[data-theme="night"],
+:root[data-theme="dark"],
+.el-night {
+  color-scheme: dark;
+  --paper: 14 21 18; /* #0E1512 */
+  --card: 20 32 25; /* #142019 */
+  --paper-2: 27 42 34; /* #1B2A22 */
+  --paper-3: 36 54 44; /* #24362C */
+  --ink: 236 231 218; /* #ECE7DA */
+  --ink-2: 180 189 180; /* #B4BDB4 */
+  --ink-3: 140 151 143; /* #8C978F */
+  --rule: 207 201 187; /* #CFC9BB a little softer than text */
+  --shadow-ink: 0 0 0; /* NIGHT hard shadow is black */
+  --contour: 201 146 90; /* #C9925A */
+  --signal: 242 194 0;
+  --on-signal: 14 21 18;
+  --accent: 111 211 227; /* #6FD3E3 */
+  --accent-line: 111 211 227;
+  --on-accent: 14 21 18;
+  --floor: 95 176 196; /* #5FB0C4 */
+  --ridge: 201 146 90; /* #C9925A */
+  --summit: 111 211 227; /* #6FD3E3 */
+  --summit-ink: 111 211 227;
+  --up: 95 211 154; /* #5FD39A */
+  --down: 255 107 94; /* #FF6B5E */
+  --blaze-red: 255 90 78;
+  --blaze-blue: 126 174 255;
+  --water: 107 184 227;
+  --warn: 242 166 90;
+  --warn-ink: 242 166 90;
+  --on-warn: 14 21 18;
+  --grain-opacity: 0.07;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --scrollbar: rgba(236, 231, 218, 0.24);
+}
+
+/*
+ * Legacy aliases ("Lumine" names) onto the Survey tokens. New code uses the
+ * Survey names; these keep older pages on-palette until they are rebuilt.
+ */
+:root {
+  --bg-0: var(--paper);
+  --bg-1: var(--card);
+  --bg-2: var(--paper-2);
+  --bg-3: var(--paper-3);
+  --text-0: var(--ink);
+  --text-1: var(--ink-2);
+  --text-2: var(--ink-3);
+  --line: rgb(var(--rule) / 0.18);
+  --line-strong: rgb(var(--rule) / 0.55);
+  --violet: var(--accent);
+  --violet-glow: var(--accent-line);
+  --violet-soft: var(--summit-ink);
+  --violet-fill: var(--accent);
+  --on-violet: var(--on-accent);
+  --gold: var(--warn-ink);
+  --gold-deep: var(--warn-ink);
+  --gold-fill: var(--signal);
+  --on-gold: var(--on-signal);
+  --mint: var(--up);
+  --mint-fill: var(--up);
+  --on-mint: var(--card);
+  --rose: var(--down);
+  --rose-fill: var(--down);
+  --on-rose: var(--card);
+  --sky: var(--water);
+  --glass: rgb(var(--card));
+  --glass-strong: rgb(var(--card));
+  --shadow-strong: rgb(var(--shadow-ink) / 0.2);
+  --shadow-soft: rgb(var(--shadow-ink) / 0.12);
+  --ease-pluck: var(--ease-out);
+  --dur: var(--dur-base);
 }

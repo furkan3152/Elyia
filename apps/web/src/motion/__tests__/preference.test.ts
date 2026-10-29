@@ -36,7 +36,10 @@ describe("ui preferences", () => {
     assert.equal(resolveTheme("dark", true), "dark");
     assert.equal(resolveTheme("system", true), "light");
     assert.equal(resolveTheme("system", false), "dark");
-    assert.equal(resolveTheme("system", null), "dark");
+    assert.equal(resolveTheme("system", null), "light", "unknown system: the DAY sheet");
+    assert.equal(resolveTheme("system", false, "site"), "light", "the site is DAY unless chosen");
+    assert.equal(resolveTheme("dark", true, "site"), "dark", "an explicit NIGHT wins on the site");
+    assert.equal(resolveTheme("system", false, "app"), "dark", "the deck follows a dark system");
     assert.equal(nextTheme("system", true), "dark");
     assert.equal(nextTheme("dark", null), "light");
   });

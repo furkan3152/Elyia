@@ -16,9 +16,9 @@ export interface NetworkBadgeProps {
   readonly className?: string;
 }
 
-const GLYPH_TEXT: Readonly<Record<NetworkFamily, string>> = { elysium: "text-gold", hyperevm: "text-sky", hypercore: "text-violet-glow" };
+const GLYPH_TEXT: Readonly<Record<NetworkFamily, string>> = { elysium: "text-summit-ink", hyperevm: "text-ridge", hypercore: "text-floor" };
 
-/** Realm badge: Elysium (gold sun), HyperEVM (sky hexagon), HyperCore (violet diamond). */
+/** Realm badge: Elysium (THE SUMMIT), HyperEVM (THE RIDGE), HyperCore (THE FLOOR), in their altitude colours. */
 export function NetworkBadge({ network, showEnvironment = true, size = "sm", iconOnly = false, className }: NetworkBadgeProps) {
   const view = networkView(network);
   const name = `${view.label}${view.environment === "testnet" ? " testnet" : ""}`;
@@ -32,8 +32,8 @@ export function NetworkBadge({ network, showEnvironment = true, size = "sm", ico
   return (
     <span
       className={cx(
-        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border font-mono",
-        size === "sm" ? "h-6 px-2.5 text-xs" : "h-7 px-3 text-[13px]",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-1.5 font-mono",
+        size === "sm" ? "h-6 px-2 text-[11px]" : "h-7 px-2.5 text-xs",
         SOFT_TONE[view.realm.tone],
         className,
       )}

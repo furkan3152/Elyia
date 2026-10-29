@@ -17,12 +17,21 @@ export interface ProgressRingProps {
 }
 
 const COLOR: Readonly<Record<Tone, string>> = {
-  violet: "rgb(var(--violet-glow))",
-  gold: "rgb(var(--gold))",
-  mint: "rgb(var(--mint))",
-  rose: "rgb(var(--rose))",
-  sky: "rgb(var(--sky))",
-  neutral: "rgb(var(--text-1))",
+  violet: "rgb(var(--summit))",
+  accent: "rgb(var(--summit))",
+  gold: "rgb(var(--signal))",
+  signal: "rgb(var(--signal))",
+  mint: "rgb(var(--up))",
+  up: "rgb(var(--up))",
+  rose: "rgb(var(--down))",
+  down: "rgb(var(--down))",
+  sky: "rgb(var(--water))",
+  water: "rgb(var(--water))",
+  warn: "rgb(var(--warn))",
+  neutral: "rgb(var(--ink))",
+  floor: "rgb(var(--floor))",
+  ridge: "rgb(var(--ridge))",
+  summit: "rgb(var(--summit))",
 };
 
 /** Circular progress for fills, TWAP slices, confirm periods. */
@@ -41,7 +50,7 @@ export function ProgressRing({ value, size = 44, thickness = 4, tone = "violet",
       style={{ width: size, height: size }}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true" className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgb(var(--text-2) / 0.2)" strokeWidth={thickness} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgb(var(--ink) / 0.15)" strokeWidth={thickness} />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -49,13 +58,13 @@ export function ProgressRing({ value, size = 44, thickness = 4, tone = "violet",
           fill="none"
           stroke={COLOR[tone]}
           strokeWidth={thickness}
-          strokeLinecap="round"
+          strokeLinecap="butt"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - clamped)}
           className="transition-[stroke-dashoffset] duration-slow ease-pluck"
         />
       </svg>
-      {children ? <span className="tnum absolute inset-0 flex items-center justify-center font-mono text-xs text-text-0">{children}</span> : null}
+      {children ? <span className="tnum absolute inset-0 flex items-center justify-center font-mono text-[11px] font-semibold text-ink">{children}</span> : null}
     </span>
   );
 }

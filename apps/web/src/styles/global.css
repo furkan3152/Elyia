@@ -1,5 +1,6 @@
 @import "./fonts.css";
 @import "./tokens.css";
+@import "./topo.css";
 
 @tailwind base;
 @tailwind components;
@@ -11,34 +12,39 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: rgb(var(--bg-0));
+    background-color: rgb(var(--paper));
     scrollbar-color: var(--scrollbar) transparent;
     scrollbar-width: thin;
   }
 
   body {
     min-height: 100dvh;
-    background-color: rgb(var(--bg-0));
-    color: rgb(var(--text-0));
+    background-color: rgb(var(--paper));
+    color: rgb(var(--ink));
     font-family: theme("fontFamily.sans");
     font-size: 0.9375rem;
     line-height: 1.5;
-    font-feature-settings: "cv11", "ss01";
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
   }
 
   ::selection {
-    background-color: rgb(var(--violet) / 0.35);
-    color: rgb(var(--text-0));
+    background-color: rgb(var(--signal) / 0.7);
+    color: rgb(var(--on-signal));
   }
 
   :focus {
     outline: none;
   }
 
+  /* Visible focus everywhere: a glacier ring, square like the paper. */
   :focus-visible {
-    outline: 2px solid rgb(var(--violet-glow));
+    outline: 2px solid rgb(var(--accent-line));
     outline-offset: 2px;
-    border-radius: 6px;
   }
 
   /* Inputs draw their own focus treatment on the field wrapper. */
@@ -57,7 +63,6 @@
   }
   ::-webkit-scrollbar-thumb {
     background-color: var(--scrollbar);
-    border-radius: 999px;
     border: 3px solid transparent;
     background-clip: content-box;
   }
@@ -81,36 +86,66 @@
 }
 
 @layer components {
-  /* Eyebrow: mono, tracked caps, gold. The section label of every surface. */
-  .eyebrow {
+  /* Section label: mono micro-caps, tracked, " · " separated. */
+  .eyebrow,
+  .caption {
     font-family: theme("fontFamily.mono");
     font-size: 0.75rem;
     line-height: 1rem;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgb(var(--gold));
+    color: rgb(var(--ink-2));
   }
 
   .label-caps {
     font-family: theme("fontFamily.mono");
     font-size: 0.75rem;
     line-height: 1rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(var(--ink-3));
+  }
+
+  /* The bordered mono caps box above a headline (Kletia lineage). */
+  .label-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 6px 11px;
+    border: var(--border) solid rgb(var(--rule));
+    background: rgb(var(--card));
+    box-shadow: var(--shadow-hard);
+    font-family: theme("fontFamily.mono");
+    font-size: 0.6875rem;
+    line-height: 1rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgb(var(--text-2));
+    color: rgb(var(--ink));
+  }
+
+  /* A paper sheet: card stock, ink border, hard offset shadow. */
+  .sheet {
+    background: rgb(var(--card));
+    border: var(--border) solid rgb(var(--rule));
+    box-shadow: var(--shadow-hard);
   }
 
   .glass {
-    background-color: var(--glass);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
-    backdrop-filter: blur(14px) saturate(1.2);
+    background-color: rgb(var(--card));
   }
 
-  /* Poetic display: Instrument Serif, italic accent in violet-soft. */
+  /* Legacy italic accent: Survey keeps headings upright and lets colour carry the accent. */
   .display-italic {
-    font-family: theme("fontFamily.display");
+    font-style: normal;
+    color: rgb(var(--summit-ink));
+  }
+
+  /* Instrument Serif italic: cartographic labels on maps only. */
+  .map-label {
+    font-family: theme("fontFamily.map");
     font-style: italic;
-    color: rgb(var(--violet-soft));
+    font-weight: 400;
+    letter-spacing: 0;
   }
 }
 
@@ -139,21 +174,28 @@
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  .shadow-hard {
+    box-shadow: var(--shadow-hard);
+  }
+  .shadow-hard-lg {
+    box-shadow: var(--shadow-hard-lg);
+  }
 }
 
-/* Reveal (src/motion/Reveal.tsx): only elements that start below the fold wait. */
+/* Reveal (src/motion/Reveal.tsx): cards rise 8 px and fade, only below the fold. */
 .el-reveal[data-reveal="waiting"] {
   opacity: 0;
-  transform: translate3d(0, 14px, 0);
+  transform: translate3d(0, 8px, 0);
 }
 .el-reveal[data-reveal="shown"] {
-  animation: el-rise-in 700ms var(--ease-pluck) both;
+  animation: el-rise-in var(--dur-slow) var(--ease-out) both;
   animation-delay: var(--el-reveal-delay, 0ms);
 }
 @keyframes el-rise-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 14px, 0);
+    transform: translate3d(0, 8px, 0);
   }
   to {
     opacity: 1;
@@ -161,21 +203,25 @@
   }
 }
 
-/* Loops (`.el-loop`) pause while the tab is hidden; the router sets html[data-hidden]. */
+/* Loops pause while the tab is hidden (html[data-hidden]) or their section is off screen ([data-el-paused]). */
 html[data-hidden] .el-loop,
-html[data-hidden] .el-loop * {
+html[data-hidden] .el-loop *,
+[data-el-paused] .el-loop,
+[data-el-paused] .el-loop *,
+.el-loop[data-el-paused] {
   animation-play-state: paused !important;
 }
 
 /*
  * Reduced motion: the operating system setting or Elyia's own Motion switch
- * (html[data-motion="off"]). Canvas visuals stop their loops in code
- * (src/motion/useReducedMotion.ts); CSS animations and transitions stop here.
+ * (html[data-motion="off"]). JS loops stop in code (src/motion/useReducedMotion.ts);
+ * CSS animations jump to their end state here.
  */
 html[data-motion="off"] *,
 html[data-motion="off"] *::before,
 html[data-motion="off"] *::after {
   animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 1ms !important;
   scroll-behavior: auto !important;
@@ -186,6 +232,7 @@ html[data-motion="off"] *::after {
   *::before,
   *::after {
     animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
@@ -198,14 +245,14 @@ html[data-motion="off"]::view-transition-new(*) {
   animation: none !important;
 }
 
-/* Theme switch: the new theme grows as a circle from the toggle (src/motion/viewTransition.ts). */
+/* Theme switch: the new sheet is laid over the old one, sliding in from the switch like a map being unfolded. */
 html[data-el-vt="theme"]::view-transition-old(root),
 html[data-el-vt="theme"]::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
 html[data-el-vt="theme"]::view-transition-new(root) {
-  animation: el-theme-reveal 520ms var(--ease-pluck) both;
+  animation: el-theme-reveal 520ms var(--ease-out) both;
 }
 @keyframes el-theme-reveal {
   from {
@@ -216,53 +263,51 @@ html[data-el-vt="theme"]::view-transition-new(root) {
   }
 }
 
-/* Route change cross-fade between marketing pages. */
+/* Route change: the old sheet fades, the new one rises 8 px. */
 html[data-el-vt="route"]::view-transition-old(root) {
-  animation: 160ms ease-out both el-fade-out;
+  animation: 150ms ease-out both el-fade-out;
 }
 html[data-el-vt="route"]::view-transition-new(root) {
-  animation: 240ms var(--ease-pluck) both el-fade-in;
+  animation: 240ms var(--ease-out) both el-sheet-in;
 }
 @keyframes el-fade-out {
   to {
     opacity: 0;
   }
 }
-@keyframes el-fade-in {
+@keyframes el-sheet-in {
   from {
     opacity: 0;
+    transform: translateY(8px);
   }
 }
 
-/* Range input (Slider): native control, Elyia skin. */
+/* Range input (Slider): an ink track and a yellow diamond thumb. */
 .el-range {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
   width: 100%;
-  height: 28px;
+  height: 30px;
   cursor: pointer;
 }
 .el-range::-webkit-slider-runnable-track {
   height: 4px;
-  border-radius: 999px;
   background: linear-gradient(
     to right,
-    rgb(var(--violet-glow)) 0%,
-    rgb(var(--violet-glow)) var(--el-range-fill, 0%),
-    rgb(var(--text-2) / 0.28) var(--el-range-fill, 0%),
-    rgb(var(--text-2) / 0.28) 100%
+    rgb(var(--ink)) 0%,
+    rgb(var(--ink)) var(--el-range-fill, 0%),
+    rgb(var(--ink) / 0.22) var(--el-range-fill, 0%),
+    rgb(var(--ink) / 0.22) 100%
   );
 }
 .el-range::-moz-range-track {
   height: 4px;
-  border-radius: 999px;
-  background: rgb(var(--text-2) / 0.28);
+  background: rgb(var(--ink) / 0.22);
 }
 .el-range::-moz-range-progress {
   height: 4px;
-  border-radius: 999px;
-  background: rgb(var(--violet-glow));
+  background: rgb(var(--ink));
 }
 .el-range::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -270,31 +315,30 @@ html[data-el-vt="route"]::view-transition-new(root) {
   width: 18px;
   height: 18px;
   margin-top: -7px;
-  border-radius: 999px;
-  background: rgb(var(--text-0));
-  border: 3px solid rgb(var(--violet));
-  box-shadow: 0 0 0 4px rgb(var(--violet) / 0.18);
-  transition: transform var(--dur-fast) var(--ease-pluck);
+  background: rgb(var(--signal));
+  border: 2px solid rgb(var(--rule));
+  transform: rotate(45deg);
+  transition: transform var(--dur-fast) var(--ease-spring);
 }
 .el-range::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  border-radius: 999px;
-  background: rgb(var(--text-0));
-  border: 3px solid rgb(var(--violet));
-  box-shadow: 0 0 0 4px rgb(var(--violet) / 0.18);
+  border-radius: 0;
+  background: rgb(var(--signal));
+  border: 2px solid rgb(var(--rule));
+  transform: rotate(45deg);
 }
 .el-range:active::-webkit-slider-thumb {
-  transform: scale(1.12);
+  transform: rotate(45deg) scale(1.15);
 }
 .el-range:focus-visible {
   outline: none;
 }
 .el-range:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 2px rgb(var(--bg-0)), 0 0 0 4px rgb(var(--violet-glow));
+  box-shadow: 0 0 0 2px rgb(var(--paper)), 0 0 0 4px rgb(var(--accent-line));
 }
 .el-range:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 2px rgb(var(--bg-0)), 0 0 0 4px rgb(var(--violet-glow));
+  box-shadow: 0 0 0 2px rgb(var(--paper)), 0 0 0 4px rgb(var(--accent-line));
 }
 .el-range:disabled {
   cursor: not-allowed;

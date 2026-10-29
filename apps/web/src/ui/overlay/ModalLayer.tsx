@@ -79,7 +79,7 @@ export function ModalLayer({
     >
       <div
         aria-hidden="true"
-        className="absolute inset-0 animate-fade-in bg-[var(--overlay)] backdrop-blur-[3px]"
+        className="absolute inset-0 animate-fade-in bg-[var(--overlay)]"
         onMouseDown={(event) => {
           if (dismissOnBackdrop && event.target === event.currentTarget) onCloseRef.current();
         }}

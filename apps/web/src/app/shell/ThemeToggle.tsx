@@ -1,15 +1,14 @@
-import { Moon, Sun } from "lucide-react";
-
-import { buttonClasses } from "../../ui/buttonStyles";
-import { cx } from "../../ui/cx";
+import { cx, FOCUS_RING } from "../../ui/cx";
 import { useThemeToggle } from "../state/useTheme";
 
-const ICON = "absolute h-[18px] w-[18px] transition-[transform,opacity] duration-base ease-pluck";
-
-/** Dark ("Night of the fields") / light ("Dawn") switch; the new theme grows from the button. */
-export function ThemeToggle({ className }: { readonly className?: string }) {
+/**
+ * DAY / NIGHT switch: the paper map or the headlamp sheet. The new sheet is
+ * laid over the old one from the switch (a view transition), and the choice
+ * is remembered (elyia.theme).
+ */
+export function ThemeToggle({ className, compact = false }: { readonly className?: string; readonly compact?: boolean }) {
   const { theme, toggle } = useThemeToggle();
-  const dark = theme === "dark";
+  const night = theme === "dark";
   return (
     <button
       type="button"
@@ -17,13 +16,13 @@ export function ThemeToggle({ className }: { readonly className?: string }) {
         const rect = event.currentTarget.getBoundingClientRect();
         toggle({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
       }}
-      aria-pressed={dark}
-      aria-label="Dark theme"
-      title={dark ? "Switch to Dawn (light)" : "Switch to Night (dark)"}
-      className={cx(buttonClasses({ variant: "ghost", size: "md", iconOnly: true }), "relative overflow-hidden", className)}
+      aria-pressed={night}
+      aria-label="Night sheet"
+      title={night ? "Switch to the DAY sheet (paper map)" : "Switch to the NIGHT sheet (headlamp)"}
+      className={cx("inline-flex h-9 shrink-0 items-stretch border-2 border-rule font-mono text-[11px] font-semibold tracking-[0.1em]", FOCUS_RING, className)}
     >
-      <Sun className={cx(ICON, dark ? "rotate-90 scale-50 opacity-0" : "rotate-0 opacity-100")} aria-hidden="true" />
-      <Moon className={cx(ICON, dark ? "rotate-0 opacity-100" : "-rotate-90 scale-50 opacity-0")} aria-hidden="true" />
+      <span className={cx("flex items-center px-2", night ? "text-ink-3" : "bg-ink text-paper")}>{compact ? "D" : "DAY"}</span>
+      <span className={cx("flex items-center border-l-2 border-rule px-2", night ? "bg-ink text-paper" : "text-ink-3")}>{compact ? "N" : "NIGHT"}</span>
     </button>
   );
 }
