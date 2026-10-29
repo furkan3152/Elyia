@@ -11,7 +11,7 @@
  * promises from async handlers to the error handler, so handlers simply
  * throw ElyiaHttpError (or let zod/upstream errors propagate).
  */
-import express, { type RequestHandler, type Router } from "express";
+import express, { type Express, type RequestHandler, type Router } from "express";
 import type { AppContext } from "../context.js";
 import { ElyiaHttpError } from "./errors.js";
 import { errorHandler, sendError } from "./request.js";
@@ -22,6 +22,14 @@ export interface ApiModule {
   /** Short unique name (logs, diagnostics). */
   readonly name: string;
   register(router: Router, ctx: AppContext): void;
+  /**
+   * Optional routes outside /v1 (for example the Telegram webhook). They are
+   * mounted on the app before /v1 and bring their own body parser and limits.
+   */
+  mountRoot?(app: Express, ctx: AppContext): void;
+  /** Optional background work (pollers, schedulers), started after listen and stopped on shutdown. */
+  start?(ctx: AppContext): void | Promise<void>;
+  stop?(ctx: AppContext): void | Promise<void>;
 }
 
 function payloadTooLarge(): ElyiaHttpError {

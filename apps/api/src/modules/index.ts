@@ -11,5 +11,19 @@
  */
 import type { ApiModule } from "../http/router.js";
 import { systemModule } from "./system/index.js";
+import { marketsModule } from "./markets/index.js";
+import { portfolioModule } from "./portfolio/index.js";
+import { intentsModule } from "./intents/index.js";
+import { opsModule } from "./ops/index.js";
+import { agentModule } from "./agent/index.js";
+import { discoveryModule } from "./discovery/index.js";
 
-export const MODULES: readonly ApiModule[] = [systemModule];
+export const MODULES: readonly ApiModule[] = [
+  systemModule,
+  marketsModule,
+  portfolioModule,
+  intentsModule,
+  opsModule,
+  agentModule,
+  discoveryModule,
+];

@@ -45,7 +45,9 @@ export function createApp(ctx: AppContext, options: AppOptions = {}): Express {
     res.json({ status: "ok", service: "elyia-api", version: ctx.config.version });
   });
 
-  app.use("/v1", createV1Router(ctx, options.modules ?? MODULES));
+  const modules = options.modules ?? MODULES;
+  for (const module of modules) module.mountRoot?.(app, ctx);
+  app.use("/v1", createV1Router(ctx, modules));
   app.use(notFoundHandler());
   app.use(errorHandler(ctx.log));
   return app;

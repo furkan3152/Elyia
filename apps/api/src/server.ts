@@ -8,6 +8,7 @@
 import type { Server } from "node:http";
 import type { Express } from "express";
 import { closeContext, type AppContext } from "./context.js";
+import type { ApiModule } from "./http/router.js";
 
 export const SHUTDOWN_GRACE_MS = 2_000;
 export const SHUTDOWN_DEADLINE_MS = 5_000;
@@ -18,7 +19,30 @@ export interface RunningServer {
   stop(reason: string): Promise<void>;
 }
 
-export function startServer(ctx: AppContext, app: Express): Promise<RunningServer> {
+/** Starts background work of each module (pollers, schedulers); a failing module is logged, never fatal. */
+async function startModules(ctx: AppContext, modules: readonly ApiModule[]): Promise<void> {
+  for (const module of modules) {
+    if (!module.start) continue;
+    try {
+      await module.start(ctx);
+    } catch (error) {
+      ctx.log.error("module failed to start", { module: module.name, error: error instanceof Error ? error : String(error) });
+    }
+  }
+}
+
+async function stopModules(ctx: AppContext, modules: readonly ApiModule[]): Promise<void> {
+  for (const module of [...modules].reverse()) {
+    if (!module.stop) continue;
+    try {
+      await module.stop(ctx);
+    } catch (error) {
+      ctx.log.error("module failed to stop", { module: module.name, error: error instanceof Error ? error : String(error) });
+    }
+  }
+}
+
+export function startServer(ctx: AppContext, app: Express, modules: readonly ApiModule[] = []): Promise<RunningServer> {
   return new Promise((resolve, reject) => {
     const server = app.listen(ctx.config.port, ctx.config.host);
     server.once("error", reject);
@@ -33,6 +57,7 @@ export function startServer(ctx: AppContext, app: Express): Promise<RunningServe
         store: ctx.store.kind,
         version: ctx.config.version,
       });
+      void startModules(ctx, modules);
       let stopping: Promise<void> | null = null;
       resolve({
         server,
@@ -47,6 +72,7 @@ export function startServer(ctx: AppContext, app: Express): Promise<RunningServe
             const cut = setTimeout(() => server.closeAllConnections(), SHUTDOWN_GRACE_MS);
             cut.unref();
             // Background work first: no new upstream calls while requests drain.
+            await stopModules(ctx, modules);
             ctx.pulse.close();
             ctx.hyperliquid.close();
             await closed;
