@@ -1,4 +1,4 @@
-// Network registry for Elyra. Addresses are pinned from on-chain reads
+// Network registry for Elyia. Addresses are pinned from on-chain reads
 // (Conduit chain info, rollup getters, gateway router lookups).
 
 export type NetworkKey =
@@ -12,7 +12,7 @@ export type NetworkKey =
 export type NetworkVm = "evm" | "hypercore";
 export type NetworkFamily = "elysium" | "hyperevm" | "hypercore";
 export type NetworkEnvironment = "testnet" | "mainnet";
-/** live: usable now. prelaunch: deployed or announced but not public; Elyra keeps it read-only. */
+/** live: usable now. prelaunch: deployed or announced but not public; Elyia keeps it read-only. */
 export type NetworkStatus = "live" | "prelaunch";
 
 export interface NativeCurrency {
@@ -32,7 +32,10 @@ export interface ElysiumBridgeContracts {
     readonly l1GatewayRouter: string | null;
     readonly l1StandardGateway: string | null;
     readonly l1WhypeGateway: string | null;
+    /** Kinetiq mirror gateway for Elysium-native tokens (ElysiumMirrorFactory). */
     readonly l1CustomGateway: string | null;
+    /** Stock Arbitrum custom gateway (custom-registered HyperEVM tokens). */
+    readonly l1StandardCustomGateway: string | null;
     readonly mirrorFactory: string | null;
   };
   /** Elysium (child chain) side. */
@@ -40,7 +43,10 @@ export interface ElysiumBridgeContracts {
     readonly l2GatewayRouter: string | null;
     readonly l2StandardGateway: string | null;
     readonly l2WhypeGateway: string | null;
+    /** Kinetiq mirror gateway for Elysium-native tokens (ElysiumBridgeFactory). */
     readonly l2CustomGateway: string | null;
+    /** Stock Arbitrum custom gateway. */
+    readonly l2StandardCustomGateway: string | null;
     readonly bridgeFactory: string | null;
   };
   /** Rollup confirm period in parent blocks, as read on-chain. Read it live before showing ETAs. */
@@ -113,9 +119,9 @@ const ELYSIUM_TESTNET: EvmNetwork = {
   rpcUrls: [
     "https://testnet-rpc.elysium.kinetiq.xyz",
     "https://rpc-elysium-testnet.t.conduit.xyz",
-    "https://elysium-testnet-rpc.hypedexer.com",
   ],
-  wsUrls: ["wss://elysium-testnet-rpc.hypedexer.com"],
+  // No keyless WebSocket RPC: live blocks come from polling or the Conduit sequencer feed.
+  wsUrls: [],
   explorer: {
     name: "Elysium Testnet Explorer",
     url: "https://test-explorer.elysium.kinetiq.xyz",
@@ -141,6 +147,7 @@ const ELYSIUM_TESTNET: EvmNetwork = {
       l1StandardGateway: "0x792487eF5E423104bec94e8c58E814e5E0450cEA",
       l1WhypeGateway: "0x494A1879e15739778b2059623C70e9C99A43870E",
       l1CustomGateway: "0x08922Faa84aC2a54aa3cFD3725b03ca256F52Da2",
+      l1StandardCustomGateway: "0x595465c1151F0306EF5CF1F1634E2Fd2fcE523d5",
       mirrorFactory: "0xcaDb9986F3727177d48FA07294E1730f9D19290b",
     },
     child: {
@@ -148,6 +155,7 @@ const ELYSIUM_TESTNET: EvmNetwork = {
       l2StandardGateway: "0x30545d8b24185DdFe83E75aB6939f867b664e2E1",
       l2WhypeGateway: "0x1F8be963E0cf8315Fc703cF415bA642DfcAEeDEf",
       l2CustomGateway: "0x7255150a0340852Fe4B4B5657C5AcE6c09a4F959",
+      l2StandardCustomGateway: "0xffBC87A98926ef35b781FaBf7028Cfa37896F5bc",
       bridgeFactory: "0xb94A38a4aC46970559E89E566f2486a3Fc56BE5a",
     },
     confirmPeriodBlocks: 10,
@@ -171,10 +179,13 @@ const ELYSIUM_MAINNET: EvmNetwork = {
   blockTimeMs: 115,
   logRangeLimit: 2000,
   parent: "hyperevm-mainnet",
+  // Token bridge read from L1AtomicTokenBridgeCreator 0x90906b0debd4c6f6ea13edb8adea63fb8b055afe
+  // (inboxToL1Deployment / inboxToL2Deployment of the mainnet inbox) on HyperEVM, and checked on 99901
+  // against the L1-confirmed assertion. Kinetiq replaced the testnet set once; re-check on launch day.
   contracts: {
-    multicall3: null,
-    permit2: null,
-    wrappedNative: null,
+    multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    wrappedNative: "0xbA876237B0F021A6c6D852d6c26E107997cC5E81",
   },
   elysiumBridge: {
     parent: {
@@ -183,17 +194,19 @@ const ELYSIUM_MAINNET: EvmNetwork = {
       inbox: "0xce59f8B65ad41C9DAE4c07A0571a39824bD92cff",
       sequencerInbox: "0x7f3Ff53aecB87261206ad3bDc27A88b6D8420fa6",
       outbox: "0xeC6B106DfA14428FE5Eec2a4065a7be599f02728",
-      l1GatewayRouter: null,
-      l1StandardGateway: null,
-      l1WhypeGateway: null,
+      l1GatewayRouter: "0x5D24f760DD7664b4214bDD4B04a3f62B9edd68c0",
+      l1StandardGateway: "0xd97B30dE0bA0C2eAeE942afce77530e06c5F122c",
+      l1WhypeGateway: "0x4ADeEcE99eDfa453e40E79FfD2F179008F5a91EB",
       l1CustomGateway: null,
+      l1StandardCustomGateway: "0xF735A40938BEfC34CDE27049f7F70780bD460748",
       mirrorFactory: null,
     },
     child: {
-      l2GatewayRouter: null,
-      l2StandardGateway: null,
-      l2WhypeGateway: null,
+      l2GatewayRouter: "0x61EbbC3A29f1970aF2Ce862bA9c5364832E14d17",
+      l2StandardGateway: "0x5DC84e4Cb0F9082246E92a5585C5395592B1aF1f",
+      l2WhypeGateway: "0xb916e67307ad52955d37B6C123CF1A79c10855B6",
       l2CustomGateway: null,
+      l2StandardCustomGateway: "0x8c0A6E1A8126f880D0DaD46F7b7106Ee48397432",
       bridgeFactory: null,
     },
     confirmPeriodBlocks: 483840,
@@ -219,7 +232,7 @@ const HYPEREVM_TESTNET: EvmNetwork = {
   parent: null,
   contracts: {
     multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
-    permit2: null,
+    permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
     wrappedNative: "0x5555555555555555555555555555555555555555",
   },
   elysiumBridge: null,
@@ -244,7 +257,7 @@ const HYPEREVM_MAINNET: EvmNetwork = {
   parent: null,
   contracts: {
     multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
-    permit2: null,
+    permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
     wrappedNative: "0x5555555555555555555555555555555555555555",
   },
   elysiumBridge: null,
@@ -342,7 +355,7 @@ export function networksFor(environment: NetworkEnvironment): Network[] {
   return Object.values(NETWORKS).filter((network) => network.environment === environment);
 }
 
-/** The three layers of one environment, in the order Elyra shows them. */
+/** The three layers of one environment, in the order Elyia shows them. */
 export function layersFor(environment: NetworkEnvironment): { elysium: EvmNetwork; hyperevm: EvmNetwork; hypercore: HyperCoreNetwork } {
   return environment === "testnet"
     ? { elysium: ELYSIUM_TESTNET, hyperevm: HYPEREVM_TESTNET, hypercore: HYPERCORE_TESTNET }
@@ -367,4 +380,64 @@ export function explorerAddressUrl(key: NetworkKey, address: string): string | n
   const network = NETWORKS[key];
   if (network.vm === "hypercore") return `${network.appUrl}/explorer/address/${address}`;
   return network.explorer ? `${network.explorer.url}${network.explorer.addressPath}${address}` : null;
+}
+
+/* ------------------------------------------------------------------ lookups */
+
+/**
+ * Words people use for a layer. They resolve inside one environment only, so
+ * "elysium" never silently means mainnet while Elyia runs in testnet mode.
+ */
+export const NETWORK_ALIASES: Readonly<Record<string, NetworkFamily>> = Object.freeze({
+  elysium: "elysium",
+  ely: "elysium",
+  hyperevm: "hyperevm",
+  hevm: "hyperevm",
+  evm: "hyperevm",
+  hypercore: "hypercore",
+  core: "hypercore",
+  hl: "hypercore",
+  hyperliquid: "hypercore",
+  perps: "hypercore",
+});
+
+/** The network with this CAIP-2 id (`eip155:99801`, `hypercore:testnet`), or null. */
+export function networkByCaip2(caip2: string): Network | null {
+  for (const network of Object.values(NETWORKS)) {
+    if (network.caip2 === caip2) return network;
+  }
+  return null;
+}
+
+/**
+ * Resolves a network key, a CAIP-2 id, an EVM chain id (number, decimal or
+ * 0x hex string) or an alias (`elysium`, `core`, ...) within `environment`.
+ * Returns null when nothing matches; never guesses across environments.
+ */
+export function resolveNetwork(value: string | number, environment: NetworkEnvironment = "testnet"): Network | null {
+  if (typeof value === "number") return Number.isSafeInteger(value) ? evmNetworkByChainId(value) : null;
+  const text = value.trim();
+  if (isNetworkKey(text)) return NETWORKS[text];
+  const byCaip = networkByCaip2(text);
+  if (byCaip) return byCaip;
+  if (/^(?:0x[0-9a-fA-F]+|[1-9]\d*)$/u.test(text)) {
+    const chainId = Number(text.startsWith("0x") ? Number.parseInt(text, 16) : text);
+    return Number.isSafeInteger(chainId) ? evmNetworkByChainId(chainId) : null;
+  }
+  const family = NETWORK_ALIASES[text.toLowerCase()];
+  return family ? layersFor(environment)[family] : null;
+}
+
+/** True when both networks belong to the same environment (testnet and mainnet capital never mix). */
+export function sameEnvironment(a: NetworkKey, b: NetworkKey): boolean {
+  return NETWORKS[a].environment === NETWORKS[b].environment;
+}
+
+/**
+ * `signatureChainId` for HyperCore user-signed actions: the wallet's active
+ * chain id as 0x hex (99801 -> "0x185d9", 998 -> "0x3e6").
+ */
+export function signatureChainIdHex(chainId: number): `0x${string}` {
+  if (!Number.isSafeInteger(chainId) || chainId <= 0) throw new Error(`invalid chain id ${chainId}`);
+  return `0x${chainId.toString(16)}`;
 }

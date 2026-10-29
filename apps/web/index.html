@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <title>Elyia — the lyre of Elysium</title>
+    <meta
+      name="description"
+      content="Elyia is the command deck for Elysium: say what you want in one sentence, trade HyperCore perps, swap, earn and bridge across Elysium and HyperEVM, see one portfolio across all three layers and watch Elysium's 115 ms blocks live. Non-custodial, testnet first."
+    />
+    <meta name="theme-color" content="#07060D" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#FBF8F2" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Elyia" />
+    <meta property="og:title" content="Elyia — the lyre of Elysium" />
+    <meta
+      property="og:description"
+      content="Speak, and Elysium answers: one sentence becomes verified, wallet-signed steps across Elysium, HyperEVM and HyperCore."
+    />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!--
+      Pre-paint: apply the stored theme and motion choice (src/app/state/uiPrefs.ts,
+      key "elyia-ui") before any script module runs, so the first frame is already
+      in the visitor's theme. The ui store takes over once the entry loads.
+    -->
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var theme = "system";
+        var motion = "on";
+        try {
+          var raw = localStorage.getItem("elyia-ui");
+          var stored = raw ? JSON.parse(raw) : null;
+          var state = stored && stored.state ? stored.state : null;
+          if (state && (state.theme === "dark" || state.theme === "light" || state.theme === "system")) theme = state.theme;
+          if (state && state.motion === "off") motion = "off";
+        } catch (error) {
+          theme = "system";
+        }
+        if (theme === "system") {
+          try {
+            theme = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+          } catch (error) {
+            theme = "dark";
+          }
+        }
+        root.setAttribute("data-theme", theme);
+        root.style.colorScheme = theme;
+        if (motion === "off") root.setAttribute("data-motion", "off");
+      })();
+    </script>
+    <style>
+      html { background-color: #07060d; }
+      html[data-theme="light"] { background-color: #fbf8f2; }
+    </style>
+    <!--
+      Latin web fonts, fetched while the entry loads so headings paint in their
+      final face. The build fingerprints these hrefs to the same files the
+      @fontsource stylesheets reference (src/styles/fonts.css); the dev server
+      cannot serve them at these paths, so nothing is preloaded under it.
+    -->
+    <template id="el-font-preloads">
+      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2" />
+      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2" />
+      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2" />
+      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2" />
+    </template>
+    <script>
+      (function () {
+        if (document.querySelector('script[src$="/@vite/client"]')) return;
+        var template = document.getElementById("el-font-preloads");
+        var links = template && template.content ? template.content.querySelectorAll("link") : [];
+        for (var i = 0; i < links.length; i += 1) document.head.appendChild(links[i].cloneNode(true));
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>Elyia needs JavaScript to show the live Elysium pulse and to plan and sign intents in your own wallet.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

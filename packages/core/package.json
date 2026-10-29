@@ -1,7 +1,7 @@
 {
-  "name": "@elyra/core",
+  "name": "@elyia/core",
   "version": "0.1.0",
-  "description": "Elyra core: networks, assets, protocol registry, intent graph, policy and HyperCore signing payloads for Elysium, HyperEVM and HyperCore.",
+  "description": "Elyia core: networks, assets, protocol registry, intent graph, policy and HyperCore signing payloads for Elysium, HyperEVM and HyperCore.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,

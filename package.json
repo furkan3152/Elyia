@@ -1,10 +1,10 @@
 {
-  "name": "elyra",
+  "name": "elyia",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "Elyra: the intent, trading and portfolio deck for Elysium, HyperEVM and HyperCore.",
+  "description": "Elyia: the intent, trading and portfolio deck for Elysium, HyperEVM and HyperCore.",
   "engines": {
     "node": ">=22.12"
   },
@@ -15,17 +15,17 @@
   ],
   "scripts": {
     "postinstall": "node tooling/postinstall-packages.mjs",
-    "build:packages": "npm run build -w @elyra/core",
-    "test:packages": "npm test -w @elyra/core",
+    "build:packages": "npm run build -w @elyia/core",
+    "test:packages": "npm test -w @elyia/core",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "dev:api": "npm run dev -w @elyra/api",
-    "dev:web": "npm run dev -w @elyra/web",
-    "build:api": "npm run build:packages && npm run build -w @elyra/api",
-    "build:web": "npm run build:packages && npm run build -w @elyra/web",
-    "test:api": "npm test -w @elyra/api",
-    "test:web": "npm test -w @elyra/web",
-    "verify": "npm run build:packages && npm run test:packages && npm run lint && npm run typecheck && npm run test:api && npm run test:web && npm run build:web && npm run build -w @elyra/api"
+    "dev:api": "npm run dev -w @elyia/api",
+    "dev:web": "npm run dev -w @elyia/web",
+    "build:api": "npm run build:packages && npm run build -w @elyia/api",
+    "build:web": "npm run build:packages && npm run build -w @elyia/web",
+    "test:api": "npm test -w @elyia/api",
+    "test:web": "npm test -w @elyia/web",
+    "verify": "npm run build:packages && npm run test:packages && npm run lint && npm run typecheck && npm run test:api && npm run test:web && npm run build:web && npm run build -w @elyia/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,0 +1,157 @@
+/*
+ * Elyia design tokens — "Lumine Purpureo".
+ * Dark "Night of the fields" is the default; light "Dawn" applies with
+ * html[data-theme="light"] (set pre-paint by index.html and kept by the ui
+ * store) or, without a stored choice and without scripts, from
+ * prefers-color-scheme.
+ *
+ * Colours used with alpha are RGB channels (`rgb(var(--violet) / 0.2)`);
+ * Tailwind maps them in tailwind.config.js. A few light values are a touch
+ * deeper than the original palette so 12 px text keeps WCAG AA (4.5:1) on
+ * both page and panel backgrounds: gold, mint, rose, sky and text-2.
+ */
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-0: 7 6 13; /* #07060D page */
+  --bg-1: 14 12 24; /* #0E0C18 panel */
+  --bg-2: 22 19 40; /* #161328 raised */
+  --bg-3: 31 27 56; /* #1F1B38 hover on raised */
+  --line: rgba(196, 181, 253, 0.11);
+  --line-strong: rgba(196, 181, 253, 0.22);
+
+  --text-0: 244 241 255; /* #F4F1FF */
+  --text-1: 185 179 214; /* #B9B3D6 */
+  --text-2: 124 118 153; /* #7C7699 */
+
+  --violet: 139 92 246; /* #8B5CF6 purple light, brand */
+  --violet-glow: 167 139 250; /* #A78BFA */
+  --violet-soft: 201 184 255; /* #C9B8FF italic display */
+  --violet-fill: 139 92 246;
+  --on-violet: 255 255 255;
+
+  --gold: 245 198 107; /* #F5C66B their own sun */
+  --gold-deep: 224 169 59; /* #E0A93B */
+  --gold-fill: 245 198 107;
+  --on-gold: 28 23 48;
+
+  --mint: 94 242 196; /* #5EF2C4 up / long */
+  --mint-fill: 94 242 196;
+  --on-mint: 4 36 26;
+
+  --rose: 255 107 139; /* #FF6B8B down / short */
+  --rose-fill: 255 107 139;
+  --on-rose: 43 7 18;
+
+  --sky: 124 196 255; /* #7CC4FF info */
+
+  --glass: rgba(14, 12, 24, 0.72);
+  --glass-strong: rgba(14, 12, 24, 0.88);
+  --overlay: rgba(4, 3, 9, 0.66);
+  --scrollbar: rgba(196, 181, 253, 0.18);
+  --aurora-violet: rgba(139, 92, 246, 0.3);
+  --aurora-gold: rgba(245, 198, 107, 0.12);
+  --aurora-sky: rgba(124, 196, 255, 0.06);
+
+  --ray: 245 198 107; /* Sun rays */
+  --lyre-frame: 245 198 107;
+  --lyre-base: 224 169 59;
+  --shadow-strong: rgba(0, 0, 0, 0.55);
+  --shadow-soft: rgba(0, 0, 0, 0.45);
+
+  --ease-pluck: cubic-bezier(0.2, 0.9, 0.1, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --dur: 220ms;
+  --dur-slow: 600ms;
+
+  --rail-w: 88px;
+  --rail-w-expanded: 232px;
+  --topbar-h: 64px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --bg-0: 251 248 242;
+    --bg-1: 255 255 255;
+    --bg-2: 243 238 228;
+    --bg-3: 234 227 214;
+    --line: rgba(28, 23, 48, 0.1);
+    --line-strong: rgba(28, 23, 48, 0.18);
+    --text-0: 28 23 48;
+    --text-1: 74 67 102;
+    --text-2: 110 103 135;
+    --violet: 109 63 224;
+    --violet-glow: 139 92 246;
+    --violet-soft: 91 47 208;
+    --violet-fill: 109 63 224;
+    --on-violet: 255 255 255;
+    --gold: 143 100 16;
+    --gold-deep: 122 82 10;
+    --gold-fill: 245 198 107;
+    --on-gold: 28 23 48;
+    --mint: 8 120 92;
+    --mint-fill: 10 127 97;
+    --on-mint: 255 255 255;
+    --rose: 199 50 90;
+    --rose-fill: 199 50 90;
+    --on-rose: 255 255 255;
+    --sky: 31 108 192;
+    --glass: rgba(255, 255, 255, 0.78);
+    --glass-strong: rgba(255, 255, 255, 0.92);
+    --overlay: rgba(28, 23, 48, 0.36);
+    --scrollbar: rgba(28, 23, 48, 0.18);
+    --aurora-violet: rgba(139, 92, 246, 0.16);
+    --aurora-gold: rgba(245, 198, 107, 0.22);
+    --aurora-sky: rgba(124, 196, 255, 0.1);
+    --ray: 200 146 40;
+    --lyre-frame: 205 152 50;
+    --lyre-base: 168 116 24;
+    --shadow-strong: rgba(28, 23, 48, 0.12);
+    --shadow-soft: rgba(28, 23, 48, 0.08);
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-0: 251 248 242; /* #FBF8F2 */
+  --bg-1: 255 255 255;
+  --bg-2: 243 238 228; /* #F3EEE4 */
+  --bg-3: 234 227 214;
+  --line: rgba(28, 23, 48, 0.1);
+  --line-strong: rgba(28, 23, 48, 0.18);
+  --text-0: 28 23 48; /* #1C1730 */
+  --text-1: 74 67 102; /* #4A4366 */
+  --text-2: 110 103 135; /* #6E6787 */
+  --violet: 109 63 224; /* #6D3FE0 */
+  --violet-glow: 139 92 246;
+  --violet-soft: 91 47 208;
+  --violet-fill: 109 63 224;
+  --on-violet: 255 255 255;
+  --gold: 143 100 16; /* #8F6410 text; fills keep the sun gold */
+  --gold-deep: 122 82 10;
+  --gold-fill: 245 198 107;
+  --on-gold: 28 23 48;
+  --mint: 8 120 92; /* #08785C */
+  --mint-fill: 10 127 97;
+  --on-mint: 255 255 255;
+  --rose: 199 50 90; /* #C7325A */
+  --rose-fill: 199 50 90;
+  --on-rose: 255 255 255;
+  --sky: 31 108 192; /* #1F6CC0 */
+  --glass: rgba(255, 255, 255, 0.78);
+  --glass-strong: rgba(255, 255, 255, 0.92);
+  --overlay: rgba(28, 23, 48, 0.36);
+  --scrollbar: rgba(28, 23, 48, 0.18);
+  --aurora-violet: rgba(139, 92, 246, 0.16);
+  --aurora-gold: rgba(245, 198, 107, 0.22);
+  --aurora-sky: rgba(124, 196, 255, 0.1);
+  --ray: 200 146 40;
+  --lyre-frame: 205 152 50;
+  --lyre-base: 168 116 24;
+  --shadow-strong: rgba(28, 23, 48, 0.12);
+  --shadow-soft: rgba(28, 23, 48, 0.08);
+}

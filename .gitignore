@@ -18,7 +18,7 @@ vite.config.ts.timestamp-*
 vite.config.js.timestamp-*
 
 # Local runtime state
-.elyra/
+.elyia/
 apps/api/data/
 .cache/
 

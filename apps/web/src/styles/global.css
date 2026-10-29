@@ -1,0 +1,302 @@
+@import "./fonts.css";
+@import "./tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: rgb(var(--bg-0));
+    scrollbar-color: var(--scrollbar) transparent;
+    scrollbar-width: thin;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: rgb(var(--bg-0));
+    color: rgb(var(--text-0));
+    font-family: theme("fontFamily.sans");
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  ::selection {
+    background-color: rgb(var(--violet) / 0.35);
+    color: rgb(var(--text-0));
+  }
+
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--violet-glow));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Inputs draw their own focus treatment on the field wrapper. */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: theme("fontFamily.mono");
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@layer components {
+  /* Eyebrow: mono, tracked caps, gold. The section label of every surface. */
+  .eyebrow {
+    font-family: theme("fontFamily.mono");
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgb(var(--gold));
+  }
+
+  .label-caps {
+    font-family: theme("fontFamily.mono");
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(var(--text-2));
+  }
+
+  .glass {
+    background-color: var(--glass);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
+
+  /* Poetic display: Instrument Serif, italic accent in violet-soft. */
+  .display-italic {
+    font-family: theme("fontFamily.display");
+    font-style: italic;
+    color: rgb(var(--violet-soft));
+  }
+}
+
+@layer utilities {
+  /* Every number in Elyia is tabular. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 0;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Reveal (src/motion/Reveal.tsx): only elements that start below the fold wait. */
+.el-reveal[data-reveal="waiting"] {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+}
+.el-reveal[data-reveal="shown"] {
+  animation: el-rise-in 700ms var(--ease-pluck) both;
+  animation-delay: var(--el-reveal-delay, 0ms);
+}
+@keyframes el-rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Loops (`.el-loop`) pause while the tab is hidden; the router sets html[data-hidden]. */
+html[data-hidden] .el-loop,
+html[data-hidden] .el-loop * {
+  animation-play-state: paused !important;
+}
+
+/*
+ * Reduced motion: the operating system setting or Elyia's own Motion switch
+ * (html[data-motion="off"]). Canvas visuals stop their loops in code
+ * (src/motion/useReducedMotion.ts); CSS animations and transitions stop here.
+ */
+html[data-motion="off"] *,
+html[data-motion="off"] *::before,
+html[data-motion="off"] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html[data-motion="off"]::view-transition-group(*),
+html[data-motion="off"]::view-transition-old(*),
+html[data-motion="off"]::view-transition-new(*) {
+  animation: none !important;
+}
+
+/* Theme switch: the new theme grows as a circle from the toggle (src/motion/viewTransition.ts). */
+html[data-el-vt="theme"]::view-transition-old(root),
+html[data-el-vt="theme"]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-el-vt="theme"]::view-transition-new(root) {
+  animation: el-theme-reveal 520ms var(--ease-pluck) both;
+}
+@keyframes el-theme-reveal {
+  from {
+    clip-path: circle(0 at var(--el-vt-x, 50%) var(--el-vt-y, 0));
+  }
+  to {
+    clip-path: circle(150vmax at var(--el-vt-x, 50%) var(--el-vt-y, 0));
+  }
+}
+
+/* Route change cross-fade between marketing pages. */
+html[data-el-vt="route"]::view-transition-old(root) {
+  animation: 160ms ease-out both el-fade-out;
+}
+html[data-el-vt="route"]::view-transition-new(root) {
+  animation: 240ms var(--ease-pluck) both el-fade-in;
+}
+@keyframes el-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes el-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Range input (Slider): native control, Elyia skin. */
+.el-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  width: 100%;
+  height: 28px;
+  cursor: pointer;
+}
+.el-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    rgb(var(--violet-glow)) 0%,
+    rgb(var(--violet-glow)) var(--el-range-fill, 0%),
+    rgb(var(--text-2) / 0.28) var(--el-range-fill, 0%),
+    rgb(var(--text-2) / 0.28) 100%
+  );
+}
+.el-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgb(var(--text-2) / 0.28);
+}
+.el-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: rgb(var(--violet-glow));
+}
+.el-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 999px;
+  background: rgb(var(--text-0));
+  border: 3px solid rgb(var(--violet));
+  box-shadow: 0 0 0 4px rgb(var(--violet) / 0.18);
+  transition: transform var(--dur-fast) var(--ease-pluck);
+}
+.el-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgb(var(--text-0));
+  border: 3px solid rgb(var(--violet));
+  box-shadow: 0 0 0 4px rgb(var(--violet) / 0.18);
+}
+.el-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+.el-range:focus-visible {
+  outline: none;
+}
+.el-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px rgb(var(--bg-0)), 0 0 0 4px rgb(var(--violet-glow));
+}
+.el-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px rgb(var(--bg-0)), 0 0 0 4px rgb(var(--violet-glow));
+}
+.el-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

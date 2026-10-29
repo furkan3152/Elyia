@@ -6,13 +6,13 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-if (process.env.ELYRA_SKIP_POSTINSTALL === "1") process.exit(0);
+if (process.env.ELYIA_SKIP_POSTINSTALL === "1") process.exit(0);
 if (!existsSync(join(root, "node_modules", "typescript"))) {
-  console.log("[elyra] typescript not installed; skipping package build");
+  console.log("[elyia] typescript not installed; skipping package build");
   process.exit(0);
 }
 for (const pkg of ["packages/core"]) {
   if (!existsSync(join(root, pkg, "package.json"))) continue;
-  console.log(`[elyra] building ${pkg}`);
+  console.log(`[elyia] building ${pkg}`);
   execSync("npm run build", { cwd: join(root, pkg), stdio: "inherit" });
 }

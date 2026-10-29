@@ -1,0 +1,10 @@
+/*
+ * Web fonts (all OFL-1.1, self-hosted through @fontsource). Instrument Serif
+ * ships Latin only: it sets display headings, never data. Inter and JetBrains
+ * Mono load every subset lazily through unicode-range. index.html preloads the
+ * Latin files of the same packages.
+ */
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
+@import "@fontsource/instrument-serif/latin-400.css";
+@import "@fontsource/instrument-serif/latin-400-italic.css";
