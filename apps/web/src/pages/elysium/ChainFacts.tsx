@@ -17,6 +17,8 @@ const FACTS: ReadonlyArray<readonly [string, string]> = [
   ["Block gas limit", "32M"],
   ["Retryable lifetime", formatDuration(ELYSIUM_RETRYABLE_LIFETIME_SECONDS)],
   ["Confirm period", bridge?.confirmPeriodBlocks ? `${bridge.confirmPeriodBlocks} HyperEVM blocks` : "read on-chain"],
+  ["Mainnet descent", "≈ 5.5 days (483,840 HyperEVM blocks), then claim"],
+  ["Ascent", "deposit on HyperEVM, a retryable lands on Elysium"],
 ];
 
 interface Contract {
@@ -50,24 +52,24 @@ const CONTRACTS = contracts();
 /** Elysium testnet facts, from @elyia/core's verified registry and the measured chain. */
 export function ChainFacts() {
   return (
-    <dl className="grid gap-x-8 sm:grid-cols-2">
+    <dl className="flex flex-col">
       {FACTS.map(([label, value]) => (
-        <div key={label} className="flex items-baseline justify-between gap-4 border-b border-line py-2 text-[13px]">
-          <dt className="text-text-2">{label}</dt>
-          <dd className="text-right text-text-0">{value}</dd>
+        <div key={label} className="flex items-baseline justify-between gap-4 border-b border-rule/20 py-2 text-[14px]">
+          <dt className="text-ink-2">{label}</dt>
+          <dd className="tnum text-right font-mono text-[13px] text-ink">{value}</dd>
         </div>
       ))}
     </dl>
   );
 }
 
-/** The canonical bridge contracts on both sides, with explorer links (HyperEVM sky, Elysium gold). */
+/** The canonical bridge contracts on both sides, with explorer links (HyperEVM and Elysium sides). */
 export function BridgeContracts() {
   return (
     <ul className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
       {CONTRACTS.map((contract) => (
         <li key={`${contract.network}-${contract.label}`} className="flex min-w-0 items-center justify-between gap-2">
-          <span className="flex min-w-0 items-center gap-2 truncate text-[13px] text-text-1">
+          <span className="flex min-w-0 items-center gap-2 truncate text-[14px] text-ink-2">
             <NetworkBadge network={contract.network} iconOnly />
             <span className="truncate">{contract.label}</span>
           </span>

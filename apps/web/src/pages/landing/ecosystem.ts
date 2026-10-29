@@ -1,3 +1,4 @@
+/** Kept only for src/visuals/constellation/__tests__ (retired visuals); delete together with src/visuals. The /elysium registry lives in pages/elysium/registry.ts. */
 /** Ecosystem chips for the landing page, from @elyia/core's protocol registry (pure). */
 import type { DeploymentStatus, ProtocolDescriptor } from "@elyia/core/protocols";
 
