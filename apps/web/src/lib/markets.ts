@@ -5,7 +5,6 @@
  * When nothing usable arrives the caller shows a deterministic demo set and
  * says so ("demo").
  */
-import type { LyreString } from "../visuals/lyre/Lyre";
 import { formatChangeCompact } from "./format";
 
 export interface MarketSummary {
@@ -81,6 +80,16 @@ export function hottestMarkets(markets: readonly MarketSummary[], count = 7): Ma
  * size (|change| of 8% or more hums fully), thickness by volume (square root,
  * so the biggest market does not dwarf the rest).
  */
+/** A market as a labelled line (label, change, amplitude, tint, thickness); was the retired Lyre's string. */
+export interface LyreString {
+  readonly id: string;
+  readonly label: string;
+  readonly sublabel?: string;
+  readonly amplitude: number;
+  readonly tint: "mint" | "rose" | "violet" | "gold";
+  readonly thickness: number;
+}
+
 export function marketStrings(markets: readonly MarketSummary[]): LyreString[] {
   const maxVolume = Math.max(1, ...markets.map((market) => market.volumeUsd));
   return markets.map((market) => {
