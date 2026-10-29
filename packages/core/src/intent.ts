@@ -127,7 +127,30 @@ export interface StepSettlement {
   readonly trackingId?: string;
   /** Orbit withdrawals: when the HyperEVM claim opens (ISO 8601). */
   readonly claimableAt?: string;
+  /** Where the settlement stands (engine-maintained, display only). */
+  readonly state?: SettlementState;
+  /** Retryable tickets: when the ticket expires (ISO 8601); a redeem must land before it. */
+  readonly deadline?: string;
 }
+
+/**
+ * - queued: an Orbit message waits for the sequencer to read it;
+ * - ticket-created / needs-redeem / redeemed / expired: retryable ticket lifecycle on Elysium;
+ * - unconfirmed / claimable / executed: an L2->L1 message waits for its assertion, can be claimed, was claimed;
+ * - resting / filling: a HyperCore order on the book; crediting: a link transfer on its way.
+ */
+export type SettlementState =
+  | "queued"
+  | "ticket-created"
+  | "needs-redeem"
+  | "redeemed"
+  | "expired"
+  | "unconfirmed"
+  | "claimable"
+  | "executed"
+  | "resting"
+  | "filling"
+  | "crediting";
 
 /** Plan-time snapshot of a HyperCore order. Verification compares against it, never against live markets. */
 export interface OrderSnapshot {
@@ -151,6 +174,8 @@ export interface OrderSnapshot {
   readonly leverage?: { readonly value: number; readonly mode: "cross" | "isolated" };
   /** sz x limitPx in USD (decimal string); null when not priced. */
   readonly notionalUsd?: string | null;
+  /** `normalTpsl` grouping: the reduce-only TP/SL trigger orders sent in the same action as this entry. */
+  readonly children?: readonly OrderSnapshot[];
 }
 
 export interface TwapSnapshot {
@@ -170,6 +195,16 @@ export interface CancelSnapshot {
   readonly oid?: number;
   readonly cloid?: Cloid;
   readonly twapId?: number;
+  /** scheduleCancel (dead man's switch): cancel every open order at `time` (UTC ms), or clear it when null. */
+  readonly schedule?: { readonly time: number | null };
+}
+
+/** Isolated margin added (positive) or removed (negative) on a perp position. */
+export interface MarginSnapshot {
+  readonly market: string;
+  readonly assetIndex: number;
+  /** Micro-USD, as `updateIsolatedMargin.ntli`. */
+  readonly ntli: number;
 }
 
 export interface LeverageSnapshot {
@@ -217,20 +252,54 @@ export interface StepFailure {
   readonly review?: boolean;
 }
 
+/** One request of a prepared payload as recorded on the step (enough to attribute HyperCore evidence later). */
+export interface PreparedRequestRecord {
+  readonly vm: "evm" | "hypercore";
+  readonly network: NetworkKey;
+  readonly kind?: "user-signed" | "l1-action";
+  readonly to?: string;
+  readonly actionType?: string;
+  readonly description: string;
+  /** HyperCore: the action nonce (unix ms). */
+  readonly nonce?: string;
+  /** HyperCore L1: the agent expected to sign and the action's expiry (unix ms). */
+  readonly agent?: EvmAddress;
+  readonly expiresAfter?: number;
+  /** HyperCore orders: the cloids of this request, entry first. */
+  readonly cloids?: readonly Cloid[];
+  /** HyperCore orders: the order snapshots as prepared (prices and sizes of this payload). */
+  readonly orders?: readonly OrderSnapshot[];
+  /** HyperCore user-signed: the signed message (destination, amount, token, nonce...). */
+  readonly message?: Readonly<Record<string, string | number | boolean>>;
+}
+
 /** What the signer was asked to sign for a step (recorded at prepare). */
 export interface PreparedStepRecord {
   readonly quoteBinding: Sha256Digest;
   readonly preparedAt: string;
   /** Unix seconds after which the payload must be prepared again. */
   readonly expiresAt: number;
-  readonly requests: readonly {
-    readonly vm: "evm" | "hypercore";
-    readonly network: NetworkKey;
-    readonly kind?: "user-signed" | "l1-action";
-    readonly to?: string;
-    readonly actionType?: string;
-    readonly description: string;
-  }[];
+  readonly requests: readonly PreparedRequestRecord[];
+  /** Readings taken at prepare that later verification compares against (balances before a credit). */
+  readonly observed?: Readonly<Record<string, string>>;
+  /** The guaranteed output of this payload (base units), when it has one. */
+  readonly floor?: string;
+}
+
+/**
+ * The plan-time route of a step: everything `prepare` must keep (venue,
+ * variant, fee tier, path) and the price floor every prepare is held to.
+ * Written by the planner; prepare never searches for another route.
+ */
+export interface StepRoute {
+  /** Adapter route variant (e.g. `eth-deposit`, `erc20-withdraw`, `v3:20000`). */
+  readonly variant: string;
+  readonly slippageBps: number;
+  /** Planned input (base units of the first input). */
+  readonly plannedInput?: string;
+  /** Planned guaranteed output (base units of the first output). */
+  readonly plannedMinimum?: string;
+  readonly params?: Readonly<Record<string, string | number | boolean>>;
 }
 
 export interface IntentStep {
@@ -255,8 +324,11 @@ export interface IntentStep {
   readonly twap?: TwapSnapshot;
   readonly cancel?: CancelSnapshot;
   readonly leverage?: LeverageSnapshot;
+  readonly margin?: MarginSnapshot;
   readonly agent?: AgentSnapshot;
   readonly funding?: StepFunding;
+  /** Plan-time route and price floor (see StepRoute). */
+  readonly route?: StepRoute;
   /** Value paid on top of the inputs (retryable submission fees, builder fees). */
   readonly extraCosts?: readonly StepAmount[];
   /** Estimated network fees in USD (decimal string); null = unknown. */
@@ -265,8 +337,12 @@ export interface IntentStep {
   readonly evidence: readonly StepEvidence[];
   readonly warnings?: readonly string[];
   readonly prepared?: PreparedStepRecord;
+  /** Earlier prepares of this step, newest last (an older signed payload that lands still verifies). */
+  readonly history?: readonly PreparedStepRecord[];
   /** Submitted references, in order (references.ts). */
   readonly references?: readonly string[];
+  /** When the references were submitted (ISO 8601); verification staleness counts from here. */
+  readonly submittedAt?: string;
   /** Observed outcome once settled (fills, credits). */
   readonly actualOutputs?: readonly StepAmount[];
   readonly failure?: StepFailure;
@@ -330,6 +406,10 @@ export interface HyperCoreL1ActionRequest {
   readonly vaultAddress?: EvmAddress;
   /** keccak(msgpack(action) || nonce || vault || expiresAfter), for display and binding. */
   readonly connectionId: `0x${string}`;
+  /** The phantom-agent EIP-712 payload the agent key signs (domain chain 1337). */
+  readonly typedData?: Eip712TypedData<"Agent">;
+  /** Orders: the client order ids the action carries, entry first. */
+  readonly cloids?: readonly Cloid[];
   readonly description: string;
 }
 

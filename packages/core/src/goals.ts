@@ -155,9 +155,15 @@ export interface AlertGoal {
   readonly cooldownSec?: number;
 }
 
+export const QUERY_KINDS = Object.freeze([
+  "balance", "positions", "pnl", "price", "funding", "orders", "liqPrice", "apy", "portfolio", "safety", "whales", "openInterest", "leverage",
+] as const);
+export type QueryKind = (typeof QUERY_KINDS)[number];
+
 export interface QueryGoal {
-  readonly what: "balance" | "positions" | "pnl" | "price" | "funding" | "orders" | "liqPrice" | "apy" | "portfolio";
-  readonly subject?: MarketSel | AssetSel;
+  readonly what: QueryKind;
+  /** A market, an asset, or an address ("is 0x... safe?"). */
+  readonly subject?: MarketSel | AssetSel | { readonly address: string };
 }
 
 export interface RuleLimits {
@@ -222,15 +228,16 @@ export function validateTradeGoal(goal: TradeGoal, path = "goal"): GoalIssue[] {
   const issues: GoalIssue[] = [];
   if (!TRADE_GOAL_KINDS.includes(goal.kind)) issues.push({ path: `${path}.kind`, message: `Unknown trade kind ${String(goal.kind)}.` });
   if ("coin" in goal.market) checkMarket(goal.market, `${path}.market`, issues);
-  else if (goal.kind !== "close" && goal.kind !== "cancel") issues.push({ path: `${path}.market`, message: "Only close and cancel apply to every market at once." });
+  else if (goal.kind !== "close" && goal.kind !== "cancel" && goal.kind !== "protect") issues.push({ path: `${path}.market`, message: "Only close, cancel and protect apply to every market at once." });
   const size = goal.size;
   if (size) {
     if (size.t === "base" && !positive(size.value)) issues.push({ path: `${path}.size`, message: "Size is a positive decimal." });
     if ((size.t === "notional" || size.t === "margin") && !positive(size.usd)) issues.push({ path: `${path}.size`, message: "USD size is a positive decimal." });
     if (size.t === "portion") checkBps(size.bps, `${path}.size.bps`, issues);
   }
-  if ((goal.kind === "open" || goal.kind === "order" || goal.kind === "twap") && !size) issues.push({ path: `${path}.size`, message: "How much? A size is needed." });
-  if ((goal.kind === "open" || goal.kind === "order" || goal.kind === "twap") && !goal.side) issues.push({ path: `${path}.side`, message: "Long or short (buy or sell)?" });
+  const sized = goal.kind === "open" || goal.kind === "order" || goal.kind === "twap";
+  if (sized && !size) issues.push({ path: `${path}.size`, message: "How much? A size is needed." });
+  if (sized && !goal.side) issues.push({ path: `${path}.side`, message: "Long or short (buy or sell)?" });
   if (goal.leverage && goal.leverage.x !== "max" && (!Number.isInteger(goal.leverage.x) || goal.leverage.x < 1 || goal.leverage.x > 100)) {
     issues.push({ path: `${path}.leverage`, message: "HyperCore leverage is a whole number (1x, 2x, ...)." });
   }
@@ -254,6 +261,11 @@ function checkCondition(condition: Condition, path: string, issues: GoalIssue[])
   if (!CONDITION_METRICS.includes(condition.metric)) issues.push({ path: `${path}.metric`, message: `Unknown metric ${String(condition.metric)}.` });
   if (!CONDITION_OPS.includes(condition.op)) issues.push({ path: `${path}.op`, message: `Unknown comparison ${String(condition.op)}.` });
   if (!SIGNED_DECIMAL.test(condition.value)) issues.push({ path: `${path}.value`, message: "A threshold is a decimal number." });
+}
+
+/** True for trade goals that can only reduce risk (close, reduce, cancel, protect, reduce-only orders). */
+export function isDerisking(goal: TradeGoal): boolean {
+  return goal.kind === "close" || goal.kind === "reduce" || goal.kind === "cancel" || goal.kind === "protect" || goal.reduceOnly === true;
 }
 
 /** Structural checks of an automation rule. Empty when valid. */
@@ -284,9 +296,77 @@ export function validateRule(rule: Rule, path = "rule"): GoalIssue[] {
     if (value !== undefined && !positive(value)) issues.push({ path: `${path}.limits.${key}`, message: `${key} is a positive USD decimal.` });
   }
   if (limits.expiresAt !== undefined && Number.isNaN(Date.parse(limits.expiresAt))) issues.push({ path: `${path}.limits.expiresAt`, message: "expiresAt is an ISO date." });
-  // Unattended trading must be bounded: an agent rule that trades needs a per-run cap.
-  if (rule.execution === "agent" && rule.then.some((item) => item.t === "trade" || item.t === "value") && limits.maxUsdPerRun === undefined) {
+  // Unattended trading must be bounded: an agent rule that adds risk or moves value needs a per-run cap.
+  // De-risking bodies (close, reduce, cancel, protect, reduce-only orders) are never blocked by a cap.
+  if (rule.execution === "agent" && rule.then.some((item) => item.t === "value" || (item.t === "trade" && !isDerisking(item.goal))) && limits.maxUsdPerRun === undefined) {
     issues.push({ path: `${path}.limits.maxUsdPerRun`, message: "An agent rule that moves value needs a per-run USD cap." });
   }
+  return issues;
+}
+
+/* ------------------------------------------------- the language envelope */
+
+/**
+ * One goal as the language layer returns it: a value move, a trade, an
+ * automation rule (schedules, conditions, alerts) or a read-only query.
+ * Only `value` and `trade` items are planned as intents (`GoalItem`); rules
+ * go to the Elysium Agent and queries are answered from market and
+ * portfolio data.
+ */
+export type LanguageGoal =
+  | { readonly t: "value"; readonly goal: ValueGoal }
+  | { readonly t: "trade"; readonly goal: TradeGoal }
+  | { readonly t: "rule"; readonly rule: Rule }
+  | { readonly t: "query"; readonly goal: QueryGoal };
+
+const ADDRESS = /^0x[0-9a-fA-F]{40}$/u;
+
+function checkAmount(amount: AmountSel | undefined, path: string, issues: GoalIssue[]): void {
+  if (!amount) return;
+  if ((amount.t === "exact" || amount.t === "usd") && !positive(amount.value)) issues.push({ path, message: "An amount is a positive decimal." });
+  if (amount.t === "portion") checkBps(amount.bps, `${path}.bps`, issues);
+  if (amount.t === "allBut" && !isDecimalAmount(amount.keep)) issues.push({ path, message: "What to keep is a decimal." });
+}
+
+function checkPlace(place: Place | undefined, path: string, issues: GoalIssue[]): void {
+  if (place?.network !== undefined && !isNetworkKey(place.network)) issues.push({ path: `${path}.network`, message: "Unknown network." });
+}
+
+/** Structural checks of a value goal (kinds, amounts, networks, recipient, chain). Empty when valid. */
+export function validateValueGoal(goal: ValueGoal, path = "goal", index?: number): GoalIssue[] {
+  const issues: GoalIssue[] = [];
+  if (!VALUE_GOAL_KINDS.includes(goal.kind)) issues.push({ path: `${path}.kind`, message: `Unknown value kind ${String(goal.kind)}.` });
+  checkAmount(goal.spend.amount, `${path}.spend.amount`, issues);
+  checkAmount(goal.want.amount, `${path}.want.amount`, issues);
+  checkPlace(goal.spend.from, `${path}.spend.from`, issues);
+  checkPlace(goal.want.at, `${path}.want.at`, issues);
+  if (goal.holder.t === "address" && !ADDRESS.test(goal.holder.value)) issues.push({ path: `${path}.holder`, message: "A recipient is a 0x address." });
+  if (goal.chain && (!Number.isInteger(goal.chain.after) || goal.chain.after < 0 || (index !== undefined && goal.chain.after >= index))) {
+    issues.push({ path: `${path}.chain.after`, message: "A goal can only follow an earlier goal." });
+  }
+  return issues;
+}
+
+/** Structural checks of a read-only query. Empty when valid. */
+export function validateQueryGoal(goal: QueryGoal, path = "goal"): GoalIssue[] {
+  const issues: GoalIssue[] = [];
+  if (!QUERY_KINDS.includes(goal.what)) issues.push({ path: `${path}.what`, message: `Unknown query ${String(goal.what)}.` });
+  const subject = goal.subject;
+  if (subject && "address" in subject && !ADDRESS.test(subject.address)) issues.push({ path: `${path}.subject.address`, message: "An address is 0x and 40 hex digits." });
+  if (subject && "coin" in subject) checkMarket(subject, `${path}.subject`, issues);
+  return issues;
+}
+
+/** Validates the goals of one reading (each by family; chains point backwards). Empty when valid. */
+export function validateLanguageGoals(goals: readonly LanguageGoal[], path = "goals"): GoalIssue[] {
+  const issues: GoalIssue[] = [];
+  goals.forEach((item, index) => {
+    const at = `${path}[${index}]`;
+    if (item.t === "value") issues.push(...validateValueGoal(item.goal, `${at}.goal`, index));
+    else if (item.t === "trade") issues.push(...validateTradeGoal(item.goal, `${at}.goal`));
+    else if (item.t === "rule") issues.push(...validateRule(item.rule, `${at}.rule`));
+    else if (item.t === "query") issues.push(...validateQueryGoal(item.goal, `${at}.goal`));
+    else issues.push({ path: at, message: "Unknown goal family." });
+  });
   return issues;
 }

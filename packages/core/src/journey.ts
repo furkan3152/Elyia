@@ -6,7 +6,7 @@
 import { explorerTxUrl, NETWORKS } from "./networks.js";
 import { deriveIntentStatus, isStepDone, topologicalOrder } from "./lifecycle.js";
 import { parseReference } from "./references.js";
-import type { IntentGraph, IntentStatus, IntentStep, StepAmount, StepStatus } from "./intent.js";
+import type { IntentGraph, IntentStatus, IntentStep, SettlementState, StepAmount, StepStatus } from "./intent.js";
 
 export const JOURNEY_SPEC = "elyia.journey/v1" as const;
 
@@ -28,6 +28,8 @@ export interface JourneyStop {
   readonly eta?: string;
   /** Orbit withdrawals: when the claim opens. */
   readonly claimableAt?: string;
+  /** Where a cross-network leg stands (retryable ticket, outbox message, resting order). */
+  readonly settlementState?: SettlementState;
   readonly explorerUrls: readonly string[];
   readonly failure?: { readonly code: string; readonly message: string };
 }
@@ -102,6 +104,7 @@ export function buildJourney(graph: IntentGraph, now: number = Date.now()): Jour
       ...(signer ? { signer } : {}),
       ...(eta ? { eta } : {}),
       ...(step.settlement?.claimableAt ? { claimableAt: step.settlement.claimableAt } : {}),
+      ...(step.settlement?.state ? { settlementState: step.settlement.state } : {}),
       explorerUrls: explorerUrls(step),
       ...(step.failure ? { failure: { code: step.failure.code, message: step.failure.message } } : {}),
     };

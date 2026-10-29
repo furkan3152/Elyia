@@ -175,7 +175,7 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
             const step = steps[index]!;
             if (step.state !== "settled") return null;
             return (
-              <span key={step.id} className="pointer-events-none absolute" style={{ left: `${((point.x + 10) / PW) * 100}%`, top: `${((point.y + 12) / PH) * 100}%` }}>
+              <span key={step.id} className="pointer-events-none absolute" style={{ left: `${((point.x > PW - 80 ? point.x - 72 : point.x + 10) / PW) * 100}%`, top: `${((point.y + 12) / PH) * 100}%` }}>
                 <HutStamp layer={step.toLayer ?? step.layer} block={step.block} time={step.time} size={56} animate delayMs={500 + index * 160} label={null} />
               </span>
             );
