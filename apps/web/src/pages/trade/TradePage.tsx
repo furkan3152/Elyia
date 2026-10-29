@@ -30,7 +30,7 @@ import { useTerminalUi } from "./terminalUi";
 import { useTradeHotkeys } from "./useTradeHotkeys";
 
 const DEFAULT_MARKET = "BTC";
-const DESKTOP_QUERY = "(min-width: 1024px)";
+const DESKTOP_QUERY = "(min-width: 1180px)";
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u;
 
 const subscribeDesktop = (onChange: () => void) => subscribeMedia(DESKTOP_QUERY, onChange);

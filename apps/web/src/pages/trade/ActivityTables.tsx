@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Coins, History, Hourglass, Receipt, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useState } from "react";
 
 import { cancelTwap } from "../../features/trading/orderBuilders";
@@ -8,11 +8,12 @@ import { infoClient } from "../../lib/hypercore/runtime";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { EmptyState } from "../../ui/EmptyState";
 import { Skeleton } from "../../ui/Skeleton";
+import { WatchAnyone } from "./WatchAnyone";
 import { dateTime, signedUsd } from "./labels";
 import { useTerminal } from "./terminalContext";
 
-const HEAD = "sticky top-0 z-[1] bg-bg-0 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.06em] text-text-2";
-const ROW = "px-4 py-[7px] font-mono text-xs hover:bg-text-0/[0.03]";
+const HEAD = "sticky top-0 z-[1] bg-card px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 border-b-1.5 border-rule/40";
+const ROW = "border-b border-rule/15 px-4 py-[7px] font-mono text-xs hover:bg-paper-2/60";
 
 function Loading() {
   return (
@@ -37,10 +38,10 @@ export function TwapTable() {
   const { feeds, account, now, readOnly, run } = useTerminal();
   const named = useMarketName();
   const [busy, setBusy] = useState<number | null>(null);
-  if (!account) return <EmptyState compact icon={<Hourglass className="h-5 w-5" aria-hidden="true" />} title="Connect to see your TWAPs" />;
+  if (!account) return <EmptyState compact scene="trail" title="No TWAPs on this sheet" description="Connect to see TWAPs slicing your size over time." />;
   if (feeds.twaps === null) return <Loading />;
   if (feeds.twaps.length === 0) {
-    return <EmptyState compact icon={<Hourglass className="h-5 w-5" aria-hidden="true" />} title="No TWAP running" description="A TWAP buys or sells over time in 30-second slices, at most 3% slippage each." example="buy $5k HYPE over 2h" />;
+    return <EmptyState compact scene="trail" title="No TWAP running" description="A TWAP buys or sells over time in 30-second slices, at most 3% slippage each." example="buy $5k HYPE over 2h" />;
   }
   return (
     <div role="table" aria-label="TWAP orders" className="min-w-[560px]">
@@ -67,22 +68,22 @@ export function TwapTable() {
         };
         return (
           <div role="row" key={twap.id} className={cx(TWAP_GRID, ROW)}>
-            <span role="cell" className="text-text-0">{name}</span>
-            <span role="cell" className={twap.isBuy ? "text-mint" : "text-rose"}>{twap.isBuy ? "buy" : "sell"}</span>
-            <span role="cell" className="tnum text-text-1">{formatSz(twap.size, market?.szDecimals ?? 4)}</span>
+            <span role="cell" className="text-ink">{name}</span>
+            <span role="cell" className={twap.isBuy ? "text-up" : "text-down"}>{twap.isBuy ? "▲ buy" : "▼ sell"}</span>
+            <span role="cell" className="tnum text-ink-2">{formatSz(twap.size, market?.szDecimals ?? 4)}</span>
             <span role="cell" className="flex items-center gap-2">
-              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-2">
-                <span className="block h-full rounded-full bg-violet-glow" style={{ width: `${done * 100}%` }} />
+              <span className="h-1.5 flex-1 overflow-hidden bg-ink/10">
+                <span className="block h-full bg-ink" style={{ width: `${done * 100}%` }} />
               </span>
-              <span className="tnum shrink-0 text-text-1">{Math.round(done * 100)}%</span>
+              <span className="tnum shrink-0 text-ink-2">{Math.round(done * 100)}%</span>
             </span>
-            <span role="cell" className="tnum text-text-1">{twap.executed > 0 ? formatPx(twap.executedNotional / twap.executed, market) : "—"}</span>
-            <span role="cell" className="tnum text-text-2">
+            <span role="cell" className="tnum text-ink-2">{twap.executed > 0 ? formatPx(twap.executedNotional / twap.executed, market) : "—"}</span>
+            <span role="cell" className="tnum text-ink-3">
               {Math.floor(left / 60_000)}m {Math.floor((left % 60_000) / 1000)}s / {twap.minutes}m
             </span>
             <span role="cell" className="flex justify-end">
               {!readOnly ? (
-                <button type="button" disabled={busy === twap.id || !market} onClick={() => void cancel()} aria-label={`Cancel TWAP ${twap.id}`} className={cx("inline-flex h-6 w-6 items-center justify-center rounded-md text-text-2 hover:bg-rose/[0.12] hover:text-rose disabled:opacity-40", FOCUS_RING)}>
+                <button type="button" disabled={busy === twap.id || !market} onClick={() => void cancel()} aria-label={`Cancel TWAP ${twap.id}`} className={cx("inline-flex h-6 w-6 items-center justify-center text-ink-3 hover:bg-down hover:text-card disabled:opacity-40", FOCUS_RING)}>
                   <X className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               ) : null}
@@ -100,9 +101,9 @@ const FILL_COMPACT = "grid grid-cols-[minmax(150px,1.6fr)_minmax(80px,1fr)_minma
 export function FillsTable({ compact }: { readonly compact: boolean }) {
   const { feeds, account } = useTerminal();
   const named = useMarketName();
-  if (!account) return <EmptyState compact icon={<Receipt className="h-5 w-5" aria-hidden="true" />} title="Connect to see your fills" />;
+  if (!account) return <EmptyState compact scene="trail" title="No fills on this sheet" description="Connect, or survey any account, to read its fills log." action={<WatchAnyone />} />;
   if (feeds.fills === null) return <Loading />;
-  if (feeds.fills.length === 0) return <EmptyState compact icon={<Receipt className="h-5 w-5" aria-hidden="true" />} title="No fills yet" description="Every fill lands here the moment HyperCore matches it." />;
+  if (feeds.fills.length === 0) return <EmptyState compact scene="trail" title="No fills yet" description="Every fill lands here the moment HyperCore matches it, with the fee and closed PnL." example="buy 0.1 ETH at market" />;
   return (
     <div role="table" aria-label="Fills" className={compact ? "min-w-[440px]" : "min-w-[820px]"}>
       {compact ? (
@@ -131,30 +132,30 @@ export function FillsTable({ compact }: { readonly compact: boolean }) {
             <div role="row" key={`${fill.tid}-${fill.time}`} className={cx(FILL_COMPACT, ROW, "py-1.5")}>
               <span role="cell" className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate">
-                  <span className="text-text-0">{name}</span> <span className={fill.side === "B" ? "text-mint" : "text-rose"}>{fill.dir}</span>
+                  <span className="text-ink">{name}</span> <span className={fill.side === "B" ? "text-up" : "text-down"}>{fill.side === "B" ? "▲" : "▼"} {fill.dir}</span>
                 </span>
-                <span className="tnum text-[11px] text-text-2">
+                <span className="tnum text-[11px] text-ink-3">
                   {dateTime(fill.time)} · fee {Number(fill.fee).toFixed(4)}
                 </span>
               </span>
-              <span role="cell" className="tnum text-text-1">{formatPx(fill.px, market)}</span>
-              <span role="cell" className="tnum text-text-1">{formatSz(fill.sz, market?.szDecimals ?? 4)}</span>
-              <span role="cell" className={cx("tnum", pnl > 0 ? "text-mint" : pnl < 0 ? "text-rose" : "text-text-2")}>{pnl === 0 ? "—" : signedUsd(pnl)}</span>
+              <span role="cell" className="tnum text-ink-2">{formatPx(fill.px, market)}</span>
+              <span role="cell" className="tnum text-ink-2">{formatSz(fill.sz, market?.szDecimals ?? 4)}</span>
+              <span role="cell" className={cx("tnum", pnl > 0 ? "text-up" : pnl < 0 ? "text-down" : "text-ink-3")}>{pnl === 0 ? "—" : signedUsd(pnl)}</span>
             </div>
           );
         }
         return (
           <div role="row" key={`${fill.tid}-${fill.time}`} className={cx(FILL_GRID, ROW)}>
-            <span role="cell" className="tnum text-text-2">{dateTime(fill.time)}</span>
-            <span role="cell" className="truncate text-text-0">{name}</span>
-            <span role="cell" className={cx("truncate", fill.side === "B" ? "text-mint" : "text-rose")}>
-              {fill.dir}
-              {fill.liquidation ? <span className="text-rose"> · liquidation</span> : null}
+            <span role="cell" className="tnum text-ink-3">{dateTime(fill.time)}</span>
+            <span role="cell" className="truncate text-ink">{name}</span>
+            <span role="cell" className={cx("truncate", fill.side === "B" ? "text-up" : "text-down")}>
+              {fill.side === "B" ? "▲" : "▼"} {fill.dir}
+              {fill.liquidation ? <span className="text-down"> · liquidation</span> : null}
             </span>
-            <span role="cell" className="tnum text-text-1">{formatPx(fill.px, market)}</span>
-            <span role="cell" className="tnum text-text-1">{formatSz(fill.sz, market?.szDecimals ?? 4)}</span>
-            <span role="cell" className="tnum text-text-2">{Number(fill.fee).toFixed(4)}</span>
-            <span role="cell" className={cx("tnum", pnl > 0 ? "text-mint" : pnl < 0 ? "text-rose" : "text-text-2")}>{pnl === 0 ? "—" : signedUsd(pnl)}</span>
+            <span role="cell" className="tnum text-ink-2">{formatPx(fill.px, market)}</span>
+            <span role="cell" className="tnum text-ink-2">{formatSz(fill.sz, market?.szDecimals ?? 4)}</span>
+            <span role="cell" className="tnum text-ink-3">{Number(fill.fee).toFixed(4)}</span>
+            <span role="cell" className={cx("tnum", pnl > 0 ? "text-up" : pnl < 0 ? "text-down" : "text-ink-3")}>{pnl === 0 ? "—" : signedUsd(pnl)}</span>
           </div>
         );
       })}
@@ -167,16 +168,16 @@ const FUNDING_GRID = "grid grid-cols-[minmax(84px,1fr)_minmax(64px,1fr)_minmax(7
 export function FundingTable() {
   const { feeds, account } = useTerminal();
   const named = useMarketName();
-  if (!account) return <EmptyState compact icon={<Coins className="h-5 w-5" aria-hidden="true" />} title="Connect to see your funding" />;
+  if (!account) return <EmptyState compact scene="trail" title="No funding log yet" description="Connect to see the hourly funding your ropes paid or earned." />;
   if (feeds.fundings === null) return <Loading />;
-  if (feeds.fundings.length === 0) return <EmptyState compact icon={<Coins className="h-5 w-5" aria-hidden="true" />} title="No funding payments yet" description="HyperCore settles funding every hour on open perp positions." />;
+  if (feeds.fundings.length === 0) return <EmptyState compact scene="trail" title="No funding paid yet" description="Funding settles every hour on open perps; the windsock in the header shows who pays." />;
   const total = feeds.fundings.reduce((sum, row) => sum + Number(row.usdc), 0);
   return (
     <div role="table" aria-label="Funding payments" className="min-w-[460px]">
-      <div className="flex items-center justify-between px-4 pb-1 pt-2 font-mono text-xs text-text-2">
+      <div className="flex items-center justify-between px-4 pb-1 pt-2 font-mono text-xs text-ink-3">
         <span>{feeds.fundings.length} payments</span>
         <span>
-          net <span className={total >= 0 ? "text-mint" : "text-rose"}>{signedUsd(total)}</span>
+          net <span className={total >= 0 ? "text-up" : "text-down"}>{signedUsd(total)}</span>
         </span>
       </div>
       <div role="row" className={cx(FUNDING_GRID, HEAD)}>
@@ -191,11 +192,11 @@ export function FundingTable() {
         const usdc = Number(row.usdc);
         return (
           <div role="row" key={`${row.time}-${row.coin}`} className={cx(FUNDING_GRID, ROW)}>
-            <span role="cell" className="tnum text-text-2">{dateTime(row.time)}</span>
-            <span role="cell" className="text-text-0">{name}</span>
-            <span role="cell" className={cx("tnum", Number(row.szi) >= 0 ? "text-mint" : "text-rose")}>{formatSz(row.szi, market?.szDecimals ?? 4)}</span>
-            <span role="cell" className="tnum text-gold">{(Number(row.fundingRate) * 100).toFixed(4)}%</span>
-            <span role="cell" className={cx("tnum", usdc >= 0 ? "text-mint" : "text-rose")}>{signedUsd(usdc, 4)}</span>
+            <span role="cell" className="tnum text-ink-3">{dateTime(row.time)}</span>
+            <span role="cell" className="text-ink">{name}</span>
+            <span role="cell" className={cx("tnum", Number(row.szi) >= 0 ? "text-up" : "text-down")}>{formatSz(row.szi, market?.szDecimals ?? 4)}</span>
+            <span role="cell" className="tnum text-warn-ink">{(Number(row.fundingRate) * 100).toFixed(4)}%</span>
+            <span role="cell" className={cx("tnum", usdc >= 0 ? "text-up" : "text-down")}>{signedUsd(usdc, 4)}</span>
           </div>
         );
       })}
@@ -221,11 +222,11 @@ export function HistoryTable({ compact }: { readonly compact: boolean }) {
     enabled: account !== null,
     staleTime: 15_000,
   });
-  if (!account) return <EmptyState compact icon={<History className="h-5 w-5" aria-hidden="true" />} title="Connect to see your order history" />;
+  if (!account) return <EmptyState compact scene="trail" title="No history on this sheet" description="Connect to read every order you placed, filled or cancelled." />;
   if (query.isPending) return <Loading />;
-  if (query.isError) return <p className="px-4 py-6 text-sm text-text-2">Order history did not load. It refreshes when you open this tab again.</p>;
+  if (query.isError) return <p className="px-4 py-6 text-sm text-ink-3">Order history did not load. It refreshes when you open this tab again.</p>;
   const rows = (query.data ?? []).slice(0, 200);
-  if (rows.length === 0) return <EmptyState compact icon={<History className="h-5 w-5" aria-hidden="true" />} title="No order history" />;
+  if (rows.length === 0) return <EmptyState compact scene="trail" title="No order history" description="Orders you place show up here with their final state." />;
   return (
     <div role="table" aria-label="Order history" className={compact ? "min-w-[440px]" : "min-w-[840px]"}>
       {compact ? (
@@ -248,33 +249,33 @@ export function HistoryTable({ compact }: { readonly compact: boolean }) {
       )}
       {rows.map((row) => {
         const { market, name } = named(row.order.coin);
-        const tone = row.status === "filled" ? "text-mint" : row.status === "open" ? "text-sky" : /Rejected|rejected|Canceled/u.test(row.status) && row.status !== "canceled" ? "text-rose" : "text-text-2";
+        const tone = row.status === "filled" ? "text-up" : row.status === "open" ? "text-water" : /Rejected|rejected|Canceled/u.test(row.status) && row.status !== "canceled" ? "text-down" : "text-ink-3";
         const status = row.status.replace(/([a-z])([A-Z])/gu, "$1 $2").toLowerCase();
         if (compact) {
           return (
             <div role="row" key={`${row.order.oid}-${row.statusTimestamp}`} className={cx(HISTORY_COMPACT, ROW, "py-1.5")}>
               <span role="cell" className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate">
-                  <span className="text-text-0">{name}</span> <span className={row.order.side === "B" ? "text-mint" : "text-rose"}>{row.order.side === "B" ? "buy" : "sell"}</span>
+                  <span className="text-ink">{name}</span> <span className={row.order.side === "B" ? "text-up" : "text-down"}>{row.order.side === "B" ? "▲ buy" : "▼ sell"}</span>
                 </span>
-                <span className="truncate text-[11px] text-text-2">
+                <span className="truncate text-[11px] text-ink-3">
                   {row.order.orderType} · {dateTime(row.statusTimestamp)}
                 </span>
               </span>
-              <span role="cell" className="tnum text-text-1">{formatPx(row.order.limitPx, market)}</span>
-              <span role="cell" className="tnum text-text-1">{formatSz(row.order.origSz, market?.szDecimals ?? 4)}</span>
+              <span role="cell" className="tnum text-ink-2">{formatPx(row.order.limitPx, market)}</span>
+              <span role="cell" className="tnum text-ink-2">{formatSz(row.order.origSz, market?.szDecimals ?? 4)}</span>
               <span role="cell" className={cx("truncate", tone)}>{status}</span>
             </div>
           );
         }
         return (
           <div role="row" key={`${row.order.oid}-${row.statusTimestamp}`} className={cx(HISTORY_GRID, ROW)}>
-            <span role="cell" className="tnum text-text-2">{dateTime(row.statusTimestamp)}</span>
-            <span role="cell" className="truncate text-text-0">{name}</span>
-            <span role="cell" className="truncate text-text-1">{row.order.orderType}</span>
-            <span role="cell" className={row.order.side === "B" ? "text-mint" : "text-rose"}>{row.order.side === "B" ? "buy" : "sell"}</span>
-            <span role="cell" className="tnum text-text-1">{formatPx(row.order.limitPx, market)}</span>
-            <span role="cell" className="tnum text-text-1">{formatSz(row.order.origSz, market?.szDecimals ?? 4)}</span>
+            <span role="cell" className="tnum text-ink-3">{dateTime(row.statusTimestamp)}</span>
+            <span role="cell" className="truncate text-ink">{name}</span>
+            <span role="cell" className="truncate text-ink-2">{row.order.orderType}</span>
+            <span role="cell" className={row.order.side === "B" ? "text-up" : "text-down"}>{row.order.side === "B" ? "▲ buy" : "▼ sell"}</span>
+            <span role="cell" className="tnum text-ink-2">{formatPx(row.order.limitPx, market)}</span>
+            <span role="cell" className="tnum text-ink-2">{formatSz(row.order.origSz, market?.szDecimals ?? 4)}</span>
             <span role="cell" className={cx("truncate", tone)}>{status}</span>
           </div>
         );

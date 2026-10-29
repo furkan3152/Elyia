@@ -1,8 +1,10 @@
 import { useTradeStore } from "../../features/trading/tradeStore";
+import { buttonClasses } from "../../ui/buttonStyles";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { Sheet } from "../../ui/Sheet";
 import { AccountPanel } from "./AccountPanel";
-import { ConnectionDot, MarketButton, MarketStats } from "./MarketHeader";
+import { marketTitle } from "./labels";
+import { ConnectionDot, FavouriteStrip, MarketButton, MarketStats } from "./MarketHeader";
 import { OrderBook } from "./OrderBook";
 import { OrderTicket } from "./OrderTicket";
 import { PriceChart } from "./PriceChart";
@@ -12,9 +14,9 @@ import { useTerminalUi, type MobilePane } from "./terminalUi";
 import { ViewAsBar } from "./ViewAsBar";
 
 /**
- * Phone and tablet terminal (< 1024 px): chart / book / trades tabs,
- * account tabs, and a sticky Long / Short bar that opens the ticket
- * as a bottom sheet.
+ * Phone and tablet terminal (< 1180 px): the market strip scrolls sideways,
+ * chart / book / tape share one pane, the ropes log sits under it, and a
+ * sticky LONG ▲ / SHORT ▼ pair opens the ticket as a bottom sheet.
  */
 export function MobileTerminal() {
   const { market, readOnly } = useTerminal();
@@ -28,16 +30,19 @@ export function MobileTerminal() {
     set({ ticketOpen: true });
   };
   return (
-    <div className="flex min-w-0 flex-col pb-24">
-      <div className="flex items-center justify-between gap-2 px-3 pt-3">
+    <div className="flex min-w-0 flex-col gap-3 pb-28">
+      <div className="flex items-center justify-between gap-3 px-4 pt-3">
         <MarketButton compact />
-        <ConnectionDot />
+        <ConnectionDot className="hidden min-[440px]:inline-flex" />
       </div>
-      <div className="scrollbar-none overflow-x-auto px-3 py-3">
+      <div className="scrollbar-none overflow-x-auto px-4">
         <MarketStats compact />
       </div>
+      <div className="scrollbar-none overflow-x-auto px-4 empty:hidden">
+        <FavouriteStrip limit={6} />
+      </div>
       <ViewAsBar />
-      <div className="px-3 pb-2">
+      <div className="flex flex-col gap-2 px-4">
         <SegmentedControl<MobilePane>
           label="Market view"
           value={pane}
@@ -46,29 +51,37 @@ export function MobileTerminal() {
           options={[
             { value: "chart", label: "Chart" },
             { value: "book", label: "Book" },
-            { value: "trades", label: "Trades" },
+            { value: "trades", label: "Tape" },
           ]}
         />
+        <div className="flex h-[400px] min-w-0 flex-col">
+          {pane === "chart" ? <PriceChart className="h-full" /> : pane === "book" ? <OrderBook className="h-full" levels={8} /> : <TradesTape className="h-full" rows={17} />}
+        </div>
       </div>
-      <div className="h-[380px] min-w-0 border-y border-line bg-bg-0">
-        {pane === "chart" ? <PriceChart className="h-full" /> : pane === "book" ? <OrderBook className="h-full" levels={8} /> : <TradesTape className="h-full" rows={17} />}
+      <div className="px-4">
+        <AccountPanel showLegend={false} className="min-h-[340px]" />
       </div>
-      <AccountPanel showLegend={false} className="min-h-[320px] border-t border-line" />
 
       {!readOnly ? (
-        <div className="glass fixed inset-x-0 bottom-16 z-30 border-t border-line px-3 py-2.5 md:bottom-0">
-          <div className="mx-auto grid max-w-lg grid-cols-2 gap-2">
-            <button type="button" onClick={() => openTicket("buy")} className="h-12 rounded-xl bg-mint-fill text-[15px] font-bold text-ink-mint active:translate-y-px">
+        <div className="fixed inset-x-0 bottom-16 z-30 border-t-2 border-rule bg-paper px-4 py-2.5 md:bottom-0">
+          <div className="mx-auto grid max-w-lg grid-cols-2 gap-3">
+            <button type="button" onClick={() => openTicket("buy")} className={buttonClasses({ variant: "long", size: "lg", fullWidth: true })}>
+              <span aria-hidden="true" className="text-[11px]">
+                ▲
+              </span>
               {isSpot ? "Buy" : "Long"}
             </button>
-            <button type="button" onClick={() => openTicket("sell")} className="h-12 rounded-xl bg-rose-fill text-[15px] font-bold text-ink-rose active:translate-y-px">
+            <button type="button" onClick={() => openTicket("sell")} className={buttonClasses({ variant: "short", size: "lg", fullWidth: true })}>
+              <span aria-hidden="true" className="text-[11px]">
+                ▼
+              </span>
               {isSpot ? "Sell" : "Short"}
             </button>
           </div>
         </div>
       ) : null}
-      <Sheet open={ticketOpen} onClose={() => set({ ticketOpen: false })} side="bottom" title={`${side === "buy" ? (isSpot ? "Buy" : "Long") : isSpot ? "Sell" : "Short"} ${market?.isSpot ? market.displayName : (market?.base ?? "")}`}>
-        <OrderTicket />
+      <Sheet open={ticketOpen} onClose={() => set({ ticketOpen: false })} side="bottom" title={`${side === "buy" ? (isSpot ? "Buy" : "Long") : isSpot ? "Sell" : "Short"} ${marketTitle(market)}`}>
+        <OrderTicket bare />
       </Sheet>
     </div>
   );

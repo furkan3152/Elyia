@@ -78,10 +78,10 @@ function NumberRow({ label, hint, value, onChange, unit, decimals = 2 }: { reado
   return (
     <label className="grid grid-cols-[1fr_140px] items-center gap-3">
       <span className="flex flex-col">
-        <span className="text-sm text-text-0">{label}</span>
-        <span className="text-xs text-text-2">{hint}</span>
+        <span className="text-sm text-ink">{label}</span>
+        <span className="text-xs text-ink-3">{hint}</span>
       </span>
-      <span className="flex h-9 items-center gap-1.5 rounded-lg border border-line-strong bg-bg-2/60 px-2.5 focus-within:border-violet-glow/60">
+      <span className="flex h-9 items-center gap-1.5 border-2 border-rule bg-card px-2.5 focus-within:shadow-hard">
         <input
           inputMode="decimal"
           value={value}
@@ -89,9 +89,9 @@ function NumberRow({ label, hint, value, onChange, unit, decimals = 2 }: { reado
             const next = sanitizeDecimalInput(event.target.value, decimals);
             if (next !== null) onChange(next);
           }}
-          className="tnum min-w-0 flex-1 bg-transparent text-right font-mono text-sm text-text-0 outline-none"
+          className="tnum min-w-0 flex-1 bg-transparent text-right font-mono text-sm text-ink outline-none"
         />
-        <span className="font-mono text-xs text-text-2">{unit}</span>
+        <span className="font-mono text-xs text-ink-3">{unit}</span>
       </span>
     </label>
   );
@@ -126,7 +126,7 @@ function RuleBookBody({ onClose }: { readonly onClose: () => void }) {
   };
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-2xl border border-line bg-bg-2/40 p-3 font-mono text-xs text-text-1">{bookSummary(next.book)}</div>
+      <div className="border-2 border-rule bg-paper/60 p-3 font-mono text-xs text-ink-2">{bookSummary(next.book)}</div>
       <section className="flex flex-col gap-3">
         <Toggle checked={draft.paused} onChange={(paused) => patch({ paused })} label="Kill switch" description="Nothing new is signed. Closing positions and cancelling orders still work." />
         <Toggle checked={draft.reduceOnly} onChange={(reduceOnly) => patch({ reduceOnly })} label="De-risk only" description="Only reduce-only orders: positions can shrink, never grow." />
@@ -139,15 +139,15 @@ function RuleBookBody({ onClose }: { readonly onClose: () => void }) {
         <NumberRow label="Daily loss stop" hint="Then only closing runs (empty = off)" value={draft.dailyLossUsd} onChange={(dailyLossUsd) => patch({ dailyLossUsd })} unit="USD" />
         <NumberRow label="Confirm above" hint="Bigger orders ask you first" value={draft.confirmAboveUsd} onChange={(confirmAboveUsd) => patch({ confirmAboveUsd })} unit="USD" />
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-text-0">Only these markets</span>
-          <input value={draft.markets} onChange={(event) => patch({ markets: event.target.value })} placeholder="every market (e.g. BTC, ETH, HYPE)" className="h-9 rounded-lg border border-line-strong bg-bg-2/60 px-2.5 font-mono text-sm text-text-0 outline-none placeholder:text-text-2 focus:border-violet-glow/60" />
+          <span className="text-sm text-ink">Only these markets</span>
+          <input value={draft.markets} onChange={(event) => patch({ markets: event.target.value })} placeholder="every market (e.g. BTC, ETH, HYPE)" className="h-9 border-2 border-rule bg-card px-2.5 font-mono text-sm text-ink outline-none placeholder:text-ink-3 focus:shadow-hard" />
         </label>
         <Toggle checked={draft.allowMainnet} onChange={(allowMainnet) => patch({ allowMainnet })} label="Allow HyperCore mainnet" description="Off by default: the default book is testnet only. Mainnet opens with Elysium mainnet." />
       </section>
-      {next.issues.length > 0 ? <p className="text-xs text-rose">{next.issues.join(" · ")}</p> : null}
+      {next.issues.length > 0 ? <p className="text-xs text-down">{next.issues.join(" · ")}</p> : null}
       {loosened.length > 0 ? (
-        <div className={cx("flex flex-col gap-2 rounded-xl border border-gold/40 bg-gold/[0.07] p-3 text-sm text-text-1")}>
-          <p className="flex items-center gap-2 text-gold">
+        <div className={cx("flex flex-col gap-2 border-l-[3px] border-warn bg-paper/60 p-3 text-sm text-ink-2")}>
+          <p className="flex items-center gap-2 text-warn-ink">
             <ShieldAlert className="h-4 w-4" aria-hidden="true" />
             This loosens your rules: {loosened.join(", ")}.
           </p>
@@ -173,7 +173,7 @@ function RuleBookBody({ onClose }: { readonly onClose: () => void }) {
           </Button>
         </div>
       </div>
-      <p className="text-xs leading-relaxed text-text-2">Stored on this device. The same evaluator ({DEFAULT_RULE_BOOK.schema}) runs in the API and the Keeper; the Elysium Agent can never loosen it.</p>
+      <p className="text-xs leading-relaxed text-ink-3">Stored on this device. The same evaluator ({DEFAULT_RULE_BOOK.schema}) runs in the API and the Keeper; the Elysium Agent can never loosen it.</p>
     </div>
   );
 }

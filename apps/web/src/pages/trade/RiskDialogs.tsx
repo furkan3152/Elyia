@@ -12,7 +12,8 @@ import { sanitizeDecimalInput } from "../../ui/numberInput";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { HoldButton } from "./HoldButton";
 import { signedUsd } from "./labels";
-import { LiquidationBar } from "./PositionsTable";
+import { SideMark } from "./parts";
+import { RowRope } from "./PositionsTable";
 import { useTerminal } from "./terminalContext";
 import { useTerminalUi } from "./terminalUi";
 
@@ -20,12 +21,12 @@ function markOf(position: PositionRow, market: TradeMarket | null, activeCoin: s
   return market && activeCoin === market.coin && activeMark ? activeMark : position.markPx;
 }
 
-/** Flatten all: cancel every order, then close every position with reduce-only IOC orders. Hold to confirm. */
+/** Descend all (flatten): cancel every order, then close every position with reduce-only IOC orders. Hold to confirm. */
 export function FlattenDialog() {
   const open = useTerminalUi((state) => state.flattenOpen);
   const close = () => useTerminalUi.getState().set({ flattenOpen: false });
   return (
-    <Dialog open={open} onClose={close} title="Flatten all" description="Cancel every open order, then close every position at market (reduce-only)." size="md">
+    <Dialog open={open} onClose={close} title="Descend all" description="Cancel every open order first, then close every position at market, reduce-only. Hold to confirm." size="md">
       {open ? <FlattenBody onClose={close} /> : null}
     </Dialog>
   );
@@ -75,37 +76,37 @@ function FlattenBody({ onClose }: { readonly onClose: () => void }) {
   return (
     <div className="flex flex-col gap-4">
       {positions.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-[var(--line)] rounded-2xl border border-line">
+        <ul className="flex flex-col divide-y divide-rule/20 border-2 border-rule">
           {positions.map((position) => {
             const market = marketByCoin.get(position.coin) ?? null;
             return (
               <li key={position.coin} className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-3 py-2 font-mono text-xs">
                 <span>
-                  <span className={position.isLong ? "text-mint" : "text-rose"}>{position.isLong ? "LONG" : "SHORT"}</span> <span className="text-text-0">{market?.base ?? position.coin}</span>{" "}
-                  <span className="text-text-2">{formatSz(Math.abs(position.szi), market?.szDecimals ?? 4)}</span>
+                  <SideMark long={position.isLong} /> <span className="font-sans font-bold text-ink">{market?.base ?? position.coin}</span>{" "}
+                  <span className="text-ink-3">{formatSz(Math.abs(position.szi), market?.szDecimals ?? 4)}</span>
                 </span>
-                <span className={position.unrealizedPnl >= 0 ? "text-mint" : "text-rose"}>{signedUsd(position.unrealizedPnl)}</span>
+                <span className={position.unrealizedPnl >= 0 ? "text-up" : "text-down"}>{signedUsd(position.unrealizedPnl)}</span>
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="text-sm text-text-1">No open positions.</p>
+        <p className="text-sm text-ink-2">No open positions.</p>
       )}
-      <p className="text-sm text-text-1">
+      <p className="text-sm text-ink-2">
         {orders.length > 0 ? `${orders.length} open order${orders.length === 1 ? "" : "s"} will be cancelled first, so nothing re-opens risk. ` : ""}
         Each close is an IOC at mark ± {(slippageBps / 100).toFixed(slippageBps < 100 ? 1 : 0)}%; it never fills worse. Your Rule Book never blocks closing.
       </p>
-      {unknown.length > 0 ? <p className="text-xs text-gold">Loading market data for {unknown.join(", ")}: those will be skipped this time.</p> : null}
+      {unknown.length > 0 ? <p className="text-xs text-warn-ink">Loading market data for {unknown.join(", ")}: those will be skipped this time.</p> : null}
       {notes.length > 0 ? (
-        <ul role="alert" className="flex flex-col gap-1 rounded-xl border border-gold/40 bg-gold/[0.07] px-3 py-2 text-xs text-gold">
+        <ul role="alert" className="flex flex-col gap-1 border-l-[3px] border-warn bg-paper/60 px-3 py-2 text-xs text-warn-ink">
           {notes.map((note) => (
             <li key={note}>{note}</li>
           ))}
         </ul>
       ) : null}
       <HoldButton onConfirm={() => void flatten()} disabled={state === "running" || (!plan.cancel && !plan.close)}>
-        {state === "running" ? "Flattening…" : `Hold to flatten ${positions.length} position${positions.length === 1 ? "" : "s"}`}
+        {state === "running" ? "Descending…" : `Hold · descend ${positions.length} rope${positions.length === 1 ? "" : "s"}`}
       </HoldButton>
     </div>
   );
@@ -130,7 +131,7 @@ function CloseBody({ coin, onClose }: { readonly coin: string; readonly onClose:
   const [error, setError] = useState<string | null>(null);
   const position = feeds.positions?.find((row) => row.coin === coin) ?? null;
   const market = marketByCoin.get(coin) ?? null;
-  if (!position || !market) return <p className="text-sm text-text-1">That position is already closed.</p>;
+  if (!position || !market) return <p className="text-sm text-ink-2">That position is already closed.</p>;
   const mark = markOf(position, market, active?.coin ?? null, ctx?.markPx ?? null);
   const submit = async () => {
     setError(null);
@@ -149,13 +150,13 @@ function CloseBody({ coin, onClose }: { readonly coin: string; readonly onClose:
   };
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-2xl border border-line bg-bg-2/40 p-3 font-mono text-xs">
+      <div className="border-2 border-rule bg-paper/60 p-3 font-mono text-xs">
         <p className="text-sm">
-          <span className={position.isLong ? "text-mint" : "text-rose"}>{position.isLong ? "LONG" : "SHORT"}</span> <span className="text-text-0">{market.base}</span> {formatSz(Math.abs(position.szi), market.szDecimals)} · entry {formatPx(position.entryPx, market)}
+          <SideMark long={position.isLong} /> <span className="font-sans font-bold text-ink">{market.base}</span> {formatSz(Math.abs(position.szi), market.szDecimals)} · entry {formatPx(position.entryPx, market)}
         </p>
-        <p className={cx("mt-1", position.unrealizedPnl >= 0 ? "text-mint" : "text-rose")}>{signedUsd(position.unrealizedPnl)} unrealized</p>
+        <p className={cx("mt-1", position.unrealizedPnl >= 0 ? "text-up" : "text-down")}>{signedUsd(position.unrealizedPnl)} unrealized</p>
         <div className="mt-2">
-          <LiquidationBar position={position} compact />
+          <RowRope rope={undefined} position={position} />
         </div>
       </div>
       <SegmentedControl<"1" | "0.5" | "0.25">
@@ -169,8 +170,8 @@ function CloseBody({ coin, onClose }: { readonly coin: string; readonly onClose:
           { value: "1", label: "All" },
         ]}
       />
-      <p className="text-xs text-text-2">Reduce-only IOC at mark ± {(slippageBps / 100).toFixed(slippageBps < 100 ? 1 : 0)}%, signed in this browser.</p>
-      {error ? <p role="alert" className="text-sm text-rose">{error}</p> : null}
+      <p className="text-xs text-ink-3">Reduce-only IOC at mark ± {(slippageBps / 100).toFixed(slippageBps < 100 ? 1 : 0)}%, signed in this browser.</p>
+      {error ? <p role="alert" className="text-sm text-down">{error}</p> : null}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>
           Cancel
@@ -188,7 +189,7 @@ export function TpslDialog() {
   const coin = useTerminalUi((state) => state.tpslCoin);
   const close = () => useTerminalUi.getState().set({ tpslCoin: null });
   return (
-    <Dialog open={coin !== null} onClose={close} title="TP / SL" description="Triggers that close the whole position, reduce-only, at market." size="sm">
+    <Dialog open={coin !== null} onClose={close} title="Flag and anchor" description="TP and SL triggers that close the whole position, reduce-only, at market." size="sm">
       {coin ? <TpslBody coin={coin} onClose={close} /> : null}
     </Dialog>
   );
@@ -206,7 +207,7 @@ function TpslBody({ coin, onClose }: { readonly coin: string; readonly onClose: 
   const [sl, setSl] = useState(currentSl ? currentSl.triggerPx : "");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (!position || !market) return <p className="text-sm text-text-1">That position is closed.</p>;
+  if (!position || !market) return <p className="text-sm text-ink-2">That position is closed.</p>;
   const decimals = Math.max(0, (market.isSpot ? 8 : 6) - market.szDecimals);
   const toPrice = (value: string, kind: "tp" | "sl") => {
     if (!value) return null;
@@ -235,8 +236,8 @@ function TpslBody({ coin, onClose }: { readonly coin: string; readonly onClose: 
     else setError(result.message);
   };
   const input = (value: string, set: (value: string) => void, label: string, tone: "mint" | "rose") => (
-    <label className={cx("flex flex-col gap-1 rounded-xl border px-3 py-2", tone === "mint" ? "border-mint/30 bg-mint/[0.05]" : "border-rose/30 bg-rose/[0.05]")}>
-      <span className="text-xs text-text-2">{label}</span>
+    <label className={cx("flex flex-col gap-1 border-2 px-3 py-2", tone === "mint" ? "border-up" : "border-rule")}>
+      <span className="text-xs text-ink-3">{label}</span>
       <span className="flex items-center gap-1">
         <input
           value={value}
@@ -246,16 +247,16 @@ function TpslBody({ coin, onClose }: { readonly coin: string; readonly onClose: 
             if (next !== null) set(next);
           }}
           placeholder={unit === "roe" ? "%" : "price"}
-          className="tnum min-w-0 flex-1 bg-transparent font-mono text-[15px] text-text-0 outline-none placeholder:text-text-2"
+          className="tnum min-w-0 flex-1 bg-transparent font-mono text-[15px] text-ink outline-none placeholder:text-ink-3"
         />
-        {unit === "roe" ? <span className={cx("font-mono text-xs", tone === "mint" ? "text-mint" : "text-rose")}>% ROE</span> : null}
+        {unit === "roe" ? <span className={cx("font-mono text-xs", tone === "mint" ? "text-up" : "text-down")}>% ROE</span> : null}
       </span>
     </label>
   );
   return (
     <div className="flex flex-col gap-4">
-      <p className="font-mono text-xs text-text-1">
-        <span className={position.isLong ? "text-mint" : "text-rose"}>{position.isLong ? "LONG" : "SHORT"}</span> {market.base} {formatSz(Math.abs(position.szi), market.szDecimals)} · entry {formatPx(position.entryPx, market)} · mark {formatPx(position.markPx, market)}
+      <p className="font-mono text-xs text-ink-2">
+        <SideMark long={position.isLong} /> {market.base} {formatSz(Math.abs(position.szi), market.szDecimals)} · entry {formatPx(position.entryPx, market)} · mark {formatPx(position.markPx, market)}
       </p>
       <SegmentedControl
         label="Unit"
@@ -272,18 +273,18 @@ function TpslBody({ coin, onClose }: { readonly coin: string; readonly onClose: 
         ]}
       />
       <div className="grid grid-cols-2 gap-2">
-        {input(tp, setTp, "Take profit", "mint")}
-        {input(sl, setSl, "Stop loss", "rose")}
+        {input(tp, setTp, "⚑ Flag · take profit", "mint")}
+        {input(sl, setSl, "⚓ Anchor · stop loss", "rose")}
       </div>
       {unit === "roe" && (tpPx || slPx) ? (
-        <p className="font-mono text-xs text-text-2">
-          {tpPx ? <span className="text-mint">TP {formatPx(tpPx, market)}</span> : null}
+        <p className="font-mono text-xs text-ink-3">
+          {tpPx ? <span className="text-up">TP {formatPx(tpPx, market)}</span> : null}
           {tpPx && slPx ? " · " : null}
-          {slPx ? <span className="text-rose">SL {formatPx(slPx, market)}</span> : null}
+          {slPx ? <span className="text-down">SL {formatPx(slPx, market)}</span> : null}
         </p>
       ) : null}
-      {existing.length > 0 ? <p className="text-xs text-text-2">Replaces {existing.length} existing trigger{existing.length === 1 ? "" : "s"}.</p> : null}
-      {error ? <p role="alert" className="text-sm text-rose">{error}</p> : null}
+      {existing.length > 0 ? <p className="text-xs text-ink-3">Replaces {existing.length} existing trigger{existing.length === 1 ? "" : "s"}.</p> : null}
+      {error ? <p role="alert" className="text-sm text-down">{error}</p> : null}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>
           Cancel

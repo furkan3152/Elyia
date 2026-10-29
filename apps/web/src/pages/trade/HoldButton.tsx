@@ -74,13 +74,13 @@ export function HoldButton({ onConfirm, holdMs = 1_500, disabled, children, clas
       onClick={(event) => event.preventDefault()}
       aria-describedby="hold-hint"
       className={cx(
-        "relative h-14 w-full select-none overflow-hidden rounded-xl border border-rose/50 bg-rose/[0.12] font-semibold text-rose transition-colors disabled:opacity-40",
+        "relative h-14 w-full select-none overflow-hidden border-2 border-down bg-card font-sans text-[15px] font-bold uppercase tracking-[0.08em] text-down shadow-[3px_3px_0_rgb(var(--down))] transition-colors disabled:opacity-40 disabled:shadow-none",
         FOCUS_RING,
         className,
       )}
     >
-      <span aria-hidden="true" className="absolute inset-y-0 left-0 bg-rose-fill/90" style={{ width: `${progress * 100}%` }} />
-      <span className={cx("relative", progress > 0.55 && "text-ink-rose")}>{children}</span>
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 border-r-2 border-rule bg-down" style={{ width: `${progress * 100}%` }} />
+      <span className={cx("relative", progress > 0.55 && "text-card")}>{children}</span>
       <span id="hold-hint" className="sr-only">
         Press and hold for {Math.round(holdMs / 100) / 10} seconds to confirm.
       </span>

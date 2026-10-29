@@ -8,6 +8,8 @@ import { create } from "zustand";
 import type { TradePlan } from "../../features/trading/executor";
 
 export type MobilePane = "chart" | "book" | "trades";
+/** The desktop book column on a short window: book or tape (both stack when there is room). */
+export type SidePane = "book" | "tape";
 export type AccountTab = "positions" | "orders" | "twap" | "fills" | "funding" | "history";
 
 export interface ReviewRequest {
@@ -30,6 +32,7 @@ interface TerminalUiState {
   /** Coin of the position to close (from F or a row). */
   readonly closeCoin: string | null;
   readonly mobilePane: MobilePane;
+  readonly sidePane: SidePane;
   readonly accountTab: AccountTab;
   /** The followed account holds HIP-3 positions or orders: load the builder-dex catalogue. */
   readonly needsHip3: boolean;
@@ -47,6 +50,7 @@ export const useTerminalUi = create<TerminalUiState>()((set) => ({
   tpslCoin: null,
   closeCoin: null,
   mobilePane: "chart",
+  sidePane: "book",
   accountTab: "positions",
   needsHip3: false,
   set: (values) => set(values),

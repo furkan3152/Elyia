@@ -24,12 +24,14 @@ import { hyperCoreSocket, infoClient } from "../../lib/hypercore/runtime";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { Skeleton } from "../../ui/Skeleton";
 import { useChartLines } from "./chartLines";
+import { marketTitle } from "./labels";
+import { Caption, Frame } from "./parts";
 import { useTerminal } from "./terminalContext";
 
 /**
  * Reads the theme's colour variables ("R G B" channel triplets) as rgba()
  * strings for the canvas chart. Local on purpose: the terminal must not depend
- * on the retired visuals; a missing variable reads as white.
+ * on the retired visuals; a missing variable reads as grey.
  */
 function readTokens(element: Element | null = typeof document === "undefined" ? null : document.documentElement): (name: string, alpha?: number) => string {
   const style = element ? getComputedStyle(element) : null;
@@ -37,7 +39,7 @@ function readTokens(element: Element | null = typeof document === "undefined" ? 
   return (name, alpha = 1) => {
     let channels = cache.get(name);
     if (channels === undefined) {
-      channels = style?.getPropertyValue(`--${name}`).trim() || "255 255 255";
+      channels = style?.getPropertyValue(`--${name}`).trim() || "128 128 128";
       cache.set(name, channels);
     }
     const [r = "255", g = "255", b = "255"] = channels.split(/\s+/u);
@@ -91,16 +93,16 @@ export function PriceChart({ className }: { readonly className?: string }) {
     if (!container) return undefined;
     const chart = createChart(container, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "transparent" }, fontFamily: '"JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace', fontSize: 11, attributionLogo: false },
-      grid: { vertLines: { visible: false }, horzLines: { style: LineStyle.Solid } },
+      layout: { background: { type: ColorType.Solid, color: "transparent" }, fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontSize: 11, attributionLogo: false },
+      grid: { vertLines: { visible: false }, horzLines: { style: LineStyle.Dashed } },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.22 } },
-      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false, rightOffset: 6 },
+      rightPriceScale: { borderVisible: true, scaleMargins: { top: 0.08, bottom: 0.2 } },
+      timeScale: { borderVisible: true, timeVisible: true, secondsVisible: false, rightOffset: 8 },
       handleScale: { axisPressedMouseMove: true },
     });
-    const candles = chart.addSeries(CandlestickSeries, { borderVisible: false, priceLineStyle: LineStyle.Solid });
+    const candles = chart.addSeries(CandlestickSeries, { borderVisible: true, priceLineStyle: LineStyle.Dotted, priceLineWidth: 1 });
     const volume = chart.addSeries(HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
-    volume.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
+    volume.priceScale().applyOptions({ scaleMargins: { top: 0.86, bottom: 0 } });
     chartRef.current = chart;
     candleRef.current = candles;
     volumeRef.current = volume;
@@ -133,18 +135,32 @@ export function PriceChart({ className }: { readonly className?: string }) {
     };
   }, []);
 
-  // Theme colours (canvas cannot read CSS variables).
+  // Sheet colours (a canvas cannot read CSS variables): ink on paper by DAY, the headlamp palette by NIGHT.
+  // Rising candles are hollow and falling ones filled, so direction never rests on colour alone.
   useEffect(() => {
     const chart = chartRef.current;
     const candles = candleRef.current;
     if (!chart || !candles) return;
     const color = readTokens();
     chart.applyOptions({
-      layout: { textColor: color("text-2") },
-      grid: { horzLines: { color: color("violet-glow", 0.07) } },
-      crosshair: { vertLine: { color: color("violet-glow", 0.4), labelBackgroundColor: color("bg-2") }, horzLine: { color: color("violet-glow", 0.4), labelBackgroundColor: color("bg-2") } },
+      layout: { textColor: color("ink-2") },
+      grid: { horzLines: { color: color("contour", theme === "dark" ? 0.18 : 0.22) } },
+      rightPriceScale: { borderColor: color("rule", 0.55) },
+      timeScale: { borderColor: color("rule", 0.55) },
+      crosshair: {
+        vertLine: { color: color("ink", 0.45), style: LineStyle.Dashed, labelBackgroundColor: color("ink") },
+        horzLine: { color: color("ink", 0.45), style: LineStyle.Dashed, labelBackgroundColor: color("ink") },
+      },
     });
-    candles.applyOptions({ upColor: color("mint"), downColor: color("rose"), wickUpColor: color("mint", 0.8), wickDownColor: color("rose", 0.8) });
+    candles.applyOptions({
+      upColor: color("card"),
+      downColor: color("down"),
+      borderUpColor: color("up"),
+      borderDownColor: color("down"),
+      wickUpColor: color("up"),
+      wickDownColor: color("down"),
+      priceLineColor: color("ink", 0.6),
+    });
   }, [theme]);
 
   // Price precision per market.
@@ -164,8 +180,8 @@ export function PriceChart({ className }: { readonly className?: string }) {
     if (!coin || !candles || !volume) return undefined;
     let cancelled = false;
     const color = readTokens();
-    const up = color("mint", 0.28);
-    const down = color("rose", 0.28);
+    const up = color("up", 0.3);
+    const down = color("down", 0.3);
     lastTimeRef.current = 0;
     candles.setData([]);
     volume.setData([]);
@@ -201,7 +217,8 @@ export function PriceChart({ className }: { readonly className?: string }) {
       cancelled = true;
       leave();
     };
-  }, [mode, coin, interval, loadKey]);
+    // The theme re-colours the volume bars on the next load.
+  }, [mode, coin, interval, loadKey, theme]);
 
   // Price lines.
   useEffect(() => {
@@ -212,56 +229,75 @@ export function PriceChart({ className }: { readonly className?: string }) {
     linesRef.current = lines.map((line) =>
       candles.createPriceLine({
         price: line.price,
-        color: color(line.tone, line.tone === "text-1" ? 0.6 : 0.9),
-        lineWidth: 1,
+        color: color(line.tone, line.style === "dotted" ? 0.7 : 0.95),
+        lineWidth: line.width ?? 1,
         lineStyle: line.style === "solid" ? LineStyle.Solid : line.style === "dashed" ? LineStyle.Dashed : LineStyle.Dotted,
-        axisLabelVisible: true,
+        axisLabelVisible: line.axis !== false,
         title: line.title,
-        axisLabelColor: color(line.tone, 0.9),
-        axisLabelTextColor: color("bg-0"),
+        axisLabelColor: color(line.tone),
+        axisLabelTextColor: color(line.tone === "ink" || line.tone === "ink-2" ? "paper" : "card"),
       }),
     );
   }, [lines, theme]);
 
   const state = status.key === loadKey ? status.state : "loading";
+  const intervals = (
+    <div role="radiogroup" aria-label="Candle interval" className="flex items-center">
+      {CHART_INTERVALS.map((option) => (
+        <button
+          key={option}
+          type="button"
+          role="radio"
+          aria-checked={option === interval}
+          onClick={() => setPrefs({ interval: option })}
+          className={cx(
+            "h-6 min-w-[30px] px-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] transition-colors duration-fast",
+            option === interval ? "bg-ink text-paper" : "text-ink-2 hover:bg-paper-2 hover:text-ink",
+            FOCUS_RING,
+          )}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
-    <div className={cx("relative flex min-h-0 flex-col", className)}>
-      <div className="flex items-center gap-1 px-3 py-2">
-        <div role="radiogroup" aria-label="Candle interval" className="flex items-center gap-0.5">
-          {CHART_INTERVALS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              role="radio"
-              aria-checked={option === interval}
-              onClick={() => setPrefs({ interval: option })}
-              className={cx(
-                "h-7 rounded-md px-2 font-mono text-xs transition-colors",
-                option === interval ? "bg-bg-2 text-text-0" : "text-text-2 hover:text-text-0",
-                FOCUS_RING,
-              )}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-        <div className="tnum ml-3 hidden min-w-0 gap-3 truncate font-mono text-[11px] text-text-2 md:flex">
+    <Frame
+      label={market ? `${marketTitle(market)} price chart` : "Price chart"}
+      className={className}
+      title={
+        <span className="flex items-center gap-3">
+          <Caption tone="ink" parts={["ELEVATION", marketTitle(market)]} className="hidden sm:inline" />
+          {intervals}
+        </span>
+      }
+      aside={
+        <span className="tnum hidden min-w-0 items-center gap-3 font-mono text-[11px] text-ink-3 min-[1400px]:flex">
           {legend ? (
             <>
-              <span>O <span className="text-text-1">{formatPx(legend.open, market)}</span></span>
-              <span>H <span className="text-text-1">{formatPx(legend.high, market)}</span></span>
-              <span>L <span className="text-text-1">{formatPx(legend.low, market)}</span></span>
-              <span>C <span className={legend.close >= legend.open ? "text-mint" : "text-rose"}>{formatPx(legend.close, market)}</span></span>
+              <span>O <span className="text-ink">{formatPx(legend.open, market)}</span></span>
+              <span>H <span className="text-ink">{formatPx(legend.high, market)}</span></span>
+              <span>L <span className="text-ink">{formatPx(legend.low, market)}</span></span>
+              <span>
+                C <span className={legend.close >= legend.open ? "text-up" : "text-down"}>{formatPx(legend.close, market)} {legend.close >= legend.open ? "▲" : "▼"}</span>
+              </span>
             </>
-          ) : null}
-        </div>
-        <span className="ml-auto hidden font-mono text-[11px] text-text-2 sm:inline">click the chart to set a limit price</span>
-      </div>
+          ) : (
+            <span className="uppercase tracking-[0.12em]">click the chart · limit price</span>
+          )}
+        </span>
+      }
+    >
       <div className="relative min-h-0 flex-1">
+        {/* The map label of the sheet: which ground this elevation is read on. */}
+        <div aria-hidden="true" className="pointer-events-none absolute left-2 top-2 z-[1] flex flex-col bg-card/85 px-1.5 py-0.5 leading-tight">
+          <span className="map-label text-[22px] text-floor">The Floor</span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">HyperCore {mode} · {interval}</span>
+        </div>
         <div ref={containerRef} className="absolute inset-0" aria-label={market ? `${market.displayName} ${interval} candles` : "Price chart"} role="img" />
         {state === "loading" ? (
-          <div className="pointer-events-none absolute inset-0 flex items-end gap-1.5 px-6 pb-10 pt-12" aria-hidden="true">
+          <div className="pointer-events-none absolute inset-0 flex items-end gap-1.5 px-6 pb-10 pt-14" aria-hidden="true">
             {Array.from({ length: 28 }, (_, index) => (
               <span key={index} className="flex flex-1 items-end" style={{ height: `${28 + ((index * 37) % 46)}%` }}>
                 <Skeleton className="h-full w-full" />
@@ -270,11 +306,11 @@ export function PriceChart({ className }: { readonly className?: string }) {
           </div>
         ) : null}
         {state === "empty" || state === "error" ? (
-          <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-text-2">
-            {state === "empty" ? "No candles yet for this market on HyperCore." : "Candles did not load; retrying when you switch the interval."}
+          <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-ink-2">
+            {state === "empty" ? "No candles yet for this market on HyperCore." : "Candles did not load. Switch the interval to try again."}
           </p>
         ) : null}
       </div>
-    </div>
+    </Frame>
   );
 }

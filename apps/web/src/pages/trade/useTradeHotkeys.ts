@@ -9,8 +9,8 @@ import { useTerminalUi } from "./terminalUi";
 
 /**
  * Terminal keys: B / S side, L / M / T limit, market, TWAP, 1-5 size
- * presets, F closes the selected position (it opens the close dialog; the
- * person still confirms), Esc clears the ticket, "/" opens the market
+ * presets, X closes the selected position (it opens the close dialog; the
+ * person still confirms), F opens "descend all" (hold to confirm), Esc clears the ticket, "/" opens the market
  * picker. They never fire while typing or while a dialog is open, never
  * with a modifier, and never sign anything by themselves.
  */
@@ -71,6 +71,13 @@ export function useTradeHotkeys(terminal: Terminal): void {
           store.patch({ kind: "twap" });
           return;
         case "f": {
+          // Descend all: opens the flatten sheet; it still needs a press-and-hold to sign.
+          if (readOnly || ((feeds.positions?.length ?? 0) === 0 && (feeds.openOrders?.length ?? 0) === 0)) return;
+          handled();
+          ui.set({ flattenOpen: true });
+          return;
+        }
+        case "x": {
           if (readOnly) return;
           const positions = feeds.positions ?? [];
           const coin = store.selectedPosition ?? (positions.find((row) => row.coin === market?.coin) ?? (positions.length === 1 ? positions[0] : undefined))?.coin ?? null;
