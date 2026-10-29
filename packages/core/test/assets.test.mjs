@@ -111,3 +111,40 @@ test("look-alikes: only registry addresses are verified", () => {
   assert.equal(assessToken({ network: "elysium-testnet", address: "0x0000000000000000000000000000000000000001", symbol: "MOON" }).status, "unverified");
   assert.equal(foldTokenName("USD₮0"), foldTokenName("usdt0"));
 });
+
+test("Elysium mainnet tokens are L1-anchored canonical pairs of HyperEVM mainnet tokens", () => {
+  const expected = {
+    WHYPE: ["0xbA876237B0F021A6c6D852d6c26E107997cC5E81", "0x5555555555555555555555555555555555555555", 18],
+    USDC: ["0xb47c4C8F73F009CC0C0d3f92B388d13E293F0B65", "0xb88339CB7199b77E23DB6E890353E22632Ba630f", 6],
+    kHYPE: ["0x248888D396A546A69A188f3Deb476964e581E9d0", "0xfD739d4e423301CE9385c1fb8850539D657C296D", 18],
+    KNTQ: ["0xe45a355d9e9cAd2aD85F2d03E3eE3102A036acF0", "0x000000000000780555bD0BCA3791f89f9542c2d6", 18],
+    USDH: ["0x87E904A076fb98eEd283AE3e3410507ce95A9326", "0x111111a1a0667d36bD57c0A9f569b98057111111", 6],
+    UBTC: ["0xE9C29585EAe4B9a55b02a9605AEa892B40d972E8", "0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463", 8],
+    UETH: ["0x7A66A75fe41Bc26867C17fe1bc7D1C076EBd4eCd", "0xBe6727B535545C67d5cAa73dEa54865B92CF7907", 18],
+  };
+  assert.equal(tokensFor("elysium-mainnet").length, 1 + Object.keys(expected).length);
+  for (const [symbol, [l2, l1, decimals]] of Object.entries(expected)) {
+    const token = findToken("elysium-mainnet", symbol);
+    assert.equal(token?.address, l2, symbol);
+    assert.equal(token?.decimals, decimals, symbol);
+    assert.match(token?.evidence ?? "", /L1-anchored/u, symbol);
+    assert.equal(counterpartToken(token)?.address, l1, `${symbol} counterpart`);
+    assert.equal(counterpartToken(token)?.network, "hyperevm-mainnet");
+  }
+  assert.equal(NETWORKS["elysium-mainnet"].contracts.wrappedNative, findToken("elysium-mainnet", "WHYPE")?.address);
+  assert.equal(counterpartToken(nativeToken("elysium-mainnet"))?.network, "hyperevm-mainnet");
+  assert.equal(findToken("elysium-mainnet", "USDT0"), null, "USD₮0 is not bridged to 99901 yet");
+});
+
+test("Elysium testnet extras: UETH and kmHYPE bridged, test stables tagged non-canonical", () => {
+  const ueth = findToken("elysium-testnet", "UETH");
+  assert.equal(ueth?.address, "0x3EF0cdeF58ddc22E46E6b22A214F0402D317EB7b");
+  assert.equal(counterpartToken(ueth)?.coreToken?.index, 1242);
+  assert.equal(findToken("elysium-testnet", "kmHYPE")?.decimals, 18);
+  for (const symbol of ["tUSDC", "Oxy-USDC", "PLUMBUSD"]) {
+    const token = findToken("elysium-testnet", symbol);
+    assert.ok(token?.tags.includes("non-canonical") && token.tags.includes("test"), symbol);
+    assert.equal(token?.group, undefined, `${symbol} is never priced as USDC`);
+  }
+  assert.equal(findToken("elysium-testnet", "USDC")?.address, "0x7D29d8047B905000459c0E80c34a26CeedcB47b2", "canonical USDC still wins");
+});

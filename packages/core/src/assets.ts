@@ -38,7 +38,9 @@ export type TokenTag =
   | "canonical-bridged"
   | "core-linked"
   | "btc"
-  | "eth";
+  | "eth"
+  /** A real contract that is not the canonical asset its name suggests (app-specific test stables). Never priced as that asset. */
+  | "non-canonical";
 
 export interface TokenCounterpart {
   readonly network: NetworkKey;
@@ -167,6 +169,47 @@ const HEVM = {
   USDT0: "0x779Ded0c9e1022225f8E0630b35a9b54bE713736",
 } as const satisfies Record<string, EvmAddress>;
 
+/*
+ * More Elysium testnet tokens, read back on 99801 and 998
+ * (name/symbol/decimals; the L2 address is
+ * `L2GatewayRouter.calculateL2TokenAddress(l1)` and the token's
+ * `l1Address()` points back).
+ */
+const ELY_MORE = {
+  UETH: "0x3EF0cdeF58ddc22E46E6b22A214F0402D317EB7b",
+  kmHYPE: "0x0eef2bf799Cb2dfE86E56f2B2768eed76b973b8A",
+} as const satisfies Record<string, EvmAddress>;
+
+const HEVM_MORE = {
+  UETH: "0x5a1A1339ad9e52B7a4dF78452D5c18e8690746f3",
+  kmHYPE: "0x6a3886EB829b3C1a91ba44BbD7154D1DD34aCfAe",
+} as const satisfies Record<string, EvmAddress>;
+
+/* HyperCore testnet UETH (`spotMeta` token 1242, evmContract = HEVM_MORE.UETH, 2026-10-29). */
+const CORE_TESTNET_UETH = {
+  name: "UETH", index: 1242, tokenId: "0xe4371d8166f362d6578725f11e0a14f3", weiDecimals: 9, szDecimals: 4, evmExtraWeiDecimals: 9,
+} as const satisfies CoreTokenLink;
+
+/*
+ * Elysium MAINNET (99901) canonical tokens. L1-anchored: the L2
+ * address is `L1GatewayRouter(0x5D24…68c0).calculateL2TokenAddress(l1)` read on
+ * HyperEVM mainnet, and the L1 token's name/symbol/decimals were read on
+ * https://rpc.hyperliquid.xyz/evm (2026-10-29). The 99901 side itself has no
+ * keyless official RPC; its metadata was only seen through an untrusted relay.
+ */
+const ELY_MAINNET = {
+  WHYPE: "0xbA876237B0F021A6c6D852d6c26E107997cC5E81",
+  USDC: "0xb47c4C8F73F009CC0C0d3f92B388d13E293F0B65",
+  kHYPE: "0x248888D396A546A69A188f3Deb476964e581E9d0",
+  KNTQ: "0xe45a355d9e9cAd2aD85F2d03E3eE3102A036acF0",
+  USDH: "0x87E904A076fb98eEd283AE3e3410507ce95A9326",
+  UBTC: "0xE9C29585EAe4B9a55b02a9605AEa892B40d972E8",
+  UETH: "0x7A66A75fe41Bc26867C17fe1bc7D1C076EBd4eCd",
+} as const satisfies Record<string, EvmAddress>;
+
+const L1_ANCHORED =
+  "L1-anchored: L1GatewayRouter(0x5D24…68c0).calculateL2TokenAddress(l1) on HyperEVM mainnet = this address, and the L1 token's name/symbol/decimals read by eth_call (2026-10-29); the standard gateway deploys the L2 token with the L1 metadata";
+
 export const TOKENS: readonly TokenDescriptor[] = Object.freeze([
   /* ------------------------------------------------------ Elysium testnet */
   native("elysium-testnet", { bridge: { route: "native", counterpart: { network: "hyperevm-testnet", address: null } } }),
@@ -252,17 +295,18 @@ export const TOKENS: readonly TokenDescriptor[] = Object.freeze([
   /* ----------------------------------------------------- HyperEVM mainnet */
   native("hyperevm-mainnet", {
     tags: ["gas", "core-linked"],
+    bridge: { route: "native", counterpart: { network: "elysium-mainnet", address: null } },
     coreToken: CORE_MAINNET.HYPE,
     evidence: "native gas asset; spotMeta HYPE index 150 (8 wei decimals; moves through system address 0x2222…2222)",
   }),
   erc20({
     network: "hyperevm-mainnet", address: "0x5555555555555555555555555555555555555555", symbol: "WHYPE", name: "Wrapped HYPE",
-    decimals: 18, group: "HYPE", tags: ["wrapped"], evidence: READ_BACK,
+    decimals: 18, group: "HYPE", tags: ["wrapped"], bridge: canonical("elysium-mainnet", ELY_MAINNET.WHYPE), evidence: READ_BACK,
   }),
   erc20({
     // Circle's USDC on HyperEVM. Core USDC is linked to 0x6B9E…0A24, not to this contract.
     network: "hyperevm-mainnet", address: "0xb88339CB7199b77E23DB6E890353E22632Ba630f", symbol: "USDC", name: "USDC",
-    decimals: 6, group: "USDC", tags: ["stablecoin"], evidence: `${READ_BACK}; not the Core-linked USDC contract`,
+    decimals: 6, group: "USDC", tags: ["stablecoin"], bridge: canonical("elysium-mainnet", ELY_MAINNET.USDC), evidence: `${READ_BACK}; not the Core-linked USDC contract`,
   }),
   erc20({
     network: "hyperevm-mainnet", address: "0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb", symbol: "USDT0", name: "USD₮0",
@@ -271,27 +315,27 @@ export const TOKENS: readonly TokenDescriptor[] = Object.freeze([
   }),
   erc20({
     network: "hyperevm-mainnet", address: "0x111111a1a0667d36bD57c0A9f569b98057111111", symbol: "USDH", name: "USDH",
-    decimals: 6, group: "USDH", tags: ["stablecoin", "core-linked"], coreToken: CORE_MAINNET.USDH,
+    decimals: 6, group: "USDH", tags: ["stablecoin", "core-linked"], coreToken: CORE_MAINNET.USDH, bridge: canonical("elysium-mainnet", ELY_MAINNET.USDH),
     evidence: `${READ_BACK}; spotMeta USDH index 360 evmContract = this address`,
   }),
   erc20({
     network: "hyperevm-mainnet", address: "0xfD739d4e423301CE9385c1fb8850539D657C296D", symbol: "kHYPE", name: "Kinetiq Staked HYPE",
-    decimals: 18, tags: ["liquid-staking", "core-linked"], coreToken: CORE_MAINNET.KHYPE,
+    decimals: 18, tags: ["liquid-staking", "core-linked"], coreToken: CORE_MAINNET.KHYPE, bridge: canonical("elysium-mainnet", ELY_MAINNET.kHYPE),
     evidence: `${READ_BACK}; Kinetiq docs contract table; spotMeta KHYPE index 121 evmContract = this address`,
   }),
   erc20({
     network: "hyperevm-mainnet", address: "0x000000000000780555bD0BCA3791f89f9542c2d6", symbol: "KNTQ", name: "Kinetiq Governance Token",
-    decimals: 18, tags: ["governance", "core-linked"], coreToken: CORE_MAINNET.KNTQ,
+    decimals: 18, tags: ["governance", "core-linked"], coreToken: CORE_MAINNET.KNTQ, bridge: canonical("elysium-mainnet", ELY_MAINNET.KNTQ),
     evidence: `${READ_BACK}; spotMeta KNTQ index 124 evmContract = this address`,
   }),
   erc20({
     network: "hyperevm-mainnet", address: "0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463", symbol: "UBTC", name: "Unit Bitcoin",
-    decimals: 8, group: "BTC", tags: ["btc", "core-linked"], coreToken: CORE_MAINNET.UBTC,
+    decimals: 8, group: "BTC", tags: ["btc", "core-linked"], coreToken: CORE_MAINNET.UBTC, bridge: canonical("elysium-mainnet", ELY_MAINNET.UBTC),
     evidence: `${READ_BACK}; spotMeta UBTC index 197 evmContract = this address`,
   }),
   erc20({
     network: "hyperevm-mainnet", address: "0xBe6727B535545C67d5cAa73dEa54865B92CF7907", symbol: "UETH", name: "Unit Ethereum",
-    decimals: 18, group: "ETH", tags: ["eth", "core-linked"], coreToken: CORE_MAINNET.UETH,
+    decimals: 18, group: "ETH", tags: ["eth", "core-linked"], coreToken: CORE_MAINNET.UETH, bridge: canonical("elysium-mainnet", ELY_MAINNET.UETH),
     evidence: `${READ_BACK}; spotMeta UETH index 221 evmContract = this address`,
   }),
   erc20({
@@ -301,8 +345,81 @@ export const TOKENS: readonly TokenDescriptor[] = Object.freeze([
   }),
 
   /* ------------------------------------------------------ Elysium mainnet */
-  // Only the gas asset: no token addresses are published for 99901 yet.
-  native("elysium-mainnet", { evidence: "native gas asset of the chain (networks.ts); no published token addresses yet" }),
+  // Canonical token-bridge set registered by the creator on Oct 19; re-check on launch day.
+  native("elysium-mainnet", {
+    bridge: { route: "native", counterpart: { network: "hyperevm-mainnet", address: null } },
+    evidence: "native gas asset of the chain (networks.ts); deposited 1:1 through the pinned mainnet Inbox 0xce59…2cff",
+  }),
+
+  /* ------------------------------------------------- more testnet tokens */
+  erc20({
+    network: "elysium-testnet", address: ELY_MORE.UETH, symbol: "UETH", name: "Unit Ethereum", decimals: 18, group: "ETH",
+    tags: ["eth", "canonical-bridged"], bridge: canonical("hyperevm-testnet", HEVM_MORE.UETH),
+    evidence: `${READ_BACK} on 99801 and 998; ${CANONICAL_PAIR}; l1Address() = 0x5a1A…46f3`,
+  }),
+  erc20({
+    network: "elysium-testnet", address: ELY_MORE.kmHYPE, symbol: "kmHYPE", name: "kMarkets LST", decimals: 18,
+    tags: ["liquid-staking", "canonical-bridged"], bridge: canonical("hyperevm-testnet", HEVM_MORE.kmHYPE),
+    evidence: `${READ_BACK} on 99801 and 998; ${CANONICAL_PAIR}; l1Address() = 0x6a38…cfAe`,
+  }),
+  // App-specific test stables on Elysium testnet: unbacked, not canonical USDC, never priced as USDC.
+  // Mock USDC 0xcC62…54d9 calls itself "USDC" and stays out on purpose: it is a look-alike of canonical USDC.
+  erc20({
+    network: "elysium-testnet", address: "0x852043605E2F2F326F6Bed69E5e5Baf970366473", symbol: "tUSDC", name: "Test USDC", decimals: 6,
+    tags: ["test", "non-canonical"], evidence: `${READ_BACK}; Reactor Perps collateral; unbacked test stable`,
+  }),
+  erc20({
+    network: "elysium-testnet", address: "0xa4CE6e6C719f7FB524230C367948039b078683E4", symbol: "Oxy-USDC", name: "Oxy USDC", decimals: 6,
+    tags: ["test", "non-canonical"], evidence: `${READ_BACK}; Oxley quote asset; unbacked test stable`,
+  }),
+  erc20({
+    network: "elysium-testnet", address: "0x3A3a8e3D34BB815cc211976C17ccf3376C97d750", symbol: "PLUMBUSD", name: "Plumbline Demo Dollar", decimals: 6,
+    tags: ["test", "non-canonical"], evidence: `${READ_BACK}; Plumbline demo stable; unbacked test stable`,
+  }),
+  erc20({
+    network: "hyperevm-testnet", address: HEVM_MORE.UETH, symbol: "UETH", name: "Unit Ethereum", decimals: 18, group: "ETH",
+    tags: ["eth", "core-linked"], bridge: canonical("elysium-testnet", ELY_MORE.UETH), coreToken: CORE_TESTNET_UETH,
+    evidence: `${READ_BACK}; spotMeta UETH index 1242 evmContract = this address`,
+  }),
+  erc20({
+    network: "hyperevm-testnet", address: HEVM_MORE.kmHYPE, symbol: "kmHYPE", name: "kMarkets LST", decimals: 18,
+    tags: ["liquid-staking"], bridge: canonical("elysium-testnet", ELY_MORE.kmHYPE), evidence: `${READ_BACK}; canonical L1 token of Elysium kmHYPE`,
+  }),
+  erc20({
+    network: "elysium-mainnet", address: ELY_MAINNET.WHYPE, symbol: "WHYPE", name: "Wrapped HYPE", decimals: 18, group: "HYPE",
+    tags: ["wrapped", "canonical-bridged"], bridge: canonical("hyperevm-mainnet", "0x5555555555555555555555555555555555555555"),
+    evidence: `${L1_ANCHORED} (WETH gateway 0x4ADe…91EB); networks.ts wrappedNative`,
+  }),
+  erc20({
+    network: "elysium-mainnet", address: ELY_MAINNET.USDC, symbol: "USDC", name: "USDC", decimals: 6, group: "USDC",
+    tags: ["stablecoin", "canonical-bridged"], bridge: canonical("hyperevm-mainnet", "0xb88339CB7199b77E23DB6E890353E22632Ba630f"),
+    evidence: `${L1_ANCHORED} (standard gateway 0xd97B…122c)`,
+  }),
+  erc20({
+    network: "elysium-mainnet", address: ELY_MAINNET.kHYPE, symbol: "kHYPE", name: "Kinetiq Staked HYPE", decimals: 18,
+    tags: ["liquid-staking", "canonical-bridged"], bridge: canonical("hyperevm-mainnet", "0xfD739d4e423301CE9385c1fb8850539D657C296D"),
+    evidence: `${L1_ANCHORED} (standard gateway 0xd97B…122c)`,
+  }),
+  erc20({
+    network: "elysium-mainnet", address: ELY_MAINNET.KNTQ, symbol: "KNTQ", name: "Kinetiq Governance Token", decimals: 18,
+    tags: ["governance", "canonical-bridged"], bridge: canonical("hyperevm-mainnet", "0x000000000000780555bD0BCA3791f89f9542c2d6"),
+    evidence: `${L1_ANCHORED} (standard gateway 0xd97B…122c)`,
+  }),
+  erc20({
+    network: "elysium-mainnet", address: ELY_MAINNET.USDH, symbol: "USDH", name: "USDH", decimals: 6, group: "USDH",
+    tags: ["stablecoin", "canonical-bridged"], bridge: canonical("hyperevm-mainnet", "0x111111a1a0667d36bD57c0A9f569b98057111111"),
+    evidence: `${L1_ANCHORED} (standard gateway 0xd97B…122c)`,
+  }),
+  erc20({
+    network: "elysium-mainnet", address: ELY_MAINNET.UBTC, symbol: "UBTC", name: "Unit Bitcoin", decimals: 8, group: "BTC",
+    tags: ["btc", "canonical-bridged"], bridge: canonical("hyperevm-mainnet", "0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463"),
+    evidence: `${L1_ANCHORED} (standard gateway 0xd97B…122c)`,
+  }),
+  erc20({
+    network: "elysium-mainnet", address: ELY_MAINNET.UETH, symbol: "UETH", name: "Unit Ethereum", decimals: 18, group: "ETH",
+    tags: ["eth", "canonical-bridged"], bridge: canonical("hyperevm-mainnet", "0xBe6727B535545C67d5cAa73dEa54865B92CF7907"),
+    evidence: `${L1_ANCHORED} (standard gateway 0xd97B…122c)`,
+  }),
 ]);
 
 const BY_ID = new Map<string, TokenDescriptor>(TOKENS.map((token) => [token.id.toLowerCase(), token]));
