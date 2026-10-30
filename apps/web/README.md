@@ -27,7 +27,8 @@ src/
     keyboard/              ⌘K / "/" Oracle, "?" shortcuts, "g t" style navigation
   ui/                      the kit (import from "src/ui"); see /kit for every component, live
   motion/                  reduced-motion preference, useAnimationFrame, AuroraBackdrop, Reveal, view transitions
-  visuals/                 Sun (+ LiveSun, MiniSun), Lyre (+ MarketsLyre), Constellation; pure models beside them
+  topo/                    the drawn Survey artifacts (Relief, Rope, RouteCard, ...); see src/topo/README.md
+  features/                agentKey/ (trading key vault and signer), trading/ (see its README)
   oracle/                  OracleDialog, store, preview tokenizer + navigation commands
   lib/                     api.ts (fetch + error envelope), sse.ts, format.ts, pulse/ (hub, model, RPC fallback)
   hooks/                   usePulse, useMarkets, useNow
