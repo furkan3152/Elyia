@@ -41,6 +41,8 @@ export const LANGUAGE_LIMITS = Object.freeze({
 export const CHIP_KINDS = Object.freeze([
   "verb", "side", "amount", "asset", "market", "leverage", "margin", "price", "trigger", "duration", "schedule",
   "condition", "network", "account", "recipient", "order", "alert", "query", "connector", "unknown",
+  // A named protocol ("kalos", "Kinetiq'te"): appended in v1.1.
+  "venue",
 ] as const);
 export type ChipKind = (typeof CHIP_KINDS)[number];
 
