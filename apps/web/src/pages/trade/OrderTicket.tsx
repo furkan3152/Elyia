@@ -18,9 +18,10 @@ import { fieldBoxClasses } from "../../ui/fieldStyles";
 import { sanitizeDecimalInput } from "../../ui/numberInput";
 import { Popover } from "../../ui/Popover";
 import { SegmentedControl } from "../../ui/SegmentedControl";
-import { Slider } from "../../ui/Slider";
 import { Toggle } from "../../ui/Toggle";
 import { useAccess } from "./access";
+import { AscentStrip } from "./AscentStrip";
+import { LeverageRidge } from "./LeverageRidge";
 import { GuardStrip } from "./GuardStrip";
 import { marketTitle, usd } from "./labels";
 import { Caption, KeyHint } from "./parts";
@@ -28,6 +29,7 @@ import { gradeOfLeverage, ticketGrade } from "./survey";
 import { maxBaseFor, ticketLeverage } from "./sizing";
 import { AccessAction, AgentBadge } from "./TicketAccess";
 import { useTerminal } from "./terminalContext";
+import { useSheetInk } from "./useSheetInk";
 
 const KINDS: readonly { readonly id: OrderKind; readonly label: string; readonly key: string }[] = [
   { id: "market", label: "Market", key: "M" },
@@ -40,7 +42,7 @@ function Field({ label, aside, children, invalid, htmlFor }: { readonly label: s
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={htmlFor} className="caption !text-ink-2">
+        <label htmlFor={htmlFor} className="font-tag text-[12px] uppercase text-ink-2">
           {label}
         </label>
         {aside ? <span className="tnum font-mono text-[11px] text-ink-3">{aside}</span> : null}
@@ -78,7 +80,7 @@ function SlippagePicker() {
       label="Market slippage"
       className="min-w-[220px]"
       trigger={(props) => (
-        <button type="button" {...props} className={cx("inline-flex items-center gap-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-2 hover:text-ink", FOCUS_RING)}>
+        <button type="button" {...props} className={cx("inline-flex items-center gap-0.5 font-tag text-[11px] uppercase text-ink-2 hover:text-ink", FOCUS_RING)}>
           slip {(slippage / 100).toFixed(slippage < 100 ? 1 : 0)}%
           <ChevronDown className="h-3 w-3" aria-hidden="true" />
         </button>
@@ -96,7 +98,7 @@ function SlippagePicker() {
                   setPrefs({ slippageBps: choice });
                   close();
                 }}
-                className={cx("h-8 border-1.5 font-mono text-xs", choice === slippage ? "border-rule bg-ink text-paper" : "border-rule/40 text-ink-2 hover:border-rule hover:text-ink", FOCUS_RING)}
+                className={cx("px-frame-thin h-8 font-mono text-xs", choice === slippage ? "bg-ink text-paper" : "bg-card text-ink-2 hover:bg-paper-2 hover:text-ink", FOCUS_RING)}
               >
                 {(choice / 100).toFixed(choice < 100 ? 1 : 0)}%
               </button>
@@ -123,7 +125,7 @@ function SideSwitch({ long, spot, onChange }: { readonly long: boolean; readonly
     { id: "sell" as const, label: spot ? "Sell" : "Short", glyph: "▼", key: "S", on: !long },
   ];
   return (
-    <div role="group" aria-label="Side (B / S)" className="grid grid-cols-2 border-2 border-rule">
+    <div role="group" aria-label="Side (B / S)" className="px-frame grid grid-cols-2 bg-card">
       {sides.map((side) => (
         <button
           key={side.id}
@@ -131,7 +133,7 @@ function SideSwitch({ long, spot, onChange }: { readonly long: boolean; readonly
           aria-pressed={side.on}
           onClick={() => onChange(side.id)}
           className={cx(
-            "relative flex h-12 items-center justify-center gap-2 font-sans text-[15px] font-bold uppercase tracking-[0.08em] transition-colors duration-fast first:border-r-2 first:border-rule",
+            "relative flex h-12 items-center justify-center gap-2 font-display text-[18px] font-bold uppercase tracking-[0.04em] first:[box-shadow:4px_0_0_0_rgb(var(--rule))]",
             side.on ? (side.id === "buy" ? "bg-up text-card" : "bg-down text-card") : side.id === "buy" ? "bg-card text-up hover:bg-up/10" : "bg-card text-down hover:bg-down/10",
             FOCUS_RING,
           )}
@@ -150,8 +152,8 @@ function SideSwitch({ long, spot, onChange }: { readonly long: boolean; readonly
 /** One ruled line of the card's log: what this order costs and where it breaks. */
 function LogLine({ term, children, tone }: { readonly term: ReactNode; readonly children: ReactNode; readonly tone?: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b border-dashed border-rule/25 py-1.5 last:border-b-0">
-      <dt className="caption !text-[11px] !text-ink-3">{term}</dt>
+    <div className="tx-row-seam flex items-baseline justify-between gap-3 py-1.5 last:bg-none">
+      <dt className="font-tag text-[11px] uppercase text-ink-3">{term}</dt>
       <dd className={cx("tnum text-right font-mono text-[12px] text-ink", tone)}>{children}</dd>
     </div>
   );
@@ -208,7 +210,7 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
   const maxBase = maxBaseFor({ market, feeds, side: store.side, px, leverage });
 
   if (!market) {
-    return <div className={cx("flex min-h-[420px] flex-col gap-3 border-2 border-rule bg-card p-4 shadow-hard-lg", className)} aria-busy="true" />;
+    return <div className={cx("flex min-h-[420px] flex-col gap-3 bg-card p-4", !bare && "px-frame px-drop-lg", className)} aria-busy="true" />;
   }
 
   const long = store.side === "buy";
@@ -230,14 +232,14 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
 
   return (
     <form
-      className={cx("flex flex-col bg-card", !bare && "border-2 border-rule shadow-hard-lg", className)}
+      className={cx("flex flex-col bg-card", !bare && "px-frame px-drop-lg", className)}
       aria-label="Order ticket"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
       }}
     >
-      <header className={cx("flex items-center justify-between gap-2 border-b-2 border-rule py-2.5", bare ? "px-0" : "px-4")}>
+      <header className={cx("tx-seam-b flex items-center justify-between gap-2 py-2.5", bare ? "px-0" : "px-4")}>
         <Caption tone="ink" parts={["TICKET", marketTitle(market)]} />
         <GradeChip grade={grade} />
       </header>
@@ -245,7 +247,27 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
       <div className={cx("flex flex-col gap-3.5 py-4", bare ? "px-0" : "px-4")}>
         <SideSwitch long={long} spot={isSpot} onChange={(side) => store.patch({ side })} />
 
-        <div role="tablist" aria-label="Order type" className="flex items-center gap-4 border-b-1.5 border-rule/30">
+        {!isSpot ? (
+          <div className="flex flex-col gap-2">
+            <LeverageRidge label={`Leverage · ${mode}`} value={leverage} max={max} danger={danger} ticks={leverageTicks(max)} gradeOf={gradeOfLeverage} onChange={(value) => store.setLeverage(market.coin, value)} />
+            <div className="flex items-center justify-between gap-2">
+              <SegmentedControl<"cross" | "isolated">
+                label="Margin mode"
+                size="sm"
+                value={mode}
+                onChange={(value) => store.setMarginMode(market.coin, value)}
+                options={[
+                  { value: "cross", label: "Cross", disabled: market.onlyIsolated, hint: market.onlyIsolated ? `${market.displayName} is isolated only` : "The whole account backs the position" },
+                  { value: "isolated", label: "Isolated", hint: "Only this position's margin is at risk" },
+                ]}
+              />
+              {leverage >= danger ? <span className="font-tag text-[11px] uppercase text-down">high for this market</span> : current && current.leverage !== leverage ? <span className="font-mono text-[11px] text-ink-3">now {current.leverage}× · will update</span> : null}
+            </div>
+          </div>
+        ) : null}
+
+
+        <div role="tablist" aria-label="Order type" className="tx-seam-b flex items-center gap-4">
           {KINDS.map((kind) => (
             <button
               key={kind.id}
@@ -255,7 +277,7 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
               onClick={() => store.patch({ kind: kind.id })}
               title={kind.key ? `${kind.label} (${kind.key})` : kind.label}
               className={cx(
-                "-mb-[1.5px] border-b-[3px] pb-1.5 font-sans text-[12px] font-bold uppercase tracking-[0.08em] transition-colors duration-fast",
+                "border-b-4 pb-1.5 font-tag text-[12px] uppercase",
                 store.kind === kind.id ? "border-accent-line text-ink" : "border-transparent text-ink-3 hover:text-ink",
                 FOCUS_RING,
               )}
@@ -274,7 +296,7 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
           <div className="flex flex-col gap-2">
             <Field label="Price" htmlFor="ticket-price" invalid={error?.field === "price"} aside={mid !== null ? `mid ${formatPx(mid, market)}` : undefined}>
               <DecimalInput id="ticket-price" value={store.price} onChange={(price) => store.patch({ price })} decimals={priceDecimals} />
-              <button type="button" onClick={() => mid !== null && store.patch({ price: String(Number(mid.toPrecision(6))) })} className={cx("border-1.5 border-rule/40 px-1.5 py-0.5 font-mono text-[11px] uppercase text-summit-ink hover:border-rule", FOCUS_RING)}>
+              <button type="button" onClick={() => mid !== null && store.patch({ price: String(Number(mid.toPrecision(6))) })} className={cx("px-frame-thin bg-card px-1.5 py-0.5 font-tag text-[11px] uppercase text-summit-ink hover:bg-paper-2", FOCUS_RING)}>
                 mid
               </button>
             </Field>
@@ -305,7 +327,7 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
               <DecimalInput id="scale-count" value={store.scaleCount} onChange={(scaleCount) => store.patch({ scaleCount })} decimals={0} placeholder="5" />
             </Field>
             <div className="flex flex-col gap-1.5">
-              <span className="caption !text-ink-2">Weight</span>
+              <span className="font-tag text-[12px] uppercase text-ink-2">Weight</span>
               <SegmentedControl<ScaleSkew>
                 label="Distribution"
                 size="sm"
@@ -339,14 +361,14 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
             <button
               type="button"
               onClick={() => store.setPrefs({ sizeUnit: store.sizeUnit === "usd" ? "base" : "usd" })}
-              className={cx("inline-flex items-center gap-1 border-1.5 border-rule/40 px-1.5 py-0.5 font-mono text-[11px] text-ink hover:border-rule", FOCUS_RING)}
+              className={cx("px-frame-thin inline-flex items-center gap-1 bg-card px-1.5 py-0.5 font-mono text-[11px] text-ink hover:bg-paper-2", FOCUS_RING)}
               title="Switch between a USDC amount and a coin amount"
             >
               {unitLabel}
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </button>
           </Field>
-          <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Size presets (keys 1 to 5)">
+          <div className="grid grid-cols-5 gap-2.5 px-0.5 pt-1" role="group" aria-label="Size presets (keys 1 to 5)">
             {SIZE_PRESETS.map((percent, index) => {
               const amount = maxBase !== null ? presetAmount({ percent, maxBase, unit: store.sizeUnit, px, szDecimals: market.szDecimals }) : null;
               const chosen = amount !== null && amount === store.amount;
@@ -358,8 +380,8 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
                   onClick={() => amount !== null && store.patch({ amount })}
                   title={`${percent === 100 ? "Max" : `${percent}%`} of what you can open (key ${index + 1})`}
                   className={cx(
-                    "h-8 border-1.5 font-mono text-[11px] font-semibold transition-colors duration-fast disabled:opacity-40",
-                    chosen ? "border-rule bg-ink text-paper" : "border-rule/35 bg-card text-ink-2 hover:border-rule hover:text-ink",
+                    "px-frame-thin h-8 font-tag text-[11px] disabled:opacity-40",
+                    chosen ? "bg-ink text-paper" : "bg-card text-ink-2 hover:bg-paper-2 hover:text-ink",
                     FOCUS_RING,
                   )}
                 >
@@ -370,37 +392,6 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
           </div>
         </div>
 
-        {!isSpot ? (
-          <div className="flex flex-col gap-2">
-            <Slider
-              label={`Leverage · ${mode}`}
-              value={leverage}
-              min={1}
-              max={max}
-              step={1}
-              ticks={leverageTicks(max)}
-              format={(value) => `${value}×`}
-              dangerFrom={danger}
-              gradeOf={gradeOfLeverage}
-              aside={`${leverage}× · T${gradeOfLeverage(leverage)}`}
-              onChange={(value) => store.setLeverage(market.coin, value)}
-            />
-            <div className="flex items-center justify-between gap-2">
-              <SegmentedControl<"cross" | "isolated">
-                label="Margin mode"
-                size="sm"
-                value={mode}
-                onChange={(value) => store.setMarginMode(market.coin, value)}
-                options={[
-                  { value: "cross", label: "Cross", disabled: market.onlyIsolated, hint: market.onlyIsolated ? `${market.displayName} is isolated only` : "The whole account backs the position" },
-                  { value: "isolated", label: "Isolated", hint: "Only this position's margin is at risk" },
-                ]}
-              />
-              {leverage >= danger ? <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-down">high for this market</span> : current && current.leverage !== leverage ? <span className="font-mono text-[11px] text-ink-3">now {current.leverage}× · will update</span> : null}
-            </div>
-          </div>
-        ) : null}
-
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <Toggle size="sm" checked={store.reduceOnly} onChange={(reduceOnly) => store.patch({ reduceOnly })} label="Reduce only" />
           {!isSpot && store.kind !== "twap" && store.kind !== "scale" ? <Toggle size="sm" checked={store.tpslOn} onChange={(tpslOn) => store.patch({ tpslOn })} label="Flag + anchor" /> : null}
@@ -409,7 +400,7 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
         {store.tpslOn && !isSpot && (store.kind === "market" || store.kind === "limit") ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="caption !text-ink-2">Set as</span>
+              <span className="font-tag text-[12px] uppercase text-ink-2">Set as</span>
               <SegmentedControl
                 label="TP/SL unit"
                 size="sm"
@@ -422,16 +413,16 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <label className={cx("flex flex-col gap-1 border-2 px-2.5 py-2", error?.field === "tp" ? "border-down" : "border-up")}>
-                <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-up">⚑ Flag · TP</span>
+              <label className={cx("px-frame-thin flex flex-col gap-1 bg-card px-2.5 py-2", error?.field === "tp" ? "px-tone-down" : "px-tone-up")}>
+                <span className="font-tag text-[10px] uppercase text-up">⚑ Flag · TP</span>
                 <span className="flex items-center gap-1">
                   <DecimalInput id="ticket-tp" label="Take profit" value={store.tp} onChange={(tp) => store.patch({ tp })} decimals={store.tpslUnit === "roe" ? 2 : priceDecimals} placeholder={store.tpslUnit === "roe" ? "10" : "price"} />
                   {store.tpslUnit === "roe" ? <span className="font-mono text-xs text-up">%</span> : null}
                 </span>
                 {preview?.tpPx ? <span className="tnum font-mono text-[11px] text-ink-2">at {formatPx(preview.tpPx, market)}</span> : null}
               </label>
-              <label className={cx("flex flex-col gap-1 border-2 px-2.5 py-2", error?.field === "sl" ? "border-down" : "border-rule")}>
-                <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-ink">⚓ Anchor · SL</span>
+              <label className={cx("px-frame-thin flex flex-col gap-1 bg-card px-2.5 py-2", error?.field === "sl" && "px-tone-down")}>
+                <span className="font-tag text-[10px] uppercase text-ink">⚓ Anchor · SL</span>
                 <span className="flex items-center gap-1">
                   <DecimalInput id="ticket-sl" label="Stop loss" value={store.sl} onChange={(sl) => store.patch({ sl })} decimals={store.tpslUnit === "roe" ? 2 : priceDecimals} placeholder={store.tpslUnit === "roe" ? "5" : "price"} />
                   {store.tpslUnit === "roe" ? <span className="font-mono text-xs text-ink-2">%</span> : null}
@@ -463,14 +454,15 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
         </dl>
 
         {error && store.amount ? (
-          <p role="alert" className="-mt-1 border-l-[3px] border-down pl-2 text-[13px] leading-snug text-down">
+          <p role="alert" className="-mt-1 border-l-4 border-down pl-2 text-[13px] leading-snug text-down">
             {error.message}
           </p>
         ) : null}
 
       </div>
       {/* The action stays in reach while the ticket scrolls: guard, the one button, the key. */}
-      <div className={cx("sticky bottom-0 z-[2] flex flex-col gap-2.5 border-t-2 border-rule bg-card pb-4 pt-3", bare ? "px-0" : "px-4")}>
+      <div className={cx("tx-seam-t sticky z-[2] flex flex-col gap-3 bg-card pt-3.5", bare ? "-bottom-6 px-0 pb-10" : "-bottom-4 px-4 pb-8")}>
+        <AscentStrip />
         {access === "ready" ? (
           <>
             <GuardStrip verdict={verdict} idle={result?.plan ? undefined : "Enter a size to see the verdict."} />
@@ -480,7 +472,7 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
               </span>
               <span className="truncate">{result?.buttonLabel ?? (long ? (isSpot ? "Buy" : "Long") : isSpot ? "Sell" : "Short")}</span>
               {verdict?.decision === "confirm" ? <span className="font-medium opacity-80">· review</span> : null}
-              <span className="ml-1 inline-flex border-1.5 border-card/70 bg-card px-0.5 py-px">
+              <span className="ml-1 inline-flex bg-card px-0.5 py-px">
                 <Blaze grade={grade} size={12} label={null} />
               </span>
             </Button>
@@ -499,42 +491,25 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
 
 /**
  * The rope before you sign: where the crevasse (liquidation) would open for
- * this exact order, drawn on the same pitch as an open position's rope.
+ * this exact order, drawn on the same pixel pitch as an open position's
+ * rope, with Ely climbing at the mark (worried when it is under 10%).
  */
 function RopePreview({ market, long, entry, mark, liquidation, stop, target, distance, sized, waiting }: { readonly market: TradeMarket; readonly long: boolean; readonly entry: number | null; readonly mark: number | null; readonly liquidation: number | null; readonly stop: number | null; readonly target: number | null; readonly distance: number | null; readonly sized: boolean; readonly waiting: string | null }) {
   const ready = sized && entry !== null && mark !== null;
+  const ink = useSheetInk();
+  const tight = distance !== null && distance < 0.1;
   return (
-    <figure className="border-2 border-dashed border-rule/45 bg-paper/60 px-3 pb-1 pt-2">
+    <figure className={cx("px-frame-thin bg-paper-2 px-3 pb-2 pt-2", tight && "px-tone-down")}>
       <figcaption className="flex items-center justify-between gap-2">
-        <span className="caption !text-[11px] !text-ink">Rope · preview</span>
-        <span className={cx("tnum font-mono text-[11px] font-semibold", distance !== null && distance < 0.1 ? "text-down" : "text-ink-2")}>
-          {ready ? (distance !== null ? `${(distance * 100).toFixed(distance < 0.1 ? 1 : 0)}% to the crevasse` : "no crevasse at this margin") : waiting ? "waiting" : "set a size"}
+        <span className="font-tag text-[11px] uppercase text-ink">Rope · before you sign</span>
+        <span className={cx("tnum font-tag text-[11px] uppercase", tight ? "text-down" : "text-ink-2")}>
+          {ready ? (distance !== null ? `${(distance * 100).toFixed(distance < 0.1 ? 1 : 0)}% to ✕` : "no crevasse") : waiting ? "waiting" : "set a size"}
         </span>
       </figcaption>
       {ready ? (
-        <>
-          <Rope variant="compact" className="mt-1" side={long ? "long" : "short"} entry={entry} mark={mark} liquidation={liquidation} stop={stop} takeProfit={target} symbol={market.base} formatPrice={(price) => formatPx(price, market)} />
-          <dl className="mt-1 grid grid-cols-3 border-t-1.5 border-rule/30">
-            {[
-              { glyph: "✕", name: "Crevasse", px: liquidation, tone: "text-down" },
-              { glyph: "⚓", name: "Anchor", px: stop, tone: "text-ink" },
-              { glyph: "⚑", name: "Flag", px: target, tone: "text-up" },
-            ].map((cell) => {
-              const move = cell.px !== null && mark ? (cell.px - mark) / mark : null;
-              return (
-                <div key={cell.name} className="flex flex-col gap-0.5 border-r border-dashed border-rule/30 px-1.5 py-1.5 first:pl-0 last:border-r-0">
-                  <dt className={cx("font-mono text-[10px] font-semibold uppercase tracking-[0.1em]", cell.tone)}>
-                    {cell.glyph} {cell.name}
-                  </dt>
-                  <dd className="tnum font-mono text-[12px] text-ink">{cell.px !== null ? formatPx(cell.px, market) : "—"}</dd>
-                  <dd className="tnum font-mono text-[10px] text-ink-3">{move !== null ? `${move >= 0 ? "+" : "−"}${Math.abs(move * 100).toFixed(1)}%` : cell.name === "Crevasse" ? "none" : "not set"}</dd>
-                </div>
-              );
-            })}
-          </dl>
-        </>
+        <Rope variant="full" className="mt-2" side={long ? "long" : "short"} entry={entry} mark={mark} liquidation={liquidation} stop={stop} takeProfit={target} symbol={market.base} formatPrice={(price) => formatPx(price, market)} ink={ink} />
       ) : (
-        <p className="py-3 text-[13px] leading-snug text-ink-2">{waiting ?? "Enter a size and the rope shows how far the mark can move against you before this position breaks, before anything is signed."}</p>
+        <p className="py-2 text-[13px] leading-snug text-ink-2">{waiting ?? "Enter a size: the rope shows how far the mark can move against you before this position breaks, before anything is signed."}</p>
       )}
     </figure>
   );

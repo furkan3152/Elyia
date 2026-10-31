@@ -64,7 +64,7 @@ function OrderLine({ order, compact }: { readonly order: FrontendOpenOrder; read
     );
   }
   return (
-    <div role="row" className={cx(GRID, "border-b border-rule/15 px-4 py-[7px] font-mono text-xs hover:bg-paper-2/60")}>
+    <div role="row" className={cx(GRID, "tx-row-seam px-4 py-[7px] font-mono text-xs hover:bg-paper-2/60")}>
       <span role="cell" className="tnum text-ink-3">{dateTime(order.timestamp)}</span>
       <span role="cell" className="truncate text-ink">{market?.kind === "spot" ? market.displayName : (market?.base ?? order.coin)}</span>
       <span role="cell" className="truncate text-ink-2">{typeLabel(order)}</span>
@@ -105,7 +105,7 @@ export function OrdersTable({ compact }: { readonly compact: boolean }) {
   return (
     <div role="table" aria-label="Open orders" className={compact ? "min-w-[440px]" : "min-w-[900px]"}>
       {compact ? (
-        <div role="row" className={cx(COMPACT, "sticky top-0 z-[1] bg-card px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 border-b-1.5 border-rule/40")}>
+        <div role="row" className={cx(COMPACT, "sticky top-0 z-[1] bg-card px-4 py-2 font-tag text-[10px] uppercase text-ink-3 tx-seam-b")}>
           <span role="columnheader">Market · type</span>
           <span role="columnheader">Price / trigger</span>
           <span role="columnheader">Size</span>
@@ -114,7 +114,7 @@ export function OrdersTable({ compact }: { readonly compact: boolean }) {
           </span>
         </div>
       ) : (
-        <div role="row" className={cx(GRID, "sticky top-0 z-[1] bg-card px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 border-b-1.5 border-rule/40")}>
+        <div role="row" className={cx(GRID, "sticky top-0 z-[1] bg-card px-4 py-2 font-tag text-[10px] uppercase text-ink-3 tx-seam-b")}>
           <span role="columnheader">Time</span>
           <span role="columnheader">Market</span>
           <span role="columnheader">Type</span>
@@ -130,7 +130,7 @@ export function OrdersTable({ compact }: { readonly compact: boolean }) {
       {inFlight.map((row) => {
         const market = marketByCoin.get(row.coin) ?? null;
         return (
-          <div key={row.cloid} role="row" className={cx(compact ? COMPACT : GRID, "border-b border-rule/15 px-4 py-[7px] font-mono text-xs text-ink-3")} aria-busy="true">
+          <div key={row.cloid} role="row" className={cx(compact ? COMPACT : GRID, "tx-row-seam px-4 py-[7px] font-mono text-xs text-ink-3")} aria-busy="true">
             <span role="cell" className="flex items-center gap-1.5">
               <LoaderCircle className="h-3 w-3 animate-spin text-summit-ink" aria-hidden="true" />
               {row.status === "resting" ? "resting" : "sending"}

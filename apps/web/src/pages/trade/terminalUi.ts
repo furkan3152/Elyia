@@ -6,6 +6,7 @@
 import { create } from "zustand";
 
 import type { TradePlan } from "../../features/trading/executor";
+import type { Ascent } from "./pixelTerminal";
 
 export type MobilePane = "chart" | "book" | "trades";
 /** The desktop book column on a short window: book or tape (both stack when there is room). */
@@ -36,6 +37,8 @@ interface TerminalUiState {
   readonly accountTab: AccountTab;
   /** The followed account holds HIP-3 positions or orders: load the builder-dex catalogue. */
   readonly needsHip3: boolean;
+  /** What Ely says about the last send: climbing, then summit / camp / refused. */
+  readonly ascent: Ascent | null;
   set(values: Partial<Omit<TerminalUiState, "set">>): void;
 }
 
@@ -53,5 +56,6 @@ export const useTerminalUi = create<TerminalUiState>()((set) => ({
   sidePane: "book",
   accountTab: "positions",
   needsHip3: false,
+  ascent: null,
   set: (values) => set(values),
 }));

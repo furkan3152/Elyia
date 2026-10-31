@@ -73,10 +73,10 @@ function ReviewBody({ plan, onClose }: { readonly plan: TradePlan; readonly onCl
   };
   return (
     <div className="flex flex-col gap-4">
-      <ol className="flex flex-col gap-2">
+      <ol className="flex flex-col gap-3 px-0.5 pt-0.5">
         {lines.map((line, index) => (
-          <li key={`${index}-${line}`} className="flex gap-2.5 border-2 border-rule bg-paper/60 px-3 py-2 font-mono text-[13px] text-ink">
-            <span className="tnum text-ink-3">{index + 1}</span>
+          <li key={`${index}-${line}`} className="px-frame-thin flex gap-2.5 bg-paper-2 px-3 py-2 font-mono text-[13px] text-ink">
+            <span className="tnum font-tag text-[11px] text-ink-3">{index + 1}</span>
             <span className="min-w-0">{line}</span>
           </li>
         ))}
@@ -87,7 +87,7 @@ function ReviewBody({ plan, onClose }: { readonly plan: TradePlan; readonly onCl
         Signed in this browser by elyia-web: a trade-only key that cannot withdraw. {plan.actions.length > 1 ? `${plan.actions.length} signatures, in this order.` : "One signature."}
       </p>
       {error ? (
-        <p role="alert" className="border-l-[3px] border-down bg-paper/60 px-3 py-2 text-sm text-down">
+        <p role="alert" className="border-l-4 border-down bg-paper-2 px-3 py-2 text-sm text-down">
           {error}
         </p>
       ) : null}

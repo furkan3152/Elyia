@@ -11,6 +11,7 @@ import { Button, ButtonLink } from "../../ui/Button";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { fieldBoxClasses } from "../../ui/fieldStyles";
 import type { Access } from "./access";
+import { Ely } from "../../pixel/Ely";
 import { useTerminal } from "./terminalContext";
 import { useTerminalUi } from "./terminalUi";
 
@@ -18,8 +19,8 @@ import { useTerminalUi } from "./terminalUi";
 export function FundingTeach({ className }: { readonly className?: string }) {
   const { endpoints, mode } = useTerminal();
   return (
-    <div className={cx("border-2 border-rule bg-paper/60 p-3.5 text-[13px] leading-relaxed", className)}>
-      <p className="flex items-center gap-2 font-bold text-ink">
+    <div className={cx("px-frame-thin bg-paper-2 p-3.5 text-[13px] leading-relaxed", className)}>
+      <p className="flex items-center gap-2 font-display text-[15px] font-bold text-ink">
         <Droplets className="h-4 w-4 text-water" aria-hidden="true" />
         No USDC on the Floor yet
       </p>
@@ -103,10 +104,11 @@ export function AccessAction({ access, className }: { readonly access: Exclude<A
   }
   if (access === "readOnly") {
     return (
-      <div className={cx("flex items-center gap-2 border-2 border-rule bg-signal/30 px-3 py-2 text-[12px] text-ink-2", className)}>
-        <Eye className="h-4 w-4 shrink-0 text-ink" aria-hidden="true" />
+      <div className={cx("px-frame-thin flex items-center gap-2 bg-signal/25 py-1 pl-1 pr-2 text-[12px] text-ink-2", className)}>
+        <Ely state="watch" size={44} label={null} className="shrink-0" />
         <p className="min-w-0 flex-1 leading-snug">
-          <span className="font-bold text-ink">Surveying {shortAddress(viewAs ?? "")}</span> · read only, nothing is signed here.
+          <span className="font-display text-[14px] font-bold text-ink">Surveying {shortAddress(viewAs ?? "")}</span>
+          <span className="block font-tag text-[10px] uppercase">read only · nothing is signed</span>
         </p>
         <ButtonLink to={routeHref("trade", { market: market?.slug ?? "BTC" })} variant="ink" size="xs">
           My sheet
@@ -160,12 +162,12 @@ export function AgentBadge({ className }: { readonly className?: string }) {
   const openAgent = () => useTerminalUi.getState().set({ agentOpen: true });
   const left = meta ? daysLeft(meta.validUntil, now) : null;
   return (
-    <div className={cx("relative flex items-stretch border-2 border-rule bg-card text-xs text-ink-2", className)}>
-      <span aria-hidden="true" className="w-2.5 shrink-0 border-r-2 border-dashed border-rule/50 bg-paper-2/60" />
+    <div className={cx("px-frame-thin relative flex items-stretch bg-card text-xs text-ink-2", className)}>
+      <span aria-hidden="true" className="w-2.5 shrink-0 bg-paper-2 [background-image:radial-gradient(rgb(var(--rule))_1px,transparent_1.5px)] [background-size:10px_8px] [background-position:2px_2px]" />
       <button type="button" onClick={openAgent} className={cx("flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left", FOCUS_RING)}>
         <KeyRound className={cx("h-4 w-4 shrink-0", canSign ? "text-up" : "text-ink-3")} aria-hidden="true" />
         <span className="min-w-0 leading-snug">
-          <span className="block font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-ink">Trade-only · can’t withdraw</span>
+          <span className="block font-tag text-[10px] uppercase text-ink">Trade-only · can’t withdraw</span>
           <span className="block truncate font-mono text-[11px] text-ink-3">
             elyia-web · {meta ? `${canSign ? "unlocked" : "locked"} · ${left} d left` : "not on this device"} · manage
           </span>
@@ -178,7 +180,7 @@ export function AgentBadge({ className }: { readonly className?: string }) {
           aria-pressed={oneClick}
           title={oneClick ? "One-click is on: the button signs at once (confirmations still ask)" : "Turn on one-click: skip the review step"}
           className={cx(
-            "inline-flex shrink-0 items-center gap-1 border-l-2 border-rule px-2 font-mono text-[10px] font-bold uppercase tracking-[0.08em] transition-colors",
+            "inline-flex shrink-0 items-center gap-1 px-2 font-tag text-[10px] uppercase [box-shadow:inset_2px_0_0_0_rgb(var(--rule))]",
             oneClick ? "bg-signal text-signal-ink" : "text-ink-3 hover:bg-paper-2 hover:text-ink",
             FOCUS_RING,
           )}

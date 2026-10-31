@@ -1,0 +1,85 @@
+/*
+ * The terminal's local pixel pieces (pages/trade only). The kit's frames,
+ * drops and fonts come from src/styles/pixel.css; these are the few patterns
+ * a dense trading sheet needs on top: dashed seams, dithered depth, block
+ * meters and the hollow pixel ticks.
+ */
+
+/* A dashed pixel seam under a panel head: 2 px dashes of 8 on a 12 px period. */
+.tx-seam-b {
+  background-image: linear-gradient(to right, rgb(var(--rule) / 0.45) 0 8px, transparent 8px 12px);
+  background-size: 12px 2px;
+  background-repeat: repeat-x;
+  background-position: 0 100%;
+}
+.tx-seam-t {
+  background-image: linear-gradient(to right, rgb(var(--rule) / 0.45) 0 8px, transparent 8px 12px);
+  background-size: 12px 2px;
+  background-repeat: repeat-x;
+  background-position: 0 0;
+}
+/* A row seam: 2 px dots of the faint rule, every 6 px. */
+.tx-row-seam {
+  background-image: linear-gradient(to right, rgb(var(--rule) / 0.16) 0 2px, transparent 2px 6px);
+  background-size: 6px 1px;
+  background-repeat: repeat-x;
+  background-position: 0 100%;
+}
+
+/* Depth: a 2 px checker dither in the side colour (cumulative size). */
+.tx-dither-up,
+.tx-dither-down {
+  --tx-c: rgb(var(--up) / 0.3);
+  background-image:
+    linear-gradient(45deg, var(--tx-c) 25%, transparent 25%, transparent 75%, var(--tx-c) 75%),
+    linear-gradient(45deg, var(--tx-c) 25%, transparent 25%, transparent 75%, var(--tx-c) 75%);
+  background-size: 4px 4px;
+  background-position:
+    0 0,
+    2px 2px;
+}
+.tx-dither-down {
+  --tx-c: rgb(var(--down) / 0.3);
+}
+
+/* Focus inside a composite control (the leverage ridge). */
+.tx-focus-within:has(:focus-visible) {
+  outline: 4px dashed rgb(var(--signal));
+  outline-offset: 2px;
+}
+
+/* The leverage ridge's native range: invisible, on top, the whole track. */
+.tx-ridge-range {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  opacity: 0;
+  cursor: grab;
+}
+.tx-ridge-range:active {
+  cursor: grabbing;
+}
+.tx-ridge-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 64px;
+}
+.tx-ridge-range::-moz-range-thumb {
+  width: 32px;
+  height: 64px;
+  border: 0;
+}
+.tx-ridge-range:disabled {
+  cursor: not-allowed;
+}
+
+/* Hold progress on the descend button fills in whole 4 px steps. */
+.tx-hold-fill {
+  transition: none;
+}

@@ -3,8 +3,9 @@ import { buttonClasses } from "../../ui/buttonStyles";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { Sheet } from "../../ui/Sheet";
 import { AccountPanel } from "./AccountPanel";
+import { AscentStrip } from "./AscentStrip";
 import { marketTitle } from "./labels";
-import { ConnectionDot, FavouriteStrip, MarketButton, MarketStats } from "./MarketHeader";
+import { ConnectionDot, FavouriteStrip, MarketButton, MobileStats } from "./MarketHeader";
 import { OrderBook } from "./OrderBook";
 import { OrderTicket } from "./OrderTicket";
 import { PriceChart } from "./PriceChart";
@@ -14,9 +15,11 @@ import { useTerminalUi, type MobilePane } from "./terminalUi";
 import { ViewAsBar } from "./ViewAsBar";
 
 /**
- * Phone and tablet terminal (< 1180 px): the market strip scrolls sideways,
- * chart / book / tape share one pane, the ropes log sits under it, and a
- * sticky LONG ▲ / SHORT ▼ pair opens the ticket as a bottom sheet.
+ * Phone and tablet terminal (< 1180 px), on one centre axis: the market tab
+ * and the mark altimeter centred, three equal instruments, chart / book /
+ * tape sharing one pane, the ropes log under it, and a sticky LONG ▲ /
+ * SHORT ▼ pair (equal halves) that opens the ticket as a bottom sheet. Ely
+ * reports each send above the pair.
  */
 export function MobileTerminal() {
   const { market, readOnly } = useTerminal();
@@ -30,19 +33,17 @@ export function MobileTerminal() {
     set({ ticketOpen: true });
   };
   return (
-    <div className="flex min-w-0 flex-col gap-3 pb-28">
-      <div className="flex items-center justify-between gap-3 px-4 pt-3">
-        <MarketButton compact />
-        <ConnectionDot className="hidden min-[440px]:inline-flex" />
+    <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col gap-6 px-5 pb-36 pt-6">
+      <div className="flex flex-col items-center gap-3">
+        <MarketButton compact fill />
+        <ConnectionDot />
       </div>
-      <div className="scrollbar-none overflow-x-auto px-4">
-        <MarketStats compact />
-      </div>
-      <div className="scrollbar-none overflow-x-auto px-4 empty:hidden">
-        <FavouriteStrip limit={6} />
+      <MobileStats />
+      <div className="scrollbar-none -mx-5 flex justify-center overflow-x-auto px-5 py-1 empty:hidden">
+        <FavouriteStrip limit={3} />
       </div>
       <ViewAsBar />
-      <div className="flex flex-col gap-2 px-4">
+      <div className="flex flex-col gap-5">
         <SegmentedControl<MobilePane>
           label="Market view"
           value={pane}
@@ -54,29 +55,30 @@ export function MobileTerminal() {
             { value: "trades", label: "Tape" },
           ]}
         />
-        <div className="flex h-[400px] min-w-0 flex-col">
+        <div className="flex h-[420px] min-w-0 flex-col">
           {pane === "chart" ? <PriceChart className="h-full" /> : pane === "book" ? <OrderBook className="h-full" levels={8} /> : <TradesTape className="h-full" rows={17} />}
         </div>
       </div>
-      <div className="px-4">
-        <AccountPanel showLegend={false} className="min-h-[340px]" />
-      </div>
+      <AccountPanel showLegend={false} className="min-h-[340px]" />
 
       {!readOnly ? (
-        <div className="fixed inset-x-0 bottom-16 z-30 border-t-2 border-rule bg-paper px-4 py-2.5 md:bottom-0">
-          <div className="mx-auto grid max-w-lg grid-cols-2 gap-3">
-            <button type="button" onClick={() => openTicket("buy")} className={buttonClasses({ variant: "long", size: "lg", fullWidth: true })}>
-              <span aria-hidden="true" className="text-[11px]">
-                ▲
-              </span>
-              {isSpot ? "Buy" : "Long"}
-            </button>
-            <button type="button" onClick={() => openTicket("sell")} className={buttonClasses({ variant: "short", size: "lg", fullWidth: true })}>
-              <span aria-hidden="true" className="text-[11px]">
-                ▼
-              </span>
-              {isSpot ? "Sell" : "Short"}
-            </button>
+        <div className="tx-seam-t fixed inset-x-0 bottom-16 z-30 bg-paper px-5 pb-3 pt-3 md:bottom-0">
+          <div className="mx-auto flex max-w-lg flex-col gap-3">
+            <AscentStrip />
+            <div className="grid grid-cols-2 gap-6">
+              <button type="button" onClick={() => openTicket("buy")} className={buttonClasses({ variant: "long", size: "lg", fullWidth: true })}>
+                <span aria-hidden="true" className="text-[11px]">
+                  ▲
+                </span>
+                {isSpot ? "Buy" : "Long"}
+              </button>
+              <button type="button" onClick={() => openTicket("sell")} className={buttonClasses({ variant: "short", size: "lg", fullWidth: true })}>
+                <span aria-hidden="true" className="text-[11px]">
+                  ▼
+                </span>
+                {isSpot ? "Sell" : "Short"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

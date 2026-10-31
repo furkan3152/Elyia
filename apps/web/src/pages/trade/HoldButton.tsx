@@ -6,6 +6,8 @@ export interface HoldButtonProps {
   readonly onConfirm: () => void;
   readonly holdMs?: number;
   readonly disabled?: boolean;
+  /** Hold progress 0..1 (0 again when let go early), for a drawing that follows the hold. */
+  readonly onProgress?: (progress: number) => void;
   readonly children: ReactNode;
   readonly className?: string;
 }
@@ -15,20 +17,25 @@ export interface HoldButtonProps {
  * pointer, Space or Enter; letting go early cancels. Nothing fires on a
  * click, a stray key press or a key repeat.
  */
-export function HoldButton({ onConfirm, holdMs = 1_500, disabled, children, className }: HoldButtonProps) {
+export function HoldButton({ onConfirm, holdMs = 1_500, disabled, onProgress, children, className }: HoldButtonProps) {
   const [progress, setProgress] = useState(0);
   const startRef = useRef<number | null>(null);
   const frameRef = useRef(0);
   const doneRef = useRef(false);
   const confirmRef = useRef(onConfirm);
+  const progressRef = useRef(onProgress);
   useEffect(() => {
     confirmRef.current = onConfirm;
+    progressRef.current = onProgress;
   });
 
   const stop = () => {
     startRef.current = null;
     window.cancelAnimationFrame(frameRef.current);
-    if (!doneRef.current) setProgress(0);
+    if (!doneRef.current) {
+      setProgress(0);
+      progressRef.current?.(0);
+    }
   };
 
   const start = () => {
@@ -38,6 +45,7 @@ export function HoldButton({ onConfirm, holdMs = 1_500, disabled, children, clas
       if (startRef.current === null) return;
       const value = Math.min(1, (performance.now() - startRef.current) / holdMs);
       setProgress(value);
+      progressRef.current?.(value);
       if (value >= 1) {
         doneRef.current = true;
         startRef.current = null;
@@ -74,13 +82,18 @@ export function HoldButton({ onConfirm, holdMs = 1_500, disabled, children, clas
       onClick={(event) => event.preventDefault()}
       aria-describedby="hold-hint"
       className={cx(
-        "relative h-14 w-full select-none overflow-hidden border-2 border-down bg-card font-sans text-[15px] font-bold uppercase tracking-[0.08em] text-down shadow-[3px_3px_0_rgb(var(--down))] transition-colors disabled:opacity-40 disabled:shadow-none",
+        "px-frame px-tone-down relative h-14 w-full select-none overflow-hidden bg-card font-display text-[18px] font-bold uppercase tracking-[0.04em] text-down disabled:opacity-40",
         FOCUS_RING,
         className,
       )}
     >
-      <span aria-hidden="true" className="absolute inset-y-0 left-0 border-r-2 border-rule bg-down" style={{ width: `${progress * 100}%` }} />
-      <span className={cx("relative", progress > 0.55 && "text-card")}>{children}</span>
+      {/* The fill grows in twenty whole steps, like a pixel meter. */}
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 bg-down" style={{ width: `${Math.floor(progress * 20) * 5}%` }} />
+      <span className="relative">{children}</span>
+      {/* The same words in card ink over the filled part, so they read on both halves. */}
+      <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center bg-transparent text-card" style={{ clipPath: `inset(0 ${100 - Math.floor(progress * 20) * 5}% 0 0)` }}>
+        {children}
+      </span>
       <span id="hold-hint" className="sr-only">
         Press and hold for {Math.round(holdMs / 100) / 10} seconds to confirm.
       </span>

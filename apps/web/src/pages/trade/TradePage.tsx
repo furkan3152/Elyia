@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useAccount } from "wagmi";
 
 import { mediaMatches, subscribeMedia } from "../../app/state/media";
@@ -23,6 +23,8 @@ import { findMarket, formatPx, type TradeMarket } from "../../lib/hypercore/mark
 import { infoClient } from "../../lib/hypercore/runtime";
 import { toast } from "../../ui/toast";
 import { DesktopTerminal } from "./DesktopTerminal";
+import { ascentClimbing, ascentOf, ropeAlarms } from "./pixelTerminal";
+import "./terminal.css";
 import { MobileTerminal } from "./MobileTerminal";
 import { TerminalOverlays } from "./TerminalOverlays";
 import { TerminalContext, type Terminal } from "./terminalContext";
@@ -32,6 +34,7 @@ import { useTradeHotkeys } from "./useTradeHotkeys";
 const DEFAULT_MARKET = "BTC";
 const DESKTOP_QUERY = "(min-width: 1180px)";
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u;
+let ascentCounter = 0;
 
 const subscribeDesktop = (onChange: () => void) => subscribeMedia(DESKTOP_QUERY, onChange);
 const desktopNow = () => mediaMatches(DESKTOP_QUERY) ?? true;
@@ -144,6 +147,9 @@ export default function TradePage() {
     async (plan: TradePlan, options: { readonly confirmed?: boolean } = {}): Promise<SubmitResult> => {
       if (readOnly || !connected || !guardBase) return { ok: false, kind: "blocked", message: "This terminal is read only.", evaluation: null };
       const store = useTradeStore.getState();
+      // Ely climbs while the order flies, then says how it went (the review dialog takes over on "confirm").
+      const ascentId = (ascentCounter += 1);
+      useTerminalUi.getState().set({ ascent: ascentClimbing(ascentId, plan) });
       const result = await executePlan(
         {
           signer: signerFor(sessionId(mode, connected), endpoints.isMainnet),
@@ -157,6 +163,7 @@ export default function TradePage() {
         options,
       );
       toastResult(result, plan);
+      if (useTerminalUi.getState().ascent?.id === ascentId) useTerminalUi.getState().set({ ascent: ascentOf(ascentId, plan, result) });
       return result;
     },
     [readOnly, connected, guardBase, mode, endpoints.isMainnet, endpoints.exchangeUrl, rules.book],
@@ -227,6 +234,34 @@ export default function TradePage() {
   }, [market, markPx]);
 
   useTradeHotkeys(terminal);
+
+  // The rope alarm: a rope that slips under 10% to its crevasse sends one worried Ely over the radio.
+  const underRef = useRef<ReadonlySet<string>>(new Set());
+  const alarmAccount = useRef(account);
+  useEffect(() => {
+    if (alarmAccount.current !== account) {
+      alarmAccount.current = account;
+      underRef.current = new Set();
+    }
+    const readings = (feeds.positions ?? []).map((position) => ({ coin: position.coin, distance: position.liquidationDistance }));
+    const { fresh, under } = ropeAlarms(readings, underRef.current);
+    underRef.current = under;
+    for (const reading of fresh) {
+      const name = marketByCoin.get(reading.coin)?.base ?? reading.coin;
+      toast.warning(`${name} rope under 10%`, {
+        id: `rope-${reading.coin}`,
+        from: "FLOOR",
+        description: `${((reading.distance ?? 0) * 100).toFixed(1)}% to the crevasse (liquidation)${readOnly ? " on the account you are surveying" : ". Add margin, set an anchor or reduce it"}.`,
+        action: {
+          label: "Show the rope",
+          onClick: () => {
+            useTerminalUi.getState().set({ accountTab: "positions" });
+            useTradeStore.getState().selectPosition(reading.coin);
+          },
+        },
+      });
+    }
+  }, [feeds.positions, account, marketByCoin, readOnly]);
 
   return (
     <TerminalContext.Provider value={terminal}>

@@ -12,8 +12,8 @@ import { WatchAnyone } from "./WatchAnyone";
 import { dateTime, signedUsd } from "./labels";
 import { useTerminal } from "./terminalContext";
 
-const HEAD = "sticky top-0 z-[1] bg-card px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 border-b-1.5 border-rule/40";
-const ROW = "border-b border-rule/15 px-4 py-[7px] font-mono text-xs hover:bg-paper-2/60";
+const HEAD = "sticky top-0 z-[1] bg-card px-4 py-2 font-tag text-[10px] uppercase text-ink-3 tx-seam-b";
+const ROW = "tx-row-seam px-4 py-[7px] font-mono text-xs hover:bg-paper-2/60";
 
 function Loading() {
   return (

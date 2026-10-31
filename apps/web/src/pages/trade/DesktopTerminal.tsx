@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { AccountPanel } from "./AccountPanel";
 import { MarketHeader } from "./MarketHeader";
@@ -9,10 +11,10 @@ import { useTerminalUi, type SidePane } from "./terminalUi";
 import { useBoxSize } from "./useBoxSize";
 import { ViewAsBar } from "./ViewAsBar";
 
-/** Book and tape stack when the column is tall enough to give each real depth; otherwise they share it as tabs. */
+/** Book and tape stack when the rail is tall enough to give each real depth; otherwise they share it as tabs. */
 const STACK_FROM_PX = 600;
 
-/** BOOK · TAPE as the panel's own title when the two share a column. */
+/** BOOK · TAPE as the panel's own title when the two share the rail. */
 function PaneTabs({ pane }: { readonly pane: SidePane }) {
   return (
     <span role="tablist" aria-label="Book or tape" className="flex items-center gap-1">
@@ -23,7 +25,7 @@ function PaneTabs({ pane }: { readonly pane: SidePane }) {
           role="tab"
           aria-selected={pane === id}
           onClick={() => useTerminalUi.getState().set({ sidePane: id })}
-          className={cx("h-6 px-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em]", pane === id ? "bg-ink text-paper" : "text-ink-3 hover:text-ink", FOCUS_RING)}
+          className={cx("h-6 px-2 font-tag text-[11px] uppercase", pane === id ? "bg-ink text-paper" : "text-ink-3 hover:text-ink", FOCUS_RING)}
         >
           {id}
         </button>
@@ -32,12 +34,12 @@ function PaneTabs({ pane }: { readonly pane: SidePane }) {
   );
 }
 
-function BookColumn() {
+function BookRail() {
   const [ref, box] = useBoxSize<HTMLDivElement>();
   const pane = useTerminalUi((state) => state.sidePane);
   const stacked = box.height >= STACK_FROM_PX;
   return (
-    <div ref={ref} className="flex min-h-0 flex-col gap-2.5">
+    <div ref={ref} className="flex min-h-0 flex-col gap-5">
       {stacked ? (
         <>
           <OrderBook className="min-h-0 flex-[3]" />
@@ -53,26 +55,33 @@ function BookColumn() {
 }
 
 /**
- * Desktop terminal (>= 1180 px), one map sheet under the top bar:
+ * Desktop terminal (>= 1180 px). One centre axis, two equal rails:
  *
- *   market strip (name tab · mark altimeter · windsock · weather · OI · volume · favourites)
- *   [ elevation chart | book / tape ] [ ticket card ]
- *   [ ropes · orders · fills log    ] [            ]
+ *   [ market tab ] [ funding · weather | MARK | OI · volume ] [ radio · favourites ]
+ *   [ book       ] [ elevation chart                        ] [ ticket card        ]
+ *   [ tape       ] [ ropes · orders · fills log             ] [                    ]
  *
- * It fills the viewport; each panel scrolls on its own, the ticket is the one raised card.
+ * The book rail and the ticket rail are the same width and the same height,
+ * so the chart and the ropes sit on the axis. It fills the viewport; each
+ * panel scrolls on its own; the ticket is the one raised card.
  */
 export function DesktopTerminal() {
   return (
-    <div className="flex h-[calc(100dvh-96px)] min-h-[640px] flex-col md:-mb-6">
+    <div
+      className="flex h-[calc(100dvh-116px)] min-h-[700px] flex-col gap-5 px-6 pb-7 pt-5 [--tx-rail:288px] md:-mb-6 xl:[--tx-rail:312px] min-[1600px]:[--tx-rail:336px]"
+      style={{ "--tx-gap": "20px" } as CSSProperties}
+    >
       <MarketHeader />
       <ViewAsBar />
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_264px_340px] grid-rows-[minmax(0,1fr)_minmax(210px,37%)] gap-2.5 px-3 pb-3 xl:grid-cols-[minmax(0,1fr)_292px_352px]">
-        <PriceChart className="min-h-[240px]" />
-        <BookColumn />
-        <aside aria-label="Order ticket" className="row-span-2 min-h-0 overflow-y-auto overscroll-contain pb-1.5 pr-1.5">
-          <OrderTicket className="el-rise" />
+      <div className="grid min-h-0 flex-1 grid-cols-[var(--tx-rail)_minmax(0,1fr)_var(--tx-rail)] gap-5">
+        <BookRail />
+        <div className="flex min-h-0 min-w-0 flex-col gap-5">
+          <PriceChart className="min-h-[260px] flex-[11]" />
+          <AccountPanel className="min-h-[220px] flex-[8]" />
+        </div>
+        <aside aria-label="Order ticket" className="-mb-4 -ml-1 -mr-4 -mt-1 min-h-0 overflow-y-auto overscroll-contain pb-4 pl-1 pr-4 pt-1">
+          <OrderTicket />
         </aside>
-        <AccountPanel className="col-span-2 min-h-0" />
       </div>
     </div>
   );

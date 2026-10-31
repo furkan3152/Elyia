@@ -8,6 +8,7 @@ import { useTradeStore } from "../../features/trading/tradeStore";
 import { usePositionRopes, type RopeView } from "../../features/trading/useTopoData";
 import { formatUsdCompact } from "../../lib/format";
 import { formatPx, formatSz } from "../../lib/hypercore/marketCatalog";
+import { Ely } from "../../pixel/Ely";
 import { Blaze } from "../../topo/Blaze";
 import { Rope } from "../../topo/Rope";
 import { cx, FOCUS_RING } from "../../ui/cx";
@@ -18,6 +19,7 @@ import { Chevron, SideMark } from "./parts";
 import { gradeOfLeverage, signTone } from "./survey";
 import { useTerminal } from "./terminalContext";
 import { useTerminalUi } from "./terminalUi";
+import { useSheetInk } from "./useSheetInk";
 import { WatchAnyone } from "./WatchAnyone";
 
 /** One line per position, every column (wide panels). */
@@ -25,11 +27,12 @@ const WIDE_GRID = "grid grid-cols-[minmax(150px,1.2fr)_minmax(100px,0.9fr)_minma
 /** Two lines per position (narrow panels, phones). */
 const COMPACT_GRID = "grid grid-cols-[minmax(124px,1.2fr)_minmax(96px,1fr)_minmax(170px,2fr)_64px] items-center gap-x-3";
 
-const HEAD = "sticky top-0 z-[1] border-b-1.5 border-rule/40 bg-card px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3";
+const HEAD = "tx-seam-b sticky top-0 z-[1] bg-card px-4 py-2 font-tag text-[10px] uppercase text-ink-3";
 
 /** The rope of a position in a table row: crevasse → anchor → climber → flag, with the distance on the rope. */
 export function RowRope({ rope, position }: { readonly rope: RopeView | undefined; readonly position: PositionRow }) {
   const { marketByCoin } = useTerminal();
+  const ink = useSheetInk();
   const market = marketByCoin.get(position.coin) ?? null;
   return (
     <Rope
@@ -42,6 +45,7 @@ export function RowRope({ rope, position }: { readonly rope: RopeView | undefine
       takeProfit={rope?.tp?.px ?? null}
       symbol={market?.base ?? position.coin}
       formatPrice={(price) => formatPx(price, market)}
+      ink={ink}
     />
   );
 }
@@ -51,11 +55,11 @@ function RopeLegend({ rope, position }: { readonly rope: RopeView | undefined; r
   const { marketByCoin } = useTerminal();
   const market = marketByCoin.get(position.coin) ?? null;
   const distance = rope?.distance ?? position.liquidationDistance;
-  if (position.liquidationPx === null) return <span className="font-mono text-[11px] text-ink-3">no crevasse · margin covers it</span>;
+  if (position.liquidationPx === null) return <span className="font-tag text-[10px] uppercase text-ink-3">no crevasse · margin covers it</span>;
   const tight = distance !== null && distance < 0.1;
   return (
     <span className={cx("tnum flex flex-wrap items-center gap-x-2 font-mono text-[11px]", tight ? "text-down" : "text-ink-2")}>
-      <span className="font-semibold">✕ {distance === null ? "—" : `${(distance * 100).toFixed(distance < 0.1 ? 1 : 0)}%`}</span>
+      <span className="font-tag text-[11px]">✕ {distance === null ? "—" : `${(distance * 100).toFixed(distance < 0.1 ? 1 : 0)}%`}</span>
       <span className="text-ink-3">liq {formatPx(position.liquidationPx, market)}</span>
       {rope?.stopBeyondLiquidation ? <span className="text-down">anchor below crevasse</span> : null}
     </span>
@@ -67,7 +71,7 @@ function RowActions({ position, compact }: { readonly position: PositionRow; rea
   if (readOnly) return <span role="cell" />;
   const stop = (event: MouseEvent) => event.stopPropagation();
   return (
-    <span role="cell" className={cx("flex justify-end gap-1.5", compact ? "flex-col items-end" : "items-center")}>
+    <span role="cell" className={cx("flex justify-end", compact ? "flex-col items-end gap-2.5" : "items-center gap-3")}>
       <button
         type="button"
         onClick={(event) => {
@@ -76,7 +80,7 @@ function RowActions({ position, compact }: { readonly position: PositionRow; rea
         }}
         aria-label={`Set flag and anchor (TP/SL) on ${position.coin}`}
         title="Set or move the flag (TP) and anchor (SL)"
-        className={cx("inline-flex h-6 items-center border-1.5 border-rule bg-card px-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-ink hover:bg-paper-2", FOCUS_RING)}
+        className={cx("px-frame-thin inline-flex h-6 items-center bg-card px-1.5 font-tag text-[10px] uppercase text-ink hover:bg-paper-2", FOCUS_RING)}
       >
         ⚑ TP/SL
       </button>
@@ -88,7 +92,7 @@ function RowActions({ position, compact }: { readonly position: PositionRow; rea
         }}
         aria-label={`Close ${position.coin}`}
         title="Close this position (X)"
-        className={cx("inline-flex h-6 items-center border-1.5 border-down bg-card px-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-down hover:bg-down hover:text-card", FOCUS_RING)}
+        className={cx("px-frame-thin px-tone-down inline-flex h-6 items-center bg-card px-1.5 font-tag text-[10px] uppercase text-down hover:bg-down hover:text-card", FOCUS_RING)}
       >
         Close
       </button>
@@ -104,6 +108,7 @@ function PositionLine({ position, rope, selected, compact, stack }: { readonly p
   const name = market?.kind === "spot" ? market.displayName : (market?.base ?? position.coin);
   const unit = market?.base ?? "";
   const fundingPaid = -position.fundingSinceOpen;
+  const critical = (rope?.distance ?? position.liquidationDistance ?? 1) < 0.1;
   const open = (event: MouseEvent) => {
     event.stopPropagation();
     navigate(`${routeHref("trade", { market: market?.slug ?? position.coin })}${viewAs ? `?as=${viewAs}` : ""}`);
@@ -112,9 +117,10 @@ function PositionLine({ position, rope, selected, compact, stack }: { readonly p
     <span className="flex min-w-0 flex-col gap-1">
       <span className="flex min-w-0 items-center gap-2">
         <SideMark long={position.isLong} />
-        <button type="button" onClick={open} className={cx("truncate font-sans text-[14px] font-bold text-ink underline-offset-2 hover:underline", FOCUS_RING)} title={`Open ${name}`}>
+        <button type="button" onClick={open} className={cx("truncate font-display text-[16px] font-bold text-ink underline-offset-2 hover:underline", FOCUS_RING)} title={`Open ${name}`}>
           {name}
         </button>
+        {critical ? <Ely state="worry" size={28} label={`Ely: ${name} rope under 10%`} className="-my-2" /> : null}
       </span>
       <span className="flex items-center gap-1.5 font-mono text-[11px] text-ink-3">
         <Blaze grade={gradeOfLeverage(position.leverage)} size={10} />
@@ -139,14 +145,14 @@ function PositionLine({ position, rope, selected, compact, stack }: { readonly p
   );
   const rowClass = cx(
     compact ? COMPACT_GRID : WIDE_GRID,
-    "relative cursor-pointer border-b border-rule/15 px-4 py-1.5 transition-colors duration-fast",
-    selected ? "bg-signal/20" : "hover:bg-paper-2/60",
-    rope?.band === "critical" && "before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-down",
+    "tx-row-seam relative cursor-pointer px-4 py-2",
+    selected ? "bg-signal/25" : "hover:bg-paper-2",
+    critical && "before:absolute before:inset-y-1 before:left-0 before:w-1 before:bg-down",
   );
   if (stack) {
     // Phones: one card per rope, the rope across the full width.
     return (
-      <div role="row" aria-selected={selected} onClick={select} className={cx("relative flex cursor-pointer flex-col gap-1.5 border-b border-rule/15 px-3 py-2.5", selected ? "bg-signal/20" : "", rope?.band === "critical" && "before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-down")}>
+      <div role="row" aria-selected={selected} onClick={select} className={cx("tx-row-seam relative flex cursor-pointer flex-col gap-2 px-3 py-3", selected ? "bg-signal/25" : "", critical && "before:absolute before:inset-y-1 before:left-0 before:w-1 before:bg-down")}>
         <span className="flex items-start justify-between gap-3">
           <span role="cell">{marketCell}</span>
           {pnlCell}

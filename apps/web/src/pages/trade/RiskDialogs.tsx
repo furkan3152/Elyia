@@ -14,6 +14,7 @@ import { HoldButton } from "./HoldButton";
 import { signedUsd } from "./labels";
 import { SideMark } from "./parts";
 import { RowRope } from "./PositionsTable";
+import { RappelScene, type RappelPhase } from "./RappelScene";
 import { useTerminal } from "./terminalContext";
 import { useTerminalUi } from "./terminalUi";
 
@@ -37,6 +38,7 @@ function FlattenBody({ onClose }: { readonly onClose: () => void }) {
   const slippageBps = useTradeStore((state) => state.slippageBps);
   const [state, setState] = useState<"idle" | "running" | "done">("idle");
   const [notes, setNotes] = useState<string[]>([]);
+  const [hold, setHold] = useState(0);
   const positions = useMemo(() => feeds.positions ?? [], [feeds.positions]);
   const orders = useMemo(() => feeds.openOrders ?? [], [feeds.openOrders]);
   const plan = useMemo(
@@ -70,13 +72,16 @@ function FlattenBody({ onClose }: { readonly onClose: () => void }) {
     for (const skipped of plan.skipped) messages.push(`${skipped.coin}: ${skipped.reason}`);
     setNotes(messages);
     setState("done");
-    if (messages.length === 0) onClose();
+    // A clean descent: Ely reaches base camp for a beat, then the dialog closes.
+    if (messages.length === 0) window.setTimeout(onClose, 1_100);
   };
 
+  const phase: RappelPhase = state === "running" ? "running" : state === "done" ? (notes.length > 0 ? "stuck" : "done") : hold > 0 ? "holding" : "ready";
   return (
     <div className="flex flex-col gap-4">
+      <RappelScene phase={phase} progress={hold} />
       {positions.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-rule/20 border-2 border-rule">
+        <ul className="px-frame-thin flex flex-col divide-y divide-dashed divide-rule/30 bg-card">
           {positions.map((position) => {
             const market = marketByCoin.get(position.coin) ?? null;
             return (
@@ -99,13 +104,20 @@ function FlattenBody({ onClose }: { readonly onClose: () => void }) {
       </p>
       {unknown.length > 0 ? <p className="text-xs text-warn-ink">Loading market data for {unknown.join(", ")}: those will be skipped this time.</p> : null}
       {notes.length > 0 ? (
-        <ul role="alert" className="flex flex-col gap-1 border-l-[3px] border-warn bg-paper/60 px-3 py-2 text-xs text-warn-ink">
+        <ul role="alert" className="flex flex-col gap-1 border-l-4 border-warn bg-paper-2 px-3 py-2 text-xs text-warn-ink">
           {notes.map((note) => (
             <li key={note}>{note}</li>
           ))}
         </ul>
       ) : null}
-      <HoldButton onConfirm={() => void flatten()} disabled={state === "running" || (!plan.cancel && !plan.close)}>
+      <HoldButton
+        onConfirm={() => void flatten()}
+        onProgress={(value) => {
+          const step = Math.floor(value * 20) / 20;
+          setHold((previous) => (previous === step ? previous : step));
+        }}
+        disabled={state === "running" || (!plan.cancel && !plan.close)}
+      >
         {state === "running" ? "Descending…" : `Hold · descend ${positions.length} rope${positions.length === 1 ? "" : "s"}`}
       </HoldButton>
     </div>
@@ -150,7 +162,7 @@ function CloseBody({ coin, onClose }: { readonly coin: string; readonly onClose:
   };
   return (
     <div className="flex flex-col gap-4">
-      <div className="border-2 border-rule bg-paper/60 p-3 font-mono text-xs">
+      <div className="px-frame-thin bg-paper-2 p-3 font-mono text-xs">
         <p className="text-sm">
           <SideMark long={position.isLong} /> <span className="font-sans font-bold text-ink">{market.base}</span> {formatSz(Math.abs(position.szi), market.szDecimals)} · entry {formatPx(position.entryPx, market)}
         </p>
@@ -236,8 +248,8 @@ function TpslBody({ coin, onClose }: { readonly coin: string; readonly onClose: 
     else setError(result.message);
   };
   const input = (value: string, set: (value: string) => void, label: string, tone: "mint" | "rose") => (
-    <label className={cx("flex flex-col gap-1 border-2 px-3 py-2", tone === "mint" ? "border-up" : "border-rule")}>
-      <span className="text-xs text-ink-3">{label}</span>
+    <label className={cx("px-frame-thin flex flex-col gap-1 bg-card px-3 py-2", tone === "mint" && "px-tone-up")}>
+      <span className="font-tag text-[10px] uppercase text-ink-2">{label}</span>
       <span className="flex items-center gap-1">
         <input
           value={value}

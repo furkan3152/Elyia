@@ -11,6 +11,8 @@ export interface PixelRopeProps extends RopeInput {
   readonly formatPrice?: (price: number) => string;
   /** "full" with Ely on the rope and labels; "compact" for a table row. */
   readonly variant?: "full" | "compact";
+  /** Colour of the route dots, piton and poles (a resolved colour; default the day ink). Pass the NIGHT ink on dark sheets. */
+  readonly ink?: string;
   readonly className?: string;
 }
 
@@ -31,13 +33,13 @@ const TONE: Readonly<Record<RopeMarker["kind"], string>> = { crevasse: "text-dow
  * profit). The rope frays under 10% to the crevasse and Ely looks worried;
  * under 5% the loose strands shift once a second.
  */
-export function PixelRope({ symbol, formatPrice = defaultPrice, variant = "full", className, ...input }: PixelRopeProps) {
+export function PixelRope({ symbol, formatPrice = defaultPrice, variant = "full", ink, className, ...input }: PixelRopeProps) {
   const { side, entry, mark, liquidation, stop, takeProfit } = input;
   const rope = useMemo(() => ropeGeometry({ side, entry, mark, liquidation, stop, takeProfit }), [side, entry, mark, liquidation, stop, takeProfit]);
   const compact = variant === "compact";
   const draw = useCallback(
-    (ctx: CanvasRenderingContext2D, info: { readonly w: number; readonly seconds: number }) => paintRope(ctx, rope, ropeLayout(info.w, compact), info.seconds),
-    [rope, compact],
+    (ctx: CanvasRenderingContext2D, info: { readonly w: number; readonly seconds: number }) => paintRope(ctx, rope, ropeLayout(info.w, compact), info.seconds, ink),
+    [rope, compact, ink],
   );
   const find = (kind: RopeMarker["kind"]) => rope.markers.find((marker) => marker.kind === kind);
   const crevasse = find("crevasse");

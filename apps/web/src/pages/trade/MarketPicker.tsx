@@ -47,7 +47,7 @@ function Row({ market, active, highlighted, favorite, onPick, onStar, onHover }:
       aria-selected={highlighted}
       id={`mk-${market.coin}`}
       onPointerEnter={onHover}
-      className={cx(GRID, "relative cursor-pointer border-b border-rule/15 px-2 py-1.5 font-mono text-[13px]", highlighted ? "bg-paper-2" : "", active && "before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:bg-signal")}
+      className={cx(GRID, "tx-row-seam relative cursor-pointer px-2 py-1.5 font-mono text-[13px]", highlighted ? "bg-paper-2" : "", active && "before:absolute before:inset-y-1 before:left-0 before:w-1 before:bg-signal")}
       onClick={onPick}
     >
       <button
@@ -63,7 +63,7 @@ function Row({ market, active, highlighted, favorite, onPick, onStar, onHover }:
         <Star className={cx("h-4 w-4", favorite && "fill-signal text-ink")} aria-hidden="true" />
       </button>
       <span className="flex min-w-0 items-center gap-2 font-sans">
-        <span className="truncate text-[14px] font-bold text-ink">{marketTitle(market)}</span>
+        <span className="truncate font-display text-[15px] font-bold text-ink">{marketTitle(market)}</span>
         <MarketBadge market={market} />
       </span>
       <span className="tnum truncate text-right text-ink">{formatPx(market.ctx?.markPx ?? null, market)}</span>
@@ -151,7 +151,7 @@ function PickerBody({ onClose }: { readonly onClose: () => void }) {
           aria-activedescendant={rows[current] ? `mk-${rows[current].coin}` : undefined}
           className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-3"
         />
-        <span className="hidden font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3 sm:inline">↑↓ · enter</span>
+        <span className="hidden font-tag text-[10px] uppercase text-ink-3 sm:inline">↑↓ · enter</span>
       </label>
       {!query.trim() ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -182,7 +182,7 @@ function PickerBody({ onClose }: { readonly onClose: () => void }) {
           />
         </div>
       ) : null}
-      <div className={cx(GRID, "border-b-2 border-rule px-2 pb-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3")}>
+      <div className={cx(GRID, "tx-seam-b px-2 pb-1.5 font-tag text-[10px] uppercase text-ink-3")}>
         <span />
         <span>Market</span>
         <span className="text-right">Price</span>

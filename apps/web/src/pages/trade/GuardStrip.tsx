@@ -24,8 +24,8 @@ export function GuardStrip({ verdict, idle, className }: { readonly verdict: Ver
   const summary = bookSummary(rules.book);
   if (!verdict) {
     return (
-      <div className={cx("flex items-center gap-2.5 border-y-1.5 border-rule/30 py-1.5 text-[12px] leading-snug text-ink-2", className)} title={idle ?? "Every order is checked before the key signs."}>
-        <span className="shrink-0 border-1.5 border-rule/50 px-1 font-mono text-[10px] font-semibold tracking-[0.1em] text-ink-2">RULE BOOK</span>
+      <div className={cx("flex items-center gap-2.5 py-1 text-[12px] leading-snug text-ink-2", className)} title={idle ?? "Every order is checked before the key signs."}>
+        <span className="px-frame-thin ml-0.5 shrink-0 bg-card px-1.5 font-tag text-[10px] uppercase text-ink-2">Rule book</span>
         <p className="min-w-0 flex-1 truncate font-mono text-[11px]">{summary}</p>
         <RulesButton onClick={openRules} />
       </div>
@@ -34,8 +34,8 @@ export function GuardStrip({ verdict, idle, className }: { readonly verdict: Ver
   const tone = TONE[verdict.decision];
   const lines = guardLines(verdict.reasons).slice(0, 3);
   return (
-    <div role="status" aria-live="polite" className={cx("flex items-start gap-2.5 border-l-[3px] bg-paper/60 py-2 pl-2.5 pr-1 text-[12px] leading-snug", tone.edge, className)}>
-      <span className={cx("mt-px inline-flex shrink-0 -rotate-2 items-center gap-1 border-2 border-current px-1.5 py-px font-mono text-[10px] font-bold tracking-[0.12em]", tone.text)}>
+    <div role="status" aria-live="polite" className={cx("flex items-start gap-2.5 border-l-4 bg-paper-2 py-2 pl-2.5 pr-1 text-[12px] leading-snug", tone.edge, className)}>
+      <span className={cx("mt-px inline-flex shrink-0 -rotate-3 items-center gap-1 px-1.5 py-px font-tag text-[10px] uppercase [box-shadow:inset_0_0_0_2px_currentColor]", tone.text)}>
         <span aria-hidden="true">{tone.mark}</span>
         {tone.stamp}
       </span>

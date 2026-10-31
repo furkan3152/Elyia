@@ -38,9 +38,9 @@ export function TradesTape({ rows = 30, className, heading }: { readonly rows?: 
       label={`${market.displayName} trades`}
       className={className}
       title={heading ?? <Caption tone="ink" parts={["TAPE", trades.length > 0 ? "LIVE" : "WAITING"]} />}
-      aside={<span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">bold = top 10%</span>}
+      aside={<span className="font-tag text-[10px] uppercase text-ink-3">bold = top 10%</span>}
     >
-      <div className="grid grid-cols-[1.1fr_1fr_1fr] px-3 pb-1 pt-1.5 text-right font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
+      <div className="grid grid-cols-[1.1fr_1fr_1fr] px-3 pb-1 pt-1.5 text-right font-tag text-[10px] uppercase text-ink-3">
         <span className="text-left">Price</span>
         <span>Size</span>
         <span>Time</span>
@@ -57,8 +57,8 @@ export function TradesTape({ rows = 30, className, heading }: { readonly rows?: 
               const big = Number(trade.sz) * Number(trade.px) >= bigFrom;
               const buy = trade.side === "B";
               return (
-                <li key={`${trade.tid}-${trade.time}`} className={cx("relative grid h-[20px] shrink-0 grid-cols-[1.1fr_1fr_1fr] items-center border-b border-rule/10 px-3 text-right font-mono text-[12px]", isMine && "bg-signal/30")}>
-                  {big ? <span aria-hidden="true" className="absolute inset-y-[3px] left-0 w-[3px] bg-ink" /> : null}
+                <li key={`${trade.tid}-${trade.time}`} className={cx("tx-row-seam relative grid h-[20px] shrink-0 grid-cols-[1.1fr_1fr_1fr] items-center px-3 text-right font-mono text-[12px]", isMine && "bg-signal/30")}>
+                  {big ? <span aria-hidden="true" className="absolute inset-y-[4px] left-0 w-1 bg-ink" /> : null}
                   <span className={cx("tnum inline-flex items-center gap-1 text-left", buy ? "text-up" : "text-down", big && "font-semibold")}>
                     <span aria-hidden="true" className="text-[8px]">
                       {buy ? "▲" : "▼"}

@@ -23,7 +23,7 @@ export function HotkeyLegend({ className }: { readonly className?: string }) {
     ["Esc", "clear", false],
   ];
   return (
-    <div className={cx("flex h-8 shrink-0 flex-nowrap items-center gap-x-3.5 overflow-hidden whitespace-nowrap font-mono text-[11px] text-ink-3", className)} aria-label="Keyboard shortcuts">
+    <div className={cx("flex h-8 shrink-0 flex-nowrap items-center justify-center gap-x-4 overflow-hidden whitespace-nowrap font-tag text-[10px] uppercase text-ink-3", className)} aria-label="Keyboard shortcuts">
       {keys.map(([key, label, always]) => (
         <span key={key} className={cx("items-center gap-1.5", always ? "inline-flex" : "hidden 2xl:inline-flex")}>
           <Kbd className="h-5 min-w-5 px-1 text-[10px] shadow-none">{key}</Kbd>
@@ -73,9 +73,9 @@ export function AccountPanel({ className, showLegend = true }: { readonly classN
   };
 
   return (
-    <section aria-label="Account" className={cx("flex min-h-0 min-w-0 flex-col border-2 border-rule bg-card", className)}>
-      <div className="flex items-end gap-2 border-b-2 border-rule bg-paper-2/50 pl-2 pr-2">
-        <div role="tablist" aria-label="Account views" className="scrollbar-none flex min-w-0 flex-1 items-end gap-1 overflow-x-auto pt-1.5">
+    <section aria-label="Account" className={cx("px-frame flex min-h-0 min-w-0 flex-col bg-card", className)}>
+      <div className="flex items-end gap-2 bg-paper-2 pl-2 pr-2 [box-shadow:inset_0_-2px_0_0_rgb(var(--rule))]">
+        <div role="tablist" aria-label="Account views" className="scrollbar-none flex min-w-0 flex-1 items-end gap-1 overflow-x-auto pt-2">
           {tabs.map((item) => {
             const selected = tab === item.id;
             return (
@@ -86,8 +86,8 @@ export function AccountPanel({ className, showLegend = true }: { readonly classN
                 aria-selected={selected}
                 onClick={() => setTab(item.id)}
                 className={cx(
-                  "-mb-[2px] flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-2 px-3 font-sans text-[12px] font-bold uppercase tracking-[0.08em] transition-colors duration-fast",
-                  selected ? "border-rule border-b-card bg-card text-ink" : "border-transparent text-ink-3 hover:text-ink",
+                  "flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap px-3 font-tag text-[12px] uppercase",
+                  selected ? "bg-card text-ink [box-shadow:inset_2px_0_0_0_rgb(var(--rule)),inset_-2px_0_0_0_rgb(var(--rule)),inset_0_2px_0_0_rgb(var(--rule))]" : "text-ink-3 hover:text-ink",
                   FOCUS_RING,
                 )}
               >
@@ -98,12 +98,12 @@ export function AccountPanel({ className, showLegend = true }: { readonly classN
           })}
         </div>
         {account && !readOnly ? (
-          <div className="flex shrink-0 items-center gap-2 py-1.5">
+          <div className="flex shrink-0 items-center gap-4 py-2 pr-1">
             <button
               type="button"
               disabled={orders === 0 || cancelling}
               onClick={() => void cancelAll()}
-              className={cx("h-7 border-2 border-rule bg-card px-2.5 font-sans text-[11px] font-bold uppercase tracking-[0.08em] text-ink transition-colors hover:bg-paper-2 disabled:opacity-40", FOCUS_RING)}
+              className={cx("px-frame-thin h-7 bg-card px-2.5 font-tag text-[11px] uppercase text-ink hover:bg-paper-2 disabled:opacity-40", FOCUS_RING)}
             >
               {cancelling ? "Cancelling…" : "Cancel orders"}
             </button>
@@ -112,7 +112,7 @@ export function AccountPanel({ className, showLegend = true }: { readonly classN
               disabled={positions === 0 && orders === 0}
               onClick={() => useTerminalUi.getState().set({ flattenOpen: true })}
               title="Descend all: cancel every order, then close every position (hold to confirm)"
-              className={cx("inline-flex h-7 items-center gap-1.5 border-2 border-down bg-card px-2.5 font-sans text-[11px] font-bold uppercase tracking-[0.08em] text-down shadow-[2px_2px_0_rgb(var(--down))] transition-colors hover:bg-down hover:text-card disabled:opacity-40 disabled:shadow-none", FOCUS_RING)}
+              className={cx("px-frame-thin px-tone-down inline-flex h-7 items-center gap-1.5 bg-card px-2.5 font-tag text-[11px] uppercase text-down hover:bg-down hover:text-card disabled:opacity-40", FOCUS_RING)}
             >
               Descend all
               <KeyHint k="F" />
@@ -135,7 +135,7 @@ export function AccountPanel({ className, showLegend = true }: { readonly classN
           <HistoryTable compact={compact} />
         )}
       </div>
-      {showLegend ? <HotkeyLegend className="border-t-1.5 border-rule/30 px-3 [@media(max-height:940px)]:hidden" /> : null}
+      {showLegend ? <HotkeyLegend className="tx-seam-t px-3 [@media(max-height:940px)]:hidden" /> : null}
     </section>
   );
 }

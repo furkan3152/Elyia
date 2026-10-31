@@ -30,8 +30,11 @@ export function ropeLayout(w: number, compact: boolean): RopeLayout {
 let climberCalm: PixelGrid | null = null;
 let climberWorried: PixelGrid | null = null;
 
-/** Paints the rope. `seconds` drives the loose strands of a critical rope (one change per second). */
-export function paintRope(ctx: PixelSurface & { clearRect(x: number, y: number, w: number, h: number): void }, rope: RopeGeometry, layout: RopeLayout, seconds = 0): void {
+/**
+ * Paints the rope. `seconds` drives the loose strands of a critical rope (one change per second).
+ * `ink` colours the route dots, piton, entry tick and flag pole (default the day ink; pass the sheet's ink on NIGHT).
+ */
+export function paintRope(ctx: PixelSurface & { clearRect(x: number, y: number, w: number, h: number): void }, rope: RopeGeometry, layout: RopeLayout, seconds = 0, ink: string = INK): void {
   const { w, h, y } = layout;
   ctx.clearRect(0, 0, w, h);
   const compact = h === ROPE_H_COMPACT;
@@ -46,7 +49,7 @@ export function paintRope(ctx: PixelSurface & { clearRect(x: number, y: number, 
   const goal = flag ? layout.x(flag.at) : w - 2;
 
   // route ahead: dotted ink
-  ctx.fillStyle = INK;
+  ctx.fillStyle = ink;
   for (let x = cx + 2; x < goal; x += rope.openEnd ? 4 : 3) ctx.fillRect(x, y, 1, 1);
 
   // the rope: braided, two pixels high
@@ -72,7 +75,7 @@ export function paintRope(ctx: PixelSurface & { clearRect(x: number, y: number, 
       ctx.fillRect(x0 + i, y + 1 - i, 1, 1);
     }
     if (!compact) {
-      ctx.fillStyle = INK;
+      ctx.fillStyle = ink;
       for (let i = 0; i < 4; i += 1) {
         ctx.fillRect(x0 - 3 + i, h - 4 + i, 1, 1);
         ctx.fillRect(x0 + 3 - i, h - 4 + i, 1, 1);
@@ -82,7 +85,7 @@ export function paintRope(ctx: PixelSurface & { clearRect(x: number, y: number, 
   // anchor: a piton with its ring
   if (anchor) {
     const ax = layout.x(anchor.at);
-    ctx.fillStyle = INK;
+    ctx.fillStyle = ink;
     ctx.fillRect(ax, y - (compact ? 4 : 6), 1, compact ? 9 : 12);
     if (!compact) {
       ctx.fillRect(ax - 1, y - 8, 3, 1);
@@ -92,12 +95,12 @@ export function paintRope(ctx: PixelSurface & { clearRect(x: number, y: number, 
   }
   // entry tick
   if (entry) {
-    ctx.fillStyle = INK;
+    ctx.fillStyle = ink;
     ctx.fillRect(layout.x(entry.at), y + 3, 1, compact ? 3 : 4);
   }
   // flag
   if (flag) {
-    ctx.fillStyle = INK;
+    ctx.fillStyle = ink;
     const fh = compact ? 10 : 14;
     ctx.fillRect(goal, y + 2 - fh, 1, fh);
     ctx.fillStyle = "#1F7A4C";
@@ -105,7 +108,7 @@ export function paintRope(ctx: PixelSurface & { clearRect(x: number, y: number, 
   }
   // the climber
   if (compact) {
-    ctx.fillStyle = INK;
+    ctx.fillStyle = ink;
     ctx.fillRect(cx - 3, y - 3, 7, 8);
     ctx.fillStyle = SUN;
     ctx.fillRect(cx - 2, y - 2, 5, 6);

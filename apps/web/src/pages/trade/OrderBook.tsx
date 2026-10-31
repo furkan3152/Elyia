@@ -9,7 +9,7 @@ import { cx, FOCUS_RING } from "../../ui/cx";
 import { Popover } from "../../ui/Popover";
 import { Skeleton } from "../../ui/Skeleton";
 import { Caption, Frame } from "./parts";
-import { hatch } from "./survey";
+import { balanceBlocks, unitWidth } from "./pixelTerminal";
 import { useTerminal } from "./terminalContext";
 import { useBoxSize } from "./useBoxSize";
 
@@ -35,26 +35,26 @@ function sizeDecimals(market: TradeMarket): number {
 }
 
 /**
- * One level: price, size, cumulative total. The cumulative depth is a hatched
- * bar from the right edge (the Survey's cliff hatching); this level's own size
- * is the solid sliver at the bar's inner end, so walls read at a glance.
+ * One level: price, size, cumulative total. The cumulative depth is a
+ * dithered pixel bar from the right edge; this level's own size is the solid
+ * block at its outer end, so walls read at a glance. Both grow in whole 4 px
+ * units, so the book's right edge steps like a contour.
  */
-function BookRow({ row, side, maxTotal, maxSize, market, mine, onPick }: { readonly row: Row; readonly side: "bid" | "ask"; readonly maxTotal: number; readonly maxSize: number; readonly market: TradeMarket; readonly mine: boolean; readonly onPick: (px: string) => void }) {
-  const depth = maxTotal > 0 ? Math.max(1.5, (row.total / maxTotal) * 100) : 0;
-  const own = maxSize > 0 ? Math.max(0.8, (row.sz / maxSize) * 22) : 0;
-  const tone = side === "bid" ? "up" : "down";
+function BookRow({ row, side, maxTotal, maxSize, width, market, mine, onPick }: { readonly row: Row; readonly side: "bid" | "ask"; readonly maxTotal: number; readonly maxSize: number; readonly width: number; readonly market: TradeMarket; readonly mine: boolean; readonly onPick: (px: string) => void }) {
+  const depth = maxTotal > 0 ? unitWidth(row.total / maxTotal, width) : 0;
+  const own = maxSize > 0 ? unitWidth((row.sz / maxSize) * 0.3, width) : 0;
   const wall = maxSize > 0 && row.sz >= maxSize * 0.999 && row.n > 0;
   return (
     <button
       type="button"
       onClick={() => onPick(row.pxText)}
       title={`${row.n} order${row.n === 1 ? "" : "s"} · click to use ${formatPx(row.px, market)} as the limit price`}
-      className={cx("group relative grid h-[20px] w-full shrink-0 grid-cols-[1.1fr_1fr_1fr] items-center px-3 text-right font-mono text-[12px] transition-colors duration-instant hover:bg-paper-2", FOCUS_RING)}
+      className={cx("group relative grid h-[20px] w-full shrink-0 grid-cols-[1.1fr_1fr_1fr] items-center px-3 text-right font-mono text-[12px] hover:bg-paper-2", FOCUS_RING)}
     >
-      <span aria-hidden="true" className="absolute inset-y-[2px] right-0" style={{ width: `${depth}%`, ...hatch(tone, 0.26, 4.5) }} />
-      <span aria-hidden="true" className={cx("absolute inset-y-[2px] right-0", side === "bid" ? "bg-up/20" : "bg-down/20")} style={{ width: `${own}%` }} />
+      <span aria-hidden="true" className={cx("absolute inset-y-[2px] right-0", side === "bid" ? "tx-dither-up" : "tx-dither-down")} style={{ width: depth }} />
+      <span aria-hidden="true" className={cx("absolute inset-y-[2px] right-0", side === "bid" ? "bg-up/35" : "bg-down/35")} style={{ width: own }} />
       <span className={cx("tnum relative text-left font-medium", side === "bid" ? "text-up" : "text-down")}>
-        {mine ? <span aria-label="your order" className="absolute -left-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rotate-45 border border-rule bg-signal" /> : null}
+        {mine ? <span aria-label="your order" className="absolute -left-2.5 top-1/2 h-1 w-1 -translate-y-1/2 bg-signal [box-shadow:0_0_0_1px_rgb(var(--rule))]" /> : null}
         {formatPx(row.px, market)}
       </span>
       <span className={cx("tnum relative text-ink", wall && "font-semibold")}>{formatSz(row.sz, sizeDecimals(market))}</span>
@@ -96,6 +96,7 @@ export function OrderBook({ levels: maxLevels = 20, className, heading }: { read
   const bidShown = bids.at(-1)?.total ?? 0;
   const askShown = asks.at(-1)?.total ?? 0;
   const imbalance = bidShown + askShown > 0 ? bidShown / (bidShown + askShown) : null;
+  const width = body.width;
 
   if (!market) {
     return (
@@ -119,7 +120,7 @@ export function OrderBook({ levels: maxLevels = 20, className, heading }: { read
           align="end"
           className="min-w-[150px]"
           trigger={(props) => (
-            <button type="button" {...props} className={cx("inline-flex h-6 items-center gap-1 border-1.5 border-rule/40 px-1.5 font-mono text-[11px] text-ink hover:border-rule", FOCUS_RING)} aria-label={`Group levels by ${grouping?.label ?? "tick"}`}>
+            <button type="button" {...props} className={cx("px-frame-thin inline-flex h-6 items-center gap-1 bg-card px-1.5 font-mono text-[11px] text-ink hover:bg-paper-2", FOCUS_RING)} aria-label={`Group levels by ${grouping?.label ?? "tick"}`}>
               {grouping?.label ?? "—"}
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </button>
@@ -148,7 +149,7 @@ export function OrderBook({ levels: maxLevels = 20, className, heading }: { read
         </Popover>
       }
     >
-      <div className="grid grid-cols-[1.1fr_1fr_1fr] px-3 pb-1 pt-1.5 text-right font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
+      <div className="grid grid-cols-[1.1fr_1fr_1fr] px-3 pb-1 pt-1.5 text-right font-tag text-[10px] uppercase text-ink-3">
         <span className="text-left">Price</span>
         <span>Size</span>
         <span>Total</span>
@@ -164,25 +165,25 @@ export function OrderBook({ levels: maxLevels = 20, className, heading }: { read
           <>
             <div className="flex min-h-0 flex-1 flex-col-reverse justify-start overflow-hidden" aria-label="Asks">
               {asks.map((row) => (
-                <BookRow key={`a${row.pxText}`} row={row} side="ask" maxTotal={maxTotal} maxSize={maxSize} market={market} mine={mine(row.px)} onPick={pickPrice} />
+                <BookRow key={`a${row.pxText}`} row={row} side="ask" maxTotal={maxTotal} maxSize={maxSize} width={width} market={market} mine={mine(row.px)} onPick={pickPrice} />
               ))}
             </div>
-            <div className="my-0.5 flex h-[42px] shrink-0 items-center justify-between border-y-2 border-rule bg-paper-2/70 px-3">
-              <span className={cx("tnum inline-flex items-center gap-1.5 font-mono text-[18px] font-semibold", up ? "text-up" : "text-down")}>
+            <div className="my-0.5 flex h-[42px] shrink-0 items-center justify-between bg-paper-2 px-3 [box-shadow:0_-2px_0_0_rgb(var(--rule)),0_2px_0_0_rgb(var(--rule))]">
+              <span className={cx("tnum inline-flex items-center gap-1.5 font-display text-[22px] font-bold leading-none", up ? "text-up" : "text-down")}>
                 {formatPx(last, market)}
                 <span aria-hidden="true" className="text-[11px]">
                   {up ? "▲" : "▼"}
                 </span>
                 <span className="sr-only">{up ? "last trade up" : "last trade down"}</span>
               </span>
-              <span className="tnum flex flex-col items-end font-mono text-[10px] uppercase leading-tight tracking-[0.1em] text-ink-3">
+              <span className="tnum flex flex-col items-end gap-0.5 font-tag text-[10px] uppercase leading-tight text-ink-3">
                 <span>spread {book.spread !== null ? formatPx(book.spread, market) : "—"}</span>
                 <span>{spreadBps !== null ? `${spreadBps.toFixed(spreadBps < 1 ? 2 : 1)} bps` : ""}</span>
               </span>
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-label="Bids">
               {bids.map((row) => (
-                <BookRow key={`b${row.pxText}`} row={row} side="bid" maxTotal={maxTotal} maxSize={maxSize} market={market} mine={mine(row.px)} onPick={pickPrice} />
+                <BookRow key={`b${row.pxText}`} row={row} side="bid" maxTotal={maxTotal} maxSize={maxSize} width={width} market={market} mine={mine(row.px)} onPick={pickPrice} />
               ))}
             </div>
             <BookBalance imbalance={imbalance} />
@@ -193,18 +194,22 @@ export function OrderBook({ levels: maxLevels = 20, className, heading }: { read
   );
 }
 
-/** Which side holds more of the shown size: bids hatch from the left, asks from the right. */
+const BALANCE_BLOCKS = 20;
+
+/** Which side holds more of the shown size: twenty pixel blocks, bids fill from the left, asks from the right. */
 function BookBalance({ imbalance }: { readonly imbalance: number | null }) {
   if (imbalance === null) return null;
   const bid = Math.round(imbalance * 100);
+  const filled = balanceBlocks(imbalance, BALANCE_BLOCKS);
   return (
-    <div className="flex h-[28px] shrink-0 items-center gap-2 border-t-1.5 border-rule/30 px-3 font-mono text-[10px] font-semibold tracking-[0.08em]" role="img" aria-label={`Book balance: bids ${bid}%, asks ${100 - bid}% of the shown size`}>
-      <span className="text-up">▲ {bid}%</span>
-      <span aria-hidden="true" className="relative flex h-2.5 flex-1 border-1.5 border-rule">
-        <span className="h-full border-r-1.5 border-rule" style={{ width: `${bid}%`, ...hatch("up", 0.75, 4) }} />
-        <span className="h-full flex-1" style={hatch("down", 0.75, 4)} />
+    <div className="tx-seam-t flex h-[30px] shrink-0 items-center gap-2 px-3 font-tag text-[10px]" role="img" aria-label={`Book balance: bids ${bid}%, asks ${100 - bid}% of the shown size`}>
+      <span className="w-10 text-up">▲ {bid}%</span>
+      <span aria-hidden="true" className="flex h-2.5 flex-1 gap-px">
+        {Array.from({ length: BALANCE_BLOCKS }, (_, index) => (
+          <span key={index} className={cx("h-full flex-1", index < filled ? "bg-up" : "bg-down")} />
+        ))}
       </span>
-      <span className="text-down">{100 - bid}% ▼</span>
+      <span className="w-10 text-right text-down">{100 - bid}% ▼</span>
     </div>
   );
 }
