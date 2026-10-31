@@ -15,7 +15,7 @@ export interface TerrainHolding {
   readonly side?: "long" | "short";
   /** Distance to liquidation in percent (19 = 19%). Omit for unlevered holdings. */
   readonly rope?: number | null;
-  /** Stable value (USDC, vault shares): the shock does not move it. */
+  /** Stable value (USDC, vault shares, or a holding outside the shocked market): the shock does not move it (hills and lakes). */
   readonly stable?: boolean;
   /** Fixed position as fractions of the map (0..1); otherwise laid out on a spiral. */
   readonly x?: number;
@@ -73,8 +73,18 @@ export function layoutTerrain(holdings: readonly TerrainHolding[]): ReadonlyArra
   return out;
 }
 
+export interface TerrainOptions {
+  /**
+   * The ground's gentle swell. "wet" (default, the reference): it dips below
+   * sea level between hills, so open ground shows small lakes. "dry": it only
+   * rises, so every lake on the map is a short or a snapped rope.
+   */
+  readonly ground?: "wet" | "dry";
+}
+
 /** Builds the height field for `shock` (percent, -30..30). */
-export function terrainModel(holdings: readonly TerrainHolding[], w: number, h: number, shock = 0): TerrainModel {
+export function terrainModel(holdings: readonly TerrainHolding[], w: number, h: number, shock = 0, options: TerrainOptions = {}): TerrainModel {
+  const dry = options.ground === "dry";
   const k = 1 + shock / 100;
   const maxUsd = Math.max(1, ...holdings.map((holding) => holding.usd));
   const top = maxUsd * 1.03;
@@ -84,7 +94,7 @@ export function terrainModel(holdings: readonly TerrainHolding[], w: number, h: 
     const [fx, fy] = positions[index]!;
     const snapped = snappedBy(holding, shock);
     const sigma = (4 + Math.sqrt(holding.usd / maxUsd) * 13.4) * unit;
-    const height = snapped ? -holding.usd * 0.45 : holding.side === "short" ? -holding.usd * (2 - k) : holding.usd * (holding.stable ? 1 : k);
+    const height = snapped ? -holding.usd * 0.45 : holding.side === "short" ? -holding.usd * (holding.stable ? 1 : 2 - k) : holding.usd * (holding.stable ? 1 : k);
     return { holding, x: fx * w, y: fy * h, sigma, height, snapped };
   });
   const field: number[][] = [];
@@ -94,7 +104,8 @@ export function terrainModel(holdings: readonly TerrainHolding[], w: number, h: 
     for (let x = 0; x < w; x += 1) {
       let v = 0;
       for (const hill of hills) v += hill.height * Math.exp(-((x - hill.x) ** 2 + (y - hill.y) ** 2) / (2 * hill.sigma * hill.sigma));
-      v += ripple * Math.sin(x / (23 * unit)) * Math.cos(y / (19 * unit));
+      const swell = Math.sin(x / (23 * unit)) * Math.cos(y / (19 * unit));
+      v += ripple * (dry ? Math.abs(swell) : swell);
       row.push(v);
     }
     field.push(row);

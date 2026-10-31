@@ -1,86 +1,160 @@
 import type { PortfolioHistory } from "@elyia/core/api/portfolio";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { routeHref } from "../../../app/routes/routeTable";
 import { hyperCoreExplorerUrl } from "../../../lib/hypercore/endpoints";
-import { ElevationProfile } from "../../../topo/ElevationProfile";
+import { SUN, INK } from "../../../pixel/ely";
+import { PixelCanvas } from "../../../pixel/PixelCanvas";
+import { PixelProfile } from "../../../pixel/PixelProfile";
+import { LAND, WATER } from "../../../pixel/terrain";
+import { shade } from "../../../pixel/topo";
 import { SummitRegister } from "../../../topo/SummitRegister";
 import { Button } from "../../../ui/Button";
 import { cx } from "../../../ui/cx";
+import { Panel } from "../../../ui/Panel";
 import { SegmentedControl } from "../../../ui/SegmentedControl";
 import { dayLabel, pctSigned, usdShort, usdSigned } from "../range/format";
-import { calendarGrid, registerEntries, type EquityRange, type RegisterEntry } from "../range/model";
+import { calendarGrid, registerEntries, type CalendarCell, type EquityRange, type RegisterEntry } from "../range/model";
 import { useEquity } from "../range/useEquity";
+import { useSheetColors } from "./sheetColors";
 
 const RANGE_WORD: Readonly<Record<EquityRange, string>> = { day: "day", week: "7-day", month: "30-day", allTime: "all-time" };
 
+/** The profile's range switch (1D / 7D / 30D / ALL), centred under the section head. */
+export function EquityRangeControl({ range, onRange }: { readonly range: EquityRange; readonly onRange: (range: EquityRange) => void }) {
+  return (
+    <SegmentedControl
+      label="Profile range"
+      size="sm"
+      value={range}
+      onChange={onRange}
+      options={[
+        { value: "day", label: "1D" },
+        { value: "week", label: "7D" },
+        { value: "month", label: "30D" },
+        { value: "allTime", label: "ALL" },
+      ]}
+    />
+  );
+}
 
 /**
- * The elevation profile: equity as a ridgeline (day / week / month / all),
- * camps at the biggest events, the summit flag at the high and the valley at
- * the deepest drawdown (the artifact finds both).
+ * The elevation profile: equity as a stepped pixel ridgeline in altitude
+ * bands, camps at the biggest events, the summit flag at the high and the
+ * deepest drawdown flooded as a valley lake.
  */
-export function EquityProfile({ history, sample, range, onRange, className }: { readonly history: PortfolioHistory | null; readonly sample: boolean; readonly range: EquityRange; readonly onRange: (range: EquityRange) => void; readonly className?: string }) {
+export function EquityProfile({ history, sample, range, className }: { readonly history: PortfolioHistory | null; readonly sample: boolean; readonly range: EquityRange; readonly className?: string }) {
   const { series, camps, facts } = useEquity(history, range);
   const climb = facts.change !== null && facts.change >= 0;
-  const caption = facts.change === null ? undefined : `a ${RANGE_WORD[range]} ${climb ? "climb" : "descent"} · ${usdSigned(facts.change, true).replace(/^[▲▼] /u, "")} · ${pctSigned(facts.changePct).replace(/^[▲▼] /u, "")}`;
+  const caption = facts.change === null ? undefined : `a ${RANGE_WORD[range]} ${climb ? "climb" : "descent"} · ${usdSigned(facts.change, true)} · ${pctSigned(facts.changePct)}`;
   return (
-    <section className={cx("border-2 border-rule bg-card shadow-hard-lg", className)} aria-label="Elevation profile of equity">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b-1.5 border-rule px-4 py-2.5">
-        <h2 className="caption !text-ink">
-          Elevation profile · {sample ? "sample equity" : "HyperCore account value"}
-          {facts.high !== null ? <span className="text-ink-2"> · high {usdShort(facts.high)} · max drawdown {(facts.drawdown * 100).toFixed(1)}%</span> : null}
-        </h2>
-        <SegmentedControl
-          label="Profile range"
-          size="sm"
-          value={range}
-          onChange={onRange}
-          options={[
-            { value: "day", label: "1D" },
-            { value: "week", label: "7D" },
-            { value: "month", label: "30D" },
-            { value: "allTime", label: "ALL" },
-          ]}
+    <Panel variant="sheet" padding="lg" className={className}>
+      <p className="mb-5 text-center font-tag text-[12px] uppercase text-ink-2">
+        <span className="text-ink">{sample ? "Sample equity" : "HyperCore account value"}</span>
+        {facts.high !== null ? ` · high ${usdShort(facts.high)} · max drawdown ${(facts.drawdown * 100).toFixed(1)}%` : ""}
+      </p>
+      {series.length < 2 ? (
+        <p className="flex h-[200px] items-center justify-center text-sm text-ink-2">{history ? "No equity curve for this range yet." : "Reading the profile…"}</p>
+      ) : (
+        <PixelProfile
+          series={series}
+          camps={camps}
+          height={64}
+          formatValue={usdShort}
+          label={`${sample ? "Sample equity" : "HyperCore account value"} over the ${RANGE_WORD[range]} range, from ${usdShort(facts.start)} to ${usdShort(facts.end)}; high ${usdShort(facts.high)}; deepest drawdown ${(facts.drawdown * 100).toFixed(1)}%`}
+          caption={caption}
+          startLabel={dayLabel(series[0]!.t)}
+          endLabel="NOW"
         />
-      </header>
-      <div className="px-2 pb-2 pt-3 sm:px-4">
-        {series.length < 2 ? (
-          <p className="flex h-[220px] items-center justify-center text-sm text-ink-2">{history ? "No equity curve for this range yet." : "Reading the profile…"}</p>
-        ) : (
-          <ElevationProfile
-            series={series}
-            camps={camps}
-            height={250}
-            formatValue={usdShort}
-            label={`${sample ? "Sample equity" : "HyperCore account value"} over the ${RANGE_WORD[range]} range, from ${usdShort(facts.start)} to ${usdShort(facts.end)}; high ${usdShort(facts.high)}; deepest drawdown ${(facts.drawdown * 100).toFixed(1)}%`}
-            caption={caption}
-            startLabel={dayLabel(series[0]!.t)}
-            endLabel="NOW"
-          />
-        )}
-      </div>
-    </section>
+      )}
+    </Panel>
   );
 }
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+const TILE = 16;
 
-/** The PnL calendar: realised PnL − fees + funding per UTC day, five weeks, ▲/▼ on every figure. */
+/** One day as a pixel tile (pure painting): a gain rises as a hill in land bands, a loss sinks as a lake; the best day wears a crown. */
+function paintTile(ctx: CanvasRenderingContext2D, cell: CalendarCell, best: boolean, paper: string): void {
+  ctx.clearRect(0, 0, TILE, TILE);
+  const net = cell.entry?.net ?? 0;
+  if (!cell.entry || net === 0) {
+    ctx.fillStyle = paper;
+    for (let x = 2; x < TILE; x += 4) ctx.fillRect(x, TILE - 3, 1, 1);
+    return;
+  }
+  const level = Math.max(1, Math.round(cell.intensity * 4)); // 1..4 steps of height or depth
+  if (net > 0) {
+    const peak = 3 + level * 3;
+    for (let x = 0; x < TILE; x += 1) {
+      const d = Math.abs(x + 0.5 - TILE / 2);
+      const h = Math.max(0, Math.round(peak - d * (peak / (TILE / 2 - 1))));
+      for (let y = TILE - h; y < TILE; y += 1) {
+        const band = Math.min(LAND.length - 1, Math.floor(((TILE - y) / 16) * 6) + 1);
+        ctx.fillStyle = y === TILE - h ? shade(LAND[band]!, -0.3) : LAND[band]!;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    if (best) {
+      const top = TILE - peak - 4;
+      ctx.fillStyle = SUN;
+      ctx.fillRect(6, top + 1, 4, 2);
+      ctx.fillRect(6, top, 1, 1);
+      ctx.fillRect(9, top, 1, 1);
+      ctx.fillStyle = INK;
+      ctx.fillRect(6, top + 3, 4, 1);
+    }
+    return;
+  }
+  const depth = 2 + level * 3;
+  for (let y = TILE - depth; y < TILE; y += 1) {
+    for (let x = 0; x < TILE; x += 1) {
+      ctx.fillStyle = (x + y) % 7 === 0 ? WATER.glint : y - (TILE - depth) > depth / 2 ? WATER.deep : WATER.shallow;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  ctx.fillStyle = WATER.shore;
+  ctx.fillRect(0, TILE - depth, TILE, 1);
+}
+
+function DayTile({ cell, best, today }: { readonly cell: CalendarCell; readonly best: boolean; readonly today: boolean }) {
+  const colors = useSheetColors();
+  const draw = useCallback((ctx: CanvasRenderingContext2D) => paintTile(ctx, cell, best, colors.ink3), [cell, best, colors.ink3]);
+  const net = cell.entry?.net ?? 0;
+  const up = net > 0;
+  return (
+    <div
+      className={cx("relative aspect-square bg-card px-frame-thin", today && "outline-dashed outline-4 outline-offset-4 outline-signal")}
+      title={cell.entry ? `${cell.day}: ${usdSigned(net)} · ${cell.entry.fills} fills · funding ${usdSigned(cell.entry.funding)}` : `${cell.day}: no activity`}
+    >
+      <PixelCanvas width={TILE} height={TILE} contain draw={draw} decorative redrawKey={`${cell.day}|${net}|${best}|${colors.night}`} className="absolute inset-0 flex !h-full items-end" />
+      <span className={cx("absolute left-1 top-0.5 font-tag text-[10px] leading-none sm:left-1.5 sm:top-1 sm:text-[11px]", cell.entry ? "text-ink" : "text-ink-3")}>{cell.date}</span>
+      {cell.entry && net !== 0 ? (
+        <span className={cx("tnum absolute bottom-0.5 right-1 bg-card px-0.5 font-mono text-[10px] font-semibold leading-none sm:bottom-1 sm:right-1.5 sm:text-[11px]", up ? "text-up" : "text-down")}>
+          {up ? "▲" : "▼"}
+          <span className="hidden md:inline">{usdShort(Math.abs(net)).replace("$", "")}</span>
+          <span className="sr-only"> {usdSigned(net)}</span>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** The PnL calendar as pixel tiles: realised PnL − fees + funding per UTC day, gains as hills, losses as lakes, ▲/▼ on every figure. */
 export function PnlCalendar({ history, now, sample, className }: { readonly history: PortfolioHistory | null; readonly now: number; readonly sample: boolean; readonly className?: string }) {
   const grid = useMemo(() => calendarGrid(history?.calendar ?? [], now, 35), [history, now]);
+  const today = new Date(now).toISOString().slice(0, 10);
   return (
-    <section className={cx("border-2 border-rule bg-card shadow-hard", className)} aria-label="PnL calendar">
-      <header className="flex flex-wrap items-baseline justify-between gap-2 border-b-1.5 border-rule px-4 py-2.5">
-        <h2 className="caption !text-ink">PnL calendar · 35 days{sample ? " · sample" : ""}</h2>
-        <span className={cx("tnum font-mono text-[13px] font-semibold", grid.total >= 0 ? "text-up" : "text-down")}>{usdSigned(grid.total, true)}</span>
-      </header>
-      <table className="w-full table-fixed border-collapse">
+    <Panel variant="sheet" padding="lg" className={className}>
+      <p className="mb-5 text-center font-tag text-[12px] uppercase text-ink-2">
+        <span className="text-ink">35 UTC days{sample ? " · sample" : ""}</span> · net <span className={grid.total >= 0 ? "text-up" : "text-down"}>{usdSigned(grid.total, true)}</span>
+      </p>
+      <table className="w-full table-fixed border-separate" style={{ borderSpacing: "8px" }}>
         <caption className="sr-only">Net PnL per day: realised PnL minus fees plus funding</caption>
         <thead>
           <tr>
             {WEEKDAYS.map((day) => (
-              <th key={day} scope="col" className="pb-1 pt-2.5 font-mono text-[10px] font-medium tracking-[0.1em] text-ink-3">
+              <th key={day} scope="col" className="pb-1 font-tag text-[10px] font-normal text-ink-3 sm:text-[11px]">
                 {day}
               </th>
             ))}
@@ -89,36 +163,16 @@ export function PnlCalendar({ history, now, sample, className }: { readonly hist
         <tbody>
           {grid.weeks.map((week, index) => (
             <tr key={index}>
-              {week.map((cell, column) => {
-                if (!cell.day) return <td key={column} className="p-[3px]" />;
-                const net = cell.entry?.net ?? 0;
-                const up = net > 0;
-                const alpha = cell.entry ? 0.14 + cell.intensity * 0.62 : 0;
-                const today = cell.day === new Date(now).toISOString().slice(0, 10);
-                return (
-                  <td key={column} className="p-[3px]">
-                    <div
-                      className={cx("relative flex h-12 flex-col justify-between border-1.5 px-1 py-0.5 sm:h-14 sm:px-1.5", today ? "border-rule ring-2 ring-signal" : cell.entry ? "border-rule" : "border-rule/20")}
-                      style={cell.entry ? { backgroundColor: `rgb(var(--${up ? "up" : "down"}) / ${alpha.toFixed(2)})` } : undefined}
-                      title={cell.entry ? `${cell.day}: ${usdSigned(net)} · ${cell.entry.fills} fills · funding ${usdSigned(cell.entry.funding)}` : `${cell.day}: no activity`}
-                    >
-                      <span className={cx("font-mono text-[10px] leading-none", cell.entry ? "text-ink" : "text-ink-3")}>{cell.date}</span>
-                      {cell.entry ? (
-                        <span className={cx("tnum truncate font-mono text-[10px] font-semibold leading-none sm:text-[11px]", cell.intensity > 0.55 ? "text-ink" : up ? "text-up" : "text-down")}>
-                          {up ? "▲" : net < 0 ? "▼" : ""}
-                          <span className="hidden sm:inline">{usdShort(Math.abs(net)).replace("$", "")}</span>
-                          <span className="sr-only"> {usdSigned(net)}</span>
-                        </span>
-                      ) : null}
-                    </div>
-                  </td>
-                );
-              })}
+              {week.map((cell, column) => (
+                <td key={column} className="p-0 align-top">
+                  {cell.day ? <DayTile cell={cell} best={grid.best?.day === cell.day} today={cell.day === today} /> : null}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
       </table>
-      <p className="tnum flex flex-wrap gap-x-4 gap-y-1 px-4 pb-3 pt-1.5 font-mono text-[11px] text-ink-2">
+      <p className="tnum mt-4 flex flex-wrap justify-center gap-x-5 gap-y-1 font-mono text-xs text-ink-2">
         {grid.best ? (
           <span>
             best <span className="text-up">{usdSigned(grid.best.net, true)}</span> {grid.best.day.slice(5)}
@@ -135,13 +189,14 @@ export function PnlCalendar({ history, now, sample, className }: { readonly hist
           </span>
         ) : null}
       </p>
-    </section>
+      <p className="mt-2 text-center font-tag text-[11px] uppercase text-ink-3">hill = a gain · lake = a loss · crown = the best day</p>
+    </Panel>
   );
 }
 
-type RegisterFilter = "all" | "fill" | "funding" | "ledger";
+export type RegisterFilter = "all" | "fill" | "funding" | "ledger";
 
-/** The Summit Register: fills, funding and transfers as a ruled log book, with filters and more pages. */
+/** The Summit Register: fills, funding and transfers as a ruled log book, with filters (centred) and more pages. */
 export function Register({ history, address, mode, sample, className }: { readonly history: PortfolioHistory | null; readonly address: string | null; readonly mode: "testnet" | "mainnet"; readonly sample: boolean; readonly className?: string }) {
   const [filter, setFilter] = useState<RegisterFilter>("all");
   const [limit, setLimit] = useState(12);
@@ -164,12 +219,8 @@ export function Register({ history, address, mode, sample, className }: { readon
   }));
   const counts = { all: entries.length, fill: entries.filter((e) => e.kind === "fill").length, funding: entries.filter((e) => e.kind === "funding").length, ledger: entries.filter((e) => e.kind === "ledger").length };
   return (
-    <section className={className} aria-label="Summit register">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="caption">Summit register{sample ? " · sample" : ""} · UTC</p>
-          <h2 className="mt-1 text-2xl font-bold tracking-[-0.01em] text-ink">Every step, in ink.</h2>
-        </div>
+    <div className={className}>
+      <div className="mb-8 flex justify-center">
         <SegmentedControl
           label="Register filter"
           size="sm"
@@ -182,17 +233,17 @@ export function Register({ history, address, mode, sample, className }: { readon
             { value: "all", label: `All ${counts.all}` },
             { value: "fill", label: `Fills ${counts.fill}` },
             { value: "funding", label: `Funding ${counts.funding}` },
-            { value: "ledger", label: `Transfers ${counts.ledger}` },
+            { value: "ledger", label: `Moves ${counts.ledger}` },
           ]}
         />
       </div>
       <SummitRegister className="hidden sm:block" rows={rows} caption="Activity register: fills, funding and transfers" empty={history ? "Nothing logged in this range yet." : "Reading the register…"} />
       {/* Phones: the same log book as ruled entries, nothing cut at the edge. */}
-      <ol className="divide-y divide-rule/20 border-2 border-rule bg-card shadow-hard sm:hidden" aria-label="Activity register">
+      <ol className="divide-y-2 divide-dashed divide-rule/20 bg-card px-frame px-drop sm:hidden" aria-label="Activity register">
         {rows.length === 0 ? <li className="px-3 py-3 text-sm text-ink-2">{history ? "Nothing logged in this range yet." : "Reading the register…"}</li> : null}
         {rows.map((row) => (
           <li key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 px-3 py-2.5">
-            <span className="font-mono text-[11px] text-ink-3">{row.when} · FLOOR</span>
+            <span className="font-tag text-[11px] uppercase text-ink-3">{row.when} · FLOOR</span>
             <span className={cx("tnum row-span-2 self-center text-right font-mono text-[13px]", row.direction === "up" ? "text-up" : row.direction === "down" ? "text-down" : "text-ink")}>
               {row.direction === "up" ? "▲ " : row.direction === "down" ? "▼ " : ""}
               {row.amount}
@@ -209,12 +260,12 @@ export function Register({ history, address, mode, sample, className }: { readon
         ))}
       </ol>
       {shown.length > limit ? (
-        <div className="mt-3 flex justify-center">
+        <div className="mt-8 flex justify-center">
           <Button variant="ink" size="sm" onClick={() => setLimit((value) => value + 24)}>
             Older entries ({shown.length - limit})
           </Button>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

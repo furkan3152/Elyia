@@ -41,8 +41,8 @@ export function WatchField({ hrefFor, example, label = "Watch a range", size = "
         submit(value);
       }}
     >
-      <div className={cx("flex w-full min-w-0 items-stretch border-2 border-rule bg-card shadow-hard focus-within:shadow-hard-lg", tall ? "h-12" : "h-11")}>
-        <label htmlFor={id} className="flex shrink-0 items-center bg-ink px-3 font-sans text-[13px] font-bold uppercase tracking-[0.06em] text-paper">
+      <div className={cx("flex w-full min-w-0 items-stretch bg-card px-frame px-drop", tall ? "h-12" : "h-11")}>
+        <label htmlFor={id} className="flex shrink-0 items-center bg-ink px-3 font-tag text-[12px] uppercase text-paper">
           {label}
         </label>
         <input
@@ -59,16 +59,16 @@ export function WatchField({ hrefFor, example, label = "Watch a range", size = "
           aria-describedby={error ? `${id}-error` : undefined}
           className="min-w-0 flex-1 bg-transparent px-3 font-mono text-sm text-ink outline-none placeholder:text-ink-3"
         />
-        <button type="submit" className={cx("shrink-0 border-l-2 border-rule px-3 font-sans text-[13px] font-bold uppercase tracking-[0.06em] text-ink hover:bg-paper-2", FOCUS_RING)}>
+        <button type="submit" className={cx("shrink-0 border-l-4 border-rule px-3 font-display text-[15px] font-bold text-ink hover:bg-paper-2", FOCUS_RING)}>
           Watch →
         </button>
       </div>
       {error ? (
-        <p id={`${id}-error`} className="mt-1.5 text-[13px] text-down" role="alert">
+        <p id={`${id}-error`} className="mt-3 text-[13px] text-down" role="alert">
           {error}
         </p>
       ) : example ? (
-        <p className="mt-1.5 font-mono text-[11px] text-ink-3">
+        <p className="mt-3 font-mono text-[11px] text-ink-3">
           try{" "}
           <button type="button" className={cx("text-ink-2 underline decoration-dotted underline-offset-2 hover:text-ink", FOCUS_RING)} onClick={() => submit(example)}>
             {example.slice(0, 10)}…{example.slice(-6)}

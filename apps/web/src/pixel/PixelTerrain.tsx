@@ -21,6 +21,8 @@ export interface PixelTerrainProps {
   readonly resolution?: number;
   /** Height / width (default 0.55). */
   readonly aspect?: number;
+  /** "dry" ground never dips under water, so every lake is a short or a snapped rope (default "wet", as the reference). */
+  readonly ground?: "wet" | "dry";
   readonly className?: string;
 }
 
@@ -39,22 +41,22 @@ function terrainSummary(model: TerrainModel, format: (n: number) => string): str
  * the fall snaps and its hill collapses into a lake, and Ely, standing on
  * the tallest peak, looks worried. Peak labels are real buttons.
  */
-export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null, label, formatUsd = usd, resolution = 200, aspect = 0.55, className }: PixelTerrainProps) {
+export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null, label, formatUsd = usd, resolution = 200, aspect = 0.55, ground = "wet", className }: PixelTerrainProps) {
   const [hot, setHot] = useState<string | null>(null);
   const cache = useRef<{ readonly holdings: readonly TerrainHolding[]; readonly key: string; readonly model: TerrainModel } | null>(null);
   const modelFor = useCallback(
     (w: number, h: number) => {
-      const key = `${w}x${h}|${shock}`;
+      const key = `${w}x${h}|${shock}|${ground}`;
       const hit = cache.current;
       if (hit && hit.holdings === holdings && hit.key === key) return hit.model;
-      const model = terrainModel(holdings, w, h, shock);
+      const model = terrainModel(holdings, w, h, shock, { ground });
       cache.current = { holdings, key, model };
       return model;
     },
-    [holdings, shock],
+    [holdings, shock, ground],
   );
   // A reference model at a fixed size for the labels and the summary (positions are fractions).
-  const reference = useMemo(() => terrainModel(holdings, 100, Math.round(100 * aspect), shock), [holdings, shock, aspect]);
+  const reference = useMemo(() => terrainModel(holdings, 100, Math.round(100 * aspect), shock, { ground }), [holdings, shock, aspect, ground]);
   const hasWater = reference.peaks.some((peak) => peak.lake);
   const [measure, width] = useMeasuredWidth<HTMLDivElement>(900);
   const height = width * aspect;
@@ -120,7 +122,7 @@ export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null,
         animate={hasWater || reference.snaps > 0}
         fps={6}
         label={label ?? `Portfolio elevation map. ${terrainSummary(reference, formatUsd)}`}
-        redrawKey={`${shock}|${holdings.length}`}
+        redrawKey={`${shock}|${holdings.length}|${ground}`}
       />
       <ul className="pointer-events-none absolute inset-0 m-0 list-none p-0">
         {reference.peaks.map((peak, index) => {

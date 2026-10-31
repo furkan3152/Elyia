@@ -1,9 +1,11 @@
 import type { PortfolioHistory, PortfolioSnapshot } from "@elyia/core/api/portfolio";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 
 import { navigate } from "../../../app/routes/history";
 import { routeHref } from "../../../app/routes/routeTable";
 import { intentHref } from "../../../oracle/preview";
+import { Cards } from "../../../pixel/layout";
+import { PixelCanvas } from "../../../pixel/PixelCanvas";
 import { Button } from "../../../ui/Button";
 import { cx, FOCUS_RING } from "../../../ui/cx";
 import { Dialog } from "../../../ui/Dialog";
@@ -13,6 +15,7 @@ import { amount, pct, usdFull, usdShort } from "../range/format";
 import {
   descentRadar,
   dustLines,
+  GAS_LOW_HYPE,
   gasCamps,
   layerSplit,
   LAYER_NAME,
@@ -23,6 +26,8 @@ import {
   timelineCsv,
   type RebalancePreset,
 } from "../range/model";
+import { GLYPH_H, GLYPH_W, paintJobGlyph, type JobGlyphInput } from "./jobGlyphs";
+import { useSheetColors } from "./sheetColors";
 import { WatchField } from "./WatchField";
 
 type Job = "rebalance" | "dust" | "gas" | "descent" | null;
@@ -30,23 +35,23 @@ type Job = "rebalance" | "dust" | "gas" | "descent" | null;
 const TONE = { floor: "text-floor", ridge: "text-ridge", summit: "text-summit-ink" } as const;
 const FILL = { floor: "bg-floor", ridge: "bg-ridge", summit: "bg-summit" } as const;
 
-function JobCard({ title, status, tone, onClick }: { readonly title: string; readonly status: React.ReactNode; readonly tone?: "warn" | "ok"; readonly onClick: () => void }) {
+
+function JobGlyph({ input, label }: { readonly input: JobGlyphInput; readonly label: string }) {
+  const colors = useSheetColors();
+  const draw = useCallback((ctx: CanvasRenderingContext2D, info: { readonly seconds: number; readonly still: boolean }) => paintJobGlyph(ctx, input, colors, info.seconds, info.still), [input, colors]);
+  const animated = (input.kind === "dust" && (input.specks ?? 0) > 0) || (input.kind === "descent" && (input.walkers ?? 0) > 0);
+  return <PixelCanvas width={GLYPH_W} height={GLYPH_H} scale={3} draw={draw} animate={animated} fps={3} label={label} redrawKey={`${JSON.stringify(input)}|${colors.night}`} />;
+}
+
+function JobCard({ title, status, tone, glyph, glyphLabel, onClick }: { readonly title: string; readonly status: React.ReactNode; readonly tone?: "warn" | "ok"; readonly glyph: JobGlyphInput; readonly glyphLabel: string; readonly onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx(
-        "group flex min-h-[86px] flex-col items-start justify-between gap-2 border-2 border-rule bg-card p-3.5 text-left shadow-hard transition-[transform,box-shadow] duration-fast hover:-translate-x-px hover:-translate-y-px hover:shadow-hard-lg active:translate-x-[3px] active:translate-y-[3px] active:shadow-none",
-        FOCUS_RING,
-      )}
-    >
-      <span className="flex w-full items-center justify-between gap-2 text-[15px] font-bold uppercase leading-tight tracking-[0.02em] text-ink">
-        {title}
-        <span aria-hidden="true" className="text-ink-3 transition-transform duration-fast group-hover:translate-x-0.5">
-          →
-        </span>
-      </span>
+    <button type="button" onClick={onClick} className={cx("group flex h-full w-full flex-col items-center gap-3 bg-card px-4 pb-5 pt-5 text-center px-frame px-drop px-press", FOCUS_RING)}>
+      <JobGlyph input={glyph} label={glyphLabel} />
+      <span className="font-display text-[19px] font-bold leading-tight text-ink">{title}</span>
       <span className={cx("font-mono text-xs leading-snug", tone === "warn" ? "text-warn-ink" : "text-ink-2")}>{status}</span>
+      <span aria-hidden="true" className="mt-auto font-tag text-[11px] uppercase text-accent">
+        open ▸
+      </span>
     </button>
   );
 }
@@ -100,24 +105,49 @@ export function Jobs({ snapshot, history, sample, now, className }: JobsProps) {
   };
 
   return (
-    <section id="jobs" className={cx("scroll-mt-28", className)} aria-label="One-tap jobs">
-      <p className="caption">
-        <span className="!text-ink">One-tap jobs</span> · each opens a route card, you sign
-      </p>
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <JobCard title="Rebalance to target" status={drift > 1 ? `${usdShort(drift)} off a three-way split · ${moves.length} move${moves.length === 1 ? "" : "s"}` : "On target"} onClick={() => setJob("rebalance")} />
-        <JobCard title="Sweep dust" status={dust.length > 0 ? `${dust.length} token${dust.length === 1 ? "" : "s"} · ${usdFull(dustUsd)} → USDC` : "No dust on any layer"} onClick={() => setJob("dust")} />
-        <JobCard
-          title="Gas at every camp"
-          tone={thirsty.length > 0 ? "warn" : "ok"}
-          status={thirsty.length > 0 ? `${thirsty.map((camp) => LAYER_NAME[camp.layer]).join(" + ")} low on HYPE` : gas.some((camp) => camp.state === "unknown") ? "Some camps not read" : "Every camp has HYPE for gas"}
-          onClick={() => setJob("gas")}
-        />
-        <JobCard title="Descent radar" status={radar.length > 0 ? `${radar.length} on the way down` : "Nothing on the way down"} onClick={() => setJob("descent")} />
-      </div>
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">
+    <div id="jobs" className={cx("scroll-mt-28", className)}>
+      <Cards n={4} as="ul">
+        <li>
+          <JobCard
+            title="Rebalance"
+            status={drift > 1 ? `${usdShort(drift)} off even thirds · ${moves.length} move${moves.length === 1 ? "" : "s"}` : "On target"}
+            glyph={{ kind: "rebalance", shares: split.map((entry) => ({ layer: entry.layer, share: entry.share, target: REBALANCE_TARGETS.thirds[entry.layer] })) }}
+            glyphLabel={`Layer shares against even thirds: ${split.map((entry) => `${LAYER_NAME[entry.layer]} ${pct(entry.share)}`).join(", ")}`}
+            onClick={() => setJob("rebalance")}
+          />
+        </li>
+        <li>
+          <JobCard
+            title="Sweep dust"
+            status={dust.length > 0 ? `${dust.length} token${dust.length === 1 ? "" : "s"} · ${usdFull(dustUsd)} → USDC` : "No dust on any layer"}
+            glyph={{ kind: "dust", specks: dust.length }}
+            glyphLabel={dust.length > 0 ? `${dust.length} dust tokens` : "No dust"}
+            onClick={() => setJob("dust")}
+          />
+        </li>
+        <li>
+          <JobCard
+            title="Gas at every camp"
+            tone={thirsty.length > 0 ? "warn" : "ok"}
+            status={thirsty.length > 0 ? `${thirsty.map((camp) => LAYER_NAME[camp.layer]).join(" + ")} low on HYPE` : gas.some((camp) => camp.state === "unknown") ? "Some camps not read" : "Every camp has HYPE for gas"}
+            glyph={{ kind: "gas", tanks: gas.map((camp) => ({ layer: camp.layer, level: camp.state === "none-needed" || camp.state === "unknown" ? null : Math.min(1, (camp.hype ?? 0) / (GAS_LOW_HYPE * 6)) })) }}
+            glyphLabel={`Gas tanks: ${gas.map((camp) => `${LAYER_NAME[camp.layer]} ${camp.state.replace("-", " ")}`).join(", ")}`}
+            onClick={() => setJob("gas")}
+          />
+        </li>
+        <li>
+          <JobCard
+            title="Descent radar"
+            status={radar.length > 0 ? `${radar.length} on the way down` : "Nothing on the way down"}
+            glyph={{ kind: "descent", walkers: radar.length }}
+            glyphLabel={radar.length > 0 ? `${radar.length} items on the trail down` : "The trail down is empty"}
+            onClick={() => setJob("descent")}
+          />
+        </li>
+      </Cards>
+      <div className="mx-auto mt-12 flex max-w-[720px] flex-col items-stretch gap-6 sm:flex-row sm:items-start">
         <WatchField hrefFor={(address) => routeHref("portfolio", { address })} className="min-w-0 flex-1" />
-        <Button variant="ink" size="md" className="h-11 shrink-0" onClick={downloadCsv} aria-label="Download the timeline as CSV">
+        <Button variant="ink" size="lg" className="shrink-0" onClick={downloadCsv} aria-label="Download the timeline as CSV">
           CSV ↓
         </Button>
       </div>
@@ -278,6 +308,6 @@ export function Jobs({ snapshot, history, sample, now, className }: JobsProps) {
           </ul>
         )}
       </Dialog>
-    </section>
+    </div>
   );
 }

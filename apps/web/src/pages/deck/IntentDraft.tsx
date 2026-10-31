@@ -133,8 +133,8 @@ export function IntentDraft({ sentence, account }: { readonly sentence: string; 
           : "The Guide is surveying the route…";
   const trade = /\b(long|short|buy|sell)\s+([a-z0-9]{2,10})\b/iu.exec(sentence);
   return (
-    <article className="el-rise relative border-2 border-rule bg-card shadow-hard-lg" aria-label="Route card draft">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-dashed border-rule px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2">
+    <article className="el-rise relative bg-card text-left px-frame px-drop-lg" aria-label="Route card draft">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-dashed border-rule/40 px-4 py-2.5 font-tag text-[11px] uppercase text-ink-2">
         <span className="text-ink">Route card {id} · draft</span>
         <span className="flex items-center gap-2">
           <Blaze grade={sketch.grade} size={14} /> grade T{sketch.grade}
@@ -151,8 +151,8 @@ export function IntentDraft({ sentence, account }: { readonly sentence: string; 
         <ol className="flex items-end gap-1.5 self-end" aria-label="Layers the route climbs">
           {sketch.layers.map((layer, index) => (
             <li key={layer} className="flex flex-col items-center gap-1">
-              <span className={cx("border-2 border-rule bg-paper-2", layer === "floor" ? "h-6" : layer === "ridge" ? "h-10" : "h-14", "w-12")} aria-hidden="true" />
-              <span className={cx("font-mono text-[10px] font-semibold tracking-[0.1em]", TONE[layer])}>
+              <span className={cx("px-frame-thin", layer === "floor" ? "h-6 bg-floor" : layer === "ridge" ? "h-10 bg-ridge" : "h-14 bg-summit", "w-12")} aria-hidden="true" />
+              <span className={cx("font-tag text-[10px] uppercase", TONE[layer])}>
                 {index + 1}·{LAYER_NAME[layer]}
               </span>
               <span className="sr-only">{NETWORK_NAME[layer]}</span>
@@ -160,7 +160,7 @@ export function IntentDraft({ sentence, account }: { readonly sentence: string; 
           ))}
         </ol>
       </div>
-      <footer className="flex flex-wrap items-center gap-2 border-t-1.5 border-rule/40 px-4 py-3">
+      <footer className="flex flex-wrap items-center gap-x-6 gap-y-5 border-t-4 border-dashed border-rule/30 px-4 py-4">
         {trade ? (
           <ButtonLink to={routeHref("trade", { market: trade[2]!.toUpperCase() })} variant="primary" size="sm" grade={sketch.grade}>
             Open the {trade[2]!.toUpperCase()} terminal
@@ -172,10 +172,8 @@ export function IntentDraft({ sentence, account }: { readonly sentence: string; 
         <Button variant="ghost" size="sm" onClick={dismiss}>
           Dismiss
         </Button>
-        <span className="ml-auto font-mono text-[11px] text-ink-3">dry run · nothing signs here</span>
+        <span className="ml-auto font-tag text-[11px] uppercase text-ink-3">dry run · nothing signs here</span>
       </footer>
-      <span aria-hidden="true" className="absolute -right-1 top-1/2 h-6 w-3 -translate-y-1/2 rounded-l-full border-2 border-r-0 border-rule bg-paper" />
-      <span aria-hidden="true" className="absolute -left-1 top-1/2 h-6 w-3 -translate-y-1/2 rounded-r-full border-2 border-l-0 border-rule bg-paper" />
     </article>
   );
 }

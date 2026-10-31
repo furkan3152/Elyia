@@ -3,7 +3,8 @@ import { useRef, useState } from "react";
 import { navigate } from "../../app/routes/history";
 import { useOracleStore } from "../../oracle/oracleStore";
 import { intentHref, matchCommand } from "../../oracle/preview";
-import { cx, FOCUS_RING } from "../../ui/cx";
+import { Chip } from "../../ui/Badge";
+import { Button } from "../../ui/Button";
 import { Kbd } from "../../ui/Kbd";
 import { modShortcutLabel } from "../../ui/platform";
 import { WhereToInput } from "../../ui/WhereToInput";
@@ -45,7 +46,7 @@ export function WhereBox({ initial = "", onPlan, viewAs }: WhereBoxProps) {
   };
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-[880px]">
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -54,7 +55,7 @@ export function WhereBox({ initial = "", onPlan, viewAs }: WhereBoxProps) {
         role="search"
         aria-label="Where to? Say what you want in one sentence"
       >
-        <div className="flex items-stretch gap-3">
+        <div className="flex flex-col items-stretch gap-6 sm:flex-row">
           <WhereToInput
             ref={input}
             value={text}
@@ -64,44 +65,34 @@ export function WhereBox({ initial = "", onPlan, viewAs }: WhereBoxProps) {
             }}
             placeholder="long ETH 5x with 200 USDC, stop at -3%"
             maxLength={500}
-            containerClassName="h-16 sm:h-[72px]"
+            containerClassName="h-16 sm:h-[72px] sm:flex-1"
             className="text-base sm:text-lg"
             aside={
-              <span className="hidden items-center gap-1 pr-1 sm:flex" aria-hidden="true">
-                <span className="font-mono text-[11px] text-ink-3">anywhere</span>
+              <span className="hidden items-center gap-1 pr-1 lg:flex" aria-hidden="true">
+                <span className="font-tag text-[11px] uppercase text-ink-3">anywhere</span>
                 <Kbd>{modShortcutLabel("K")}</Kbd>
               </span>
             }
           />
-          <button
-            type="submit"
-            className={cx(
-              "hidden shrink-0 items-center gap-2 border-2 border-rule bg-accent px-6 font-sans text-[15px] font-bold uppercase tracking-[0.06em] text-accent-ink shadow-hard transition-[transform,box-shadow] duration-instant hover:-translate-x-px hover:-translate-y-px hover:shadow-hard-lg active:translate-x-[3px] active:translate-y-[3px] active:shadow-none sm:flex",
-              FOCUS_RING,
-            )}
-          >
-            Plan route →
-          </button>
+          <Button type="submit" variant="primary" size="xl" className="h-14 shrink-0 sm:h-[72px]">
+            Plan route ▸
+          </Button>
         </div>
-        <button type="submit" className={cx("mt-3 flex h-12 w-full items-center justify-center border-2 border-rule bg-accent font-sans text-sm font-bold uppercase tracking-[0.06em] text-accent-ink shadow-hard sm:hidden", FOCUS_RING)}>
-          Plan route →
-        </button>
       </form>
-      <ul className="mt-4 flex flex-wrap items-center gap-2" aria-label="Example sentences">
-        <li className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">try</li>
+      <ul className="mt-8 flex flex-wrap items-center justify-center gap-4" aria-label="Example sentences">
+        <li className="font-tag text-[11px] uppercase text-ink-3">try</li>
         {EXAMPLES.map((example) => (
           <li key={example}>
-            <button
-              type="button"
+            <Chip
+              mono
               onClick={() => {
                 setText(example);
                 setDraft(example);
                 input.current?.focus();
               }}
-              className={cx("border-1.5 border-rule/50 bg-card px-2.5 py-1 font-mono text-xs text-ink-2 transition-colors duration-fast hover:border-rule hover:text-ink", FOCUS_RING)}
             >
               {example}
-            </button>
+            </Chip>
           </li>
         ))}
       </ul>
