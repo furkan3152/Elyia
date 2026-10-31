@@ -66,9 +66,9 @@ export function ChainFacts() {
 /** The canonical bridge contracts on both sides, with explorer links (HyperEVM and Elysium sides). */
 export function BridgeContracts() {
   return (
-    <ul className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+    <ul className="m-0 flex list-none flex-col p-0">
       {CONTRACTS.map((contract) => (
-        <li key={`${contract.network}-${contract.label}`} className="flex min-w-0 items-center justify-between gap-2">
+        <li key={`${contract.network}-${contract.label}`} className="flex min-w-0 items-center justify-between gap-3 border-b border-rule/20 py-[5px]">
           <span className="flex min-w-0 items-center gap-2 truncate text-[14px] text-ink-2">
             <NetworkBadge network={contract.network} iconOnly />
             <span className="truncate">{contract.label}</span>

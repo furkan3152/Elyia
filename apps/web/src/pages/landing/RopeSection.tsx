@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 
 import { routeHref } from "../../app/routes/routeTable";
-import { Reveal } from "../../motion/Reveal";
-import { Rope } from "../../topo/Rope";
-import { Badge, Tag } from "../../ui/Badge";
+import { Cards, Section } from "../../pixel/layout";
+import { PixelRope } from "../../pixel/PixelRope";
+import { Badge } from "../../ui/Badge";
 import { ButtonLink } from "../../ui/Button";
 import { cx } from "../../ui/cx";
 import { pickRopes, shortAddress, signedUsd, usd, type RopeLine } from "./model";
@@ -15,77 +15,85 @@ function price(value: number): string {
   return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-function RopeRow({ rope }: { readonly rope: RopeLine }) {
+const ROLE: Readonly<Record<RopeLine["role"], string>> = { tight: "Tightest long", short: "Closest short", safe: "Safest long", other: "Largest" };
+
+function RopeCard({ rope }: { readonly rope: RopeLine }) {
   const pct = rope.ropePct;
   const fraying = pct !== null && pct < 10;
   return (
-    <li className="flex flex-col gap-1 border-t-1.5 border-rule px-4 pb-3 pt-3.5 first:border-t-0 sm:px-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="flex items-baseline gap-2 text-[17px] font-bold tracking-[-0.01em]">
+    <li className={cx("flex h-full flex-col bg-card px-frame px-drop", fraying && "px-tone-down")}>
+      <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-3 font-tag text-[11px] uppercase text-ink-2">
+        <span>{ROLE[rope.role]}</span>
+        <span className={cx("tnum", fraying ? "text-down" : "text-ink-2")}>{fraying ? "Fraying" : "Tied off"}</span>
+      </div>
+      <div className="flex flex-col items-center gap-1 px-4 pt-1 text-center">
+        <p className="flex items-baseline gap-2 font-display text-[24px] font-bold leading-none text-ink">
           <span aria-hidden="true" className={rope.side === "long" ? "text-up" : "text-down"}>
             {rope.side === "long" ? "▲" : "▼"}
           </span>
-          {rope.coin} {rope.leverage}× · {rope.side === "long" ? "Long" : "Short"}
-          <span className="tnum font-mono text-[12px] font-normal text-ink-2">
-            {usd(rope.usd)} · <span className={rope.pnl > 0 ? "text-up" : rope.pnl < 0 ? "text-down" : ""}>{signedUsd(rope.pnl)}</span>
-          </span>
+          {rope.coin} {rope.leverage}×<span className="sr-only">{rope.side}</span>
         </p>
-        <p className={cx("tnum font-mono text-[12px] uppercase tracking-[0.08em]", fraying ? "text-down" : "text-ink-2")}>
-          rope left <b className={cx("text-[14px]", fraying ? "text-down" : "text-ink")}>{pct !== null ? `${pct.toFixed(pct < 10 ? 1 : 0)}%` : "—"}</b>
-          {fraying ? " · fraying" : ""}
+        <p className="tnum font-mono text-[12px] text-ink-2">
+          {rope.side === "long" ? "Long" : "Short"} · {usd(rope.usd)} · <span className={rope.pnl > 0 ? "text-up" : rope.pnl < 0 ? "text-down" : ""}>{signedUsd(rope.pnl)}</span>
         </p>
       </div>
-      <Rope symbol={rope.coin} side={rope.side} entry={rope.entry} mark={rope.mark} liquidation={rope.liquidation} formatPrice={price} />
+      <div className="mt-auto px-4 pb-2 pt-5">
+        <PixelRope symbol={rope.coin} side={rope.side} entry={rope.entry} mark={rope.mark} liquidation={rope.liquidation} formatPrice={price} />
+      </div>
+      <p className={cx("flex items-center justify-center gap-2 border-t-4 border-dashed border-rule/30 px-4 py-3 font-tag text-[12px] uppercase", fraying ? "text-down" : "text-ink-2")}>
+        Rope left
+        <b className={cx("tnum font-display text-[22px] font-bold normal-case", fraying ? "text-down" : "text-ink")}>{pct !== null ? `${pct.toFixed(pct < 10 ? 1 : 0)}%` : "—"}</b>
+      </p>
     </li>
   );
 }
 
-/** "How much rope do you have left?": three real positions as ropes, from crevasse to climber. */
+/** "How much rope do you have left?": a real testnet trader's positions as pixel ropes, from crevasse to flag. */
 export function RopeSection({ trader }: { readonly trader: TraderView }) {
   const ropes = useMemo(() => pickRopes(trader.snapshot), [trader.snapshot]);
   return (
-    <section aria-labelledby="rope-title" className="mx-auto grid max-w-[1440px] gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16 lg:px-10 lg:py-28">
-      <Reveal className="flex flex-col gap-6 lg:pt-4">
-        <Tag className="self-start">The rope · every position, tied off</Tag>
-        <h2 id="rope-title" className="text-[40px] font-bold leading-[1.02] tracking-[-0.02em] text-balance sm:text-[56px]">
-          How much rope do you have left?
-        </h2>
-        <p className="max-w-[34rem] text-[18px] leading-relaxed text-ink-2">
-          Each position hangs between the <b className="text-ink">crevasse</b> (liquidation) and the <b className="text-ink">summit flag</b> (take-profit). The <b className="text-ink">anchor</b> is your stop; the climber moves with the mark. When the rope frays, the Guide radios you before you fall.
-        </p>
-        <ul className="grid max-w-[34rem] grid-cols-2 gap-x-6 gap-y-2 font-mono text-[12px] text-ink-2">
-          <li>
-            <span className="text-down">✕</span> crevasse · liquidation
-          </li>
-          <li>⚓ anchor · your stop</li>
-          <li>● climber · the mark</li>
-          <li>⚑ flag · take-profit</li>
-        </ul>
-        <div>
-          <ButtonLink to={routeHref("trade")} variant="ink" size="lg">
-            Tie in on the Floor →
-          </ButtonLink>
-        </div>
-      </Reveal>
-      <Reveal delay={120}>
-        <div className="border-2 border-rule bg-card shadow-hard-xl">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-rule px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2 sm:px-5">
-            <span>Ropes · {trader.sample ? "sample book" : `live book · ${shortAddress(trader.snapshot.address)}`}</span>
-            {trader.sample ? (
-              <Badge tone="signal" variant="solid">
-                Sample
-              </Badge>
-            ) : (
-              <span>HyperCore testnet · marks from the venue</span>
-            )}
-          </div>
-          <ol aria-label="Three positions as ropes">
-            {ropes.map((rope) => (
-              <RopeRow key={rope.id} rope={rope} />
-            ))}
-          </ol>
-        </div>
-      </Reveal>
-    </section>
+    <Section
+      id="rope"
+      tag="The rope · every position, tied off"
+      title="How much rope do you have left?"
+      lede={
+        <>
+          Each position hangs between the crevasse (liquidation) and the summit flag (take-profit). Ely climbs at the mark; under 10% the rope frays, Ely holds on, and the Guide radios you before you fall.
+        </>
+      }
+    >
+      <div className="mb-10 flex flex-wrap items-center justify-center gap-4">
+        {trader.sample ? (
+          <Badge tone="signal" variant="solid">
+            Sample book{trader.loading ? " · reaching the API" : ""}
+          </Badge>
+        ) : (
+          <Badge tone="up" dot="pulse">
+            Live · testnet trader <span className="normal-case">{shortAddress(trader.snapshot.address)}</span>
+          </Badge>
+        )}
+        <span className="font-tag text-[11px] uppercase text-ink-2">{trader.sample ? "labelled sample · the API did not answer" : "HyperCore testnet · marks from the venue · every 30 s"}</span>
+      </div>
+      <Cards n={3} as="ol">
+        {ropes.map((rope) => (
+          <RopeCard key={rope.id} rope={rope} />
+        ))}
+      </Cards>
+      <ul className="mx-auto mt-10 flex max-w-[860px] list-none flex-wrap justify-center gap-x-8 gap-y-2 p-0 font-tag text-[11px] uppercase text-ink-2">
+        <li>
+          <span className="text-down">✕</span> crevasse · liquidation
+        </li>
+        <li>⚓ anchor · your stop</li>
+        <li>● Ely · the mark</li>
+        <li>
+          <span className="text-up">⚑</span> flag · take-profit
+        </li>
+      </ul>
+      <div className="mt-10 flex justify-center">
+        <ButtonLink to={routeHref("trade")} variant="ink" size="lg">
+          Tie in on the Floor →
+        </ButtonLink>
+      </div>
+    </Section>
   );
 }

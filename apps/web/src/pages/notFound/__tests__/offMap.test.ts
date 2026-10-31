@@ -29,3 +29,19 @@ describe("off the map", () => {
     assert.ok(a.elevation >= 2400 && a.elevation < 4600);
   });
 });
+
+describe("off the map, in pixels", () => {
+  it("puts the pin on the blank paper and walks the trail from it to base camp", async () => {
+    const { CAMP, EDGE, elyPhase, pinFor, tearAt, trailPoints, SHEET_H } = await import("../offMapArt");
+    const pin = pinFor(offMapReading("/nowhere").y);
+    assert.ok(pin.x > EDGE + 10 && pin.y > 20 && pin.y < SHEET_H - 20);
+    const trail = trailPoints(pin);
+    assert.deepEqual([trail[0]!.x, trail[0]!.y], [pin.x, pin.y]);
+    assert.deepEqual([trail[trail.length - 1]!.x, trail[trail.length - 1]!.y], [...CAMP]);
+    assert.ok(Math.abs(tearAt(10) - EDGE) <= 6);
+    assert.deepEqual(elyPhase(0, true), { phase: "home", t: 1 });
+    assert.equal(elyPhase(1, false).phase, "lost");
+    assert.equal(elyPhase(8, false).phase, "walk");
+    assert.equal(elyPhase(13, false).phase, "home");
+  });
+});

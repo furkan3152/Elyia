@@ -9,6 +9,7 @@
  */
 import { gradeFor, type Grade } from "../../topo/geometry/conditions";
 import type { Layer, ReliefHolding } from "../../topo/geometry/relief";
+import type { TerrainHolding } from "../../pixel/terrain";
 import { previewChips, type ChipKind } from "../../oracle/preview";
 
 /* ------------------------------------------------------------ the trader */
@@ -164,6 +165,62 @@ export function mapScale(holdings: readonly ReliefHolding[]): { readonly holding
   const top = holdings.reduce((max, holding) => Math.max(max, holding.usd), 0);
   const factor = top > 0 ? MAP_TOP_USD / top : 1;
   return { holdings: holdings.map((holding) => ({ ...holding, usd: holding.usd * factor })), factor };
+}
+
+/**
+ * Pixel terrain holdings: perp positions are hills (shorts lakes) carrying
+ * their rope (distance to liquidation), balance lines are hills; stablecoins
+ * and perp margin do not move with a shock. Largest `max` only.
+ */
+export function terrainHoldings(snapshot: TraderSnapshot, max = 7): TerrainHolding[] {
+  return reliefHoldings(snapshot, max).map((holding) => {
+    const rope = holding.note ? /rope (\d+)%/u.exec(holding.note) : null;
+    const position = holding.id.startsWith("pos:") ? snapshot.positions.find((p) => `pos:${p.id}` === holding.id) : undefined;
+    const lev = holding.leverage && holding.leverage > 1 ? ` ${holding.leverage}×` : "";
+    const margin = holding.note === "margin";
+    return {
+      id: holding.id,
+      label: `${holding.symbol}${lev}${margin ? " margin" : ""}`,
+      usd: holding.usd,
+      side: holding.side === "short" ? "short" : "long",
+      rope: position?.liquidationDistancePct ?? (rope ? Number(rope[1]) : null),
+      stable: margin || STABLE.test(holding.symbol),
+    } satisfies TerrainHolding;
+  });
+}
+
+const STABLE = /^(USDC|USDT0?|USDE|USDH|DAI|USDHL)$/iu;
+
+/**
+ * Net worth if every price moved by `shock` percent at once (an estimate):
+ * longs gain shock x notional, shorts lose it, and a position whose rope is
+ * shorter than the move is liquidated, losing at most its margin
+ * (notional / leverage). Balances other than stablecoins move with the shock.
+ */
+export function shockedNetWorth(snapshot: TraderSnapshot, shock: number): { readonly netWorth: number; readonly liquidated: number } {
+  const s = shock / 100;
+  let delta = 0;
+  let liquidated = 0;
+  for (const position of snapshot.positions) {
+    const notional = positionUsd(position);
+    if (!(notional > 0)) continue;
+    const rope = position.liquidationDistancePct;
+    const against = position.side === "long" ? -shock : shock;
+    const margin = notional / Math.max(1, position.leverage.value);
+    if (rope !== null && against >= rope) {
+      liquidated += 1;
+      delta -= margin;
+      continue;
+    }
+    delta += (position.side === "long" ? 1 : -1) * notional * s;
+  }
+  for (const layer of snapshot.layers) {
+    for (const line of layer.lines) {
+      if (line.usd === null || !(line.usd > 0) || line.account === "perp" || STABLE.test(line.asset)) continue;
+      delta += line.usd * s;
+    }
+  }
+  return { netWorth: snapshot.totals.netWorthUsd + delta, liquidated };
 }
 
 export interface LayerShare {

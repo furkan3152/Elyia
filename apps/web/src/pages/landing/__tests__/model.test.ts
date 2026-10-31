@@ -59,6 +59,31 @@ describe("landing trader model", () => {
     assert.equal(pickRopes(SAMPLE_TRADER).length, 3);
   });
 
+  it("maps the book to pixel terrain: ropes from the venue, margin and stables hold still", async () => {
+    const { terrainHoldings } = await import("../model");
+    const terrain = terrainHoldings(parseTrader(LIVE)!);
+    const bnb = terrain.find((h) => h.label === "BNB 10×")!;
+    assert.equal(bnb.side, "short");
+    assert.equal(bnb.rope, 26.99);
+    const margin = terrain.find((h) => h.label === "USDC margin")!;
+    assert.equal(margin.stable, true);
+    assert.ok(terrain.length <= 7);
+  });
+
+  it("re-prices the book under a shock, liquidating ropes shorter than the move", async () => {
+    const { shockedNetWorth } = await import("../model");
+    const trader = parseTrader(LIVE)!;
+    assert.equal(shockedNetWorth(trader, 0).netWorth, trader.totals.netWorthUsd);
+    assert.equal(shockedNetWorth(trader, 0).liquidated, 0);
+    // -20%: ETH (rope 18%) is liquidated and loses its margin; BNB short gains; NEAR long loses 20%.
+    const down = shockedNetWorth(trader, -20);
+    assert.equal(down.liquidated, 1);
+    const expected = trader.totals.netWorthUsd - 744.9 / 5 + 1303.5 * 0.2 - 83.9 * 0.2 - 12.3 * 0.2;
+    assert.ok(Math.abs(down.netWorth - expected) < 1e-6);
+    // +30%: the BNB short's rope (27%) snaps.
+    assert.equal(shockedNetWorth(trader, 30).liquidated, 1);
+  });
+
   it("splits net worth by altitude", () => {
     const shares = layerShares(SAMPLE_TRADER);
     assert.deepEqual(shares.map((s) => s.layer), ["floor", "ridge", "summit"]);
