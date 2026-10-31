@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  FLAGGED_TOKENS,
   HYPE_SYSTEM_ADDRESS,
   NETWORKS,
   TOKENS,
   assessToken,
+  flaggedToken,
+  flaggedTokensFor,
+  resolveToken,
+  validateFlaggedTokens,
   coreSystemAddress,
   counterpartToken,
   findToken,
@@ -147,4 +152,79 @@ test("Elysium testnet extras: UETH and kmHYPE bridged, test stables tagged non-c
     assert.equal(token?.group, undefined, `${symbol} is never priced as USDC`);
   }
   assert.equal(findToken("elysium-testnet", "USDC")?.address, "0x7D29d8047B905000459c0E80c34a26CeedcB47b2", "canonical USDC still wins");
+});
+
+/* ---------------------------------------- flagged tokens (census 2026-10-31) */
+
+const CANONICAL_WHYPE = "0xCD57F65c2B0e5881CFC2E609F7CD53b746E1F234";
+
+test("flagged tokens: 59 census look-alikes and impersonations, none a registry token", () => {
+  assert.equal(FLAGGED_TOKENS.length, 59);
+  assert.deepEqual(validateFlaggedTokens(FLAGGED_TOKENS), []);
+  const whype = FLAGGED_TOKENS.filter((row) => row.network === "elysium-testnet" && row.imitatesSymbol === "WHYPE");
+  assert.equal(whype.length, 17, "every non-canonical wrapped native the census named");
+  assert.ok(whype.every((row) => row.address !== CANONICAL_WHYPE));
+  assert.equal(flaggedTokensFor("elysium-mainnet").length, 1, "Supercolony's own WHYPE");
+  assert.equal(flaggedTokensFor("hyperevm-testnet").length, 6, "Elypact mocks at the same address on 998");
+  for (const row of FLAGGED_TOKENS) {
+    assert.ok(row.tags.includes("lookalike") || row.tags.includes("suspicious"), row.address);
+    assert.equal(toChecksumAddress(row.address), row.address);
+    assert.match(row.evidence, /eth_getCode \d+ B/u);
+    assert.equal(tokenByAddress(row.network, row.address), null, `${row.address} must never resolve as a registry token`);
+  }
+  // The validator refuses a flagged registry token, an unknown imitation and missing tags.
+  const usdc = findToken("elysium-testnet", "USDC");
+  const sample = FLAGGED_TOKENS.find((row) => row.imitatesSymbol === "USDC");
+  assert.ok(validateFlaggedTokens([{ ...sample, address: usdc.address }]).some((issue) => /registry token/u.test(issue.message)));
+  assert.ok(validateFlaggedTokens([{ ...sample, imitatesSymbol: "NOPE" }]).some((issue) => /not a registry token/u.test(issue.message)));
+  assert.ok(validateFlaggedTokens([{ ...sample, tags: ["mock"] }]).some((issue) => /lookalike or suspicious/u.test(issue.message)));
+  assert.ok(validateFlaggedTokens([sample, sample]).some((issue) => /twice/u.test(issue.message)));
+});
+
+test("assessToken warns by address for flagged tokens", () => {
+  const kalosWhype = assessToken({ network: "elysium-testnet", address: "0x41051f27c609db70af05b7128f15155dc8e49ac7" });
+  assert.equal(kalosWhype.status, "lookalike", "flagged even with no symbol given");
+  assert.equal(kalosWhype.lookalikeOf.address, CANONICAL_WHYPE);
+  assert.equal(kalosWhype.flagged?.protocol, "kalos-v3");
+  assert.match(kalosWhype.warning, /never routes/u);
+  const elara = assessToken({ network: "elysium-testnet", address: "0x1Fa390BE3732E758cd4Ffb2B18234803320c7a8c", symbol: "kHYPE" });
+  assert.equal(elara.status, "lookalike");
+  assert.equal(elara.lookalikeOf.address, "0xe26Eb188447eA470cBfdC6f770183e77345554dc");
+  assert.ok(elara.flagged.tags.includes("suspicious"));
+  const franklin = assessToken({ network: "elysium-testnet", address: "0xd7988a624b03d2b1d3567359af57f03464953237", symbol: "YLDEX" });
+  assert.equal(franklin.status, "unverified", "nothing in the registry to be a look-alike of");
+  assert.ok(franklin.flagged?.tags.includes("impersonation"));
+  assert.match(franklin.warning, /Franklin/u);
+  const bayc = flaggedToken("elysium-testnet", "0xecb6091a66d9dcf7a288d7c8a030a5cedb13fcf6");
+  assert.equal(bayc?.standard, "erc721");
+  assert.equal(bayc?.protocol, "kalos-marketplace");
+  const supercolony = assessToken({ network: "elysium-mainnet", address: "0xaeb7ede82165bb12ea5c0c80ce8c0a0d05bce6af" });
+  assert.equal(supercolony.status, "lookalike");
+  assert.equal(supercolony.lookalikeOf.address, "0xbA876237B0F021A6c6D852d6c26E107997cC5E81");
+  // Per network: the Elypact mock is flagged on both chains, against each chain's own canonical token.
+  assert.equal(assessToken({ network: "hyperevm-testnet", address: "0x4B71068Ae625373ACe4B9D38AAbD102463AB7650" }).lookalikeOf?.address, "0x2B3370eE501B4a559b57D449569354196457D8Ab");
+  assert.equal(flaggedToken("hyperevm-mainnet", "0x4B71068Ae625373ACe4B9D38AAbD102463AB7650"), null);
+});
+
+test("resolveToken: findToken with warnings; flagged addresses never resolve", () => {
+  const whype = resolveToken("elysium-testnet", "WHYPE");
+  assert.equal(whype.token?.address, CANONICAL_WHYPE);
+  assert.match(whype.warning, /17 known look-alikes of WHYPE/u);
+  assert.equal(resolveToken("elysium-testnet", CANONICAL_WHYPE).warning, null, "an exact canonical address needs no warning");
+  const fake = resolveToken("elysium-testnet", "0x757a34dd7b411546c6dd8f510b52e4381102f9b0");
+  assert.equal(fake.token, null);
+  assert.equal(fake.flagged?.protocol, "perpme");
+  assert.match(fake.warning, /look-alike/u);
+  assert.equal(findToken("elysium-testnet", "0x757a34dd7b411546c6dd8f510b52e4381102f9b0"), null);
+  assert.deepEqual(resolveToken("elysium-testnet", "MOON"), { token: null, flagged: null, warning: null });
+  assert.equal(resolveToken("elysium-testnet", "KNTQ").token?.address, "0x9856148d9CAcf40F12BCAA9357ca016Ba5B0ED19");
+});
+
+test("protocol tokens the census found in use: KALOS and stKALOS", () => {
+  const kalos = findToken("elysium-testnet", "KALOS");
+  assert.equal(kalos?.address, "0x8a2201953AF29e8BE7700bcB53dA3ce5caD18726");
+  assert.ok(kalos.tags.includes("protocol-token"));
+  assert.equal(kalos.group, undefined, "never priced as anything else");
+  assert.equal(findToken("elysium-testnet", "stKALOS")?.decimals, 24);
+  assert.equal(assessToken({ network: "elysium-testnet", address: kalos.address }).status, "verified");
 });
