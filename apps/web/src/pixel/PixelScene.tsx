@@ -55,7 +55,7 @@ function SceneBody({ labels = DEFAULT_SCENE_LABELS, cycle = 18, feed, night, lab
   return (
     <figure className={cx("m-0 w-full", className)}>
       <div className="bg-card px-frame px-drop">
-        <PixelCanvas width={400} height={SCENE_H} draw={draw} animate fps={20} endTime={0} label={name} redrawKey={redraw} />
+        <PixelCanvas width={400} height={SCENE_H} draw={draw} animate fps={20} endTime={0} night={isNight} label={name} redrawKey={redraw} />
       </div>
       {hideCaption ? null : (
         <figcaption className="mt-4 grid grid-cols-2 items-center gap-2 px-1 sm:grid-cols-3 font-tag text-[11px] uppercase text-ink-2">

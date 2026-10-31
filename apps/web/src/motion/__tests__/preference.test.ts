@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { DEFAULT_UI_PREFS, effectiveMode, modeAvailability, nextTheme, resolveTheme, sanitizeUiPrefs } from "../../app/state/uiPrefs";
+import { DEFAULT_UI_PREFS, effectiveMode, modeAvailability, nextTheme, resolveTheme, sanitizeUiPrefs, THEME_COLORS } from "../../app/state/uiPrefs";
 import { isReducedMotion, loopAllowed, motionToggleView } from "../preference";
 
 describe("motion preference", () => {
@@ -57,5 +57,12 @@ describe("ui preferences", () => {
     assert.deepEqual(sanitizeUiPrefs(null), DEFAULT_UI_PREFS);
     assert.deepEqual(sanitizeUiPrefs({ theme: "light", motion: "off", mode: "mainnet", railCollapsed: true }), { theme: "light", motion: "off", mode: "testnet", railCollapsed: true });
     assert.deepEqual(sanitizeUiPrefs({ theme: "neon", motion: 1, railCollapsed: "yes" }), DEFAULT_UI_PREFS);
+  });
+});
+
+describe("browser chrome colour", () => {
+  it("matches the Pixel Survey paper of each sheet (tokens.css)", () => {
+    assert.equal(THEME_COLORS.light, "#F2ECDD");
+    assert.equal(THEME_COLORS.dark, "#0E1512");
   });
 });

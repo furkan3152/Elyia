@@ -33,7 +33,7 @@ import { Ely, ElyLoader, ElyEmpty, PixelScene, PixelTerrain, PixelRope, Cards, S
 
 | Component | Props |
 |---|---|
-| `PixelCanvas` | `width`, `height`, `scale?` (fixed CSS px per pixel; omitted = fit the container), `pixelSize?` (fit: CSS px per pixel to aim for), `aspect?` (fit: height follows width), `contain?` (fixed art at the largest whole scale), `draw(ctx, {w, h, seconds, still})`, `animate?`, `fps?`, `endTime?`, `label?`, `decorative?`, `redrawKey?`, `className?`, `canvasClassName?`, `style?` |
+| `PixelCanvas` | `width`, `height`, `scale?` (fixed CSS px per pixel; omitted = fit the container), `pixelSize?` (fit: CSS px per pixel to aim for), `aspect?` (fit: height follows width), `contain?` (fixed art at the largest whole scale), `draw(ctx, {w, h, seconds, still})`, `animate?`, `fps?`, `endTime?`, `label?`, `decorative?`, `redrawKey?`, `night?` (draw as NIGHT regardless of the sheet), `halo?` (default true: NIGHT rim on `drawGrid` sprites), `className?`, `canvasClassName?`, `style?` |
 | `Ely` | `state?: "idle" \| "climb" \| "summit" \| "worry" \| "sleep" \| "watch" \| "talk"`, `traits?: ElyTraits`, `size?` (CSS px height, default 88), `label?: string \| null`, `still?`, `className?` |
 | `ElyLoader` | `label` (status text), `size?: "sm" \| "md" \| "lg"`, `hideLabel?`, `className?` |
 | `ElyEmpty` | `title`, `description?`, `action?`, `compact?`, `className?` |
@@ -55,9 +55,9 @@ import { Ely, ElyLoader, ElyEmpty, PixelScene, PixelTerrain, PixelRope, Cards, S
 
 - `ely.ts`: `makeEly(traits)` → 32 x 34 colour grid (mirrored, outlined), `mini(grid)` (16 x 17), `mirror`, `outline`, `elySprite` (memoised), catalogues `FURS`, `HORNS`, `EYES`, `MOUTHS`, `GEAR`, `LAYERS`.
 - `topo.ts`: `rngOf`, `shade`, `topoField`, `drawTopo`, `bandOf`, `isContour`, `contourMask`, `fieldMax`.
-- `terrain.ts`: `terrainModel(holdings, w, h, shock)` (the height field from holdings), `paintTerrain`, `layoutTerrain`, `snappedBy`, `landBand`, `placeLabels`, `SAMPLE_TERRAIN`.
-- `draw.ts`: `drawGrid`, `drawSilhouette`, `drawDisc`, `fixedScale`, `fitScale`.
-- `ticker.ts`: `createTicker(env)` (one rAF loop, per-subscriber fps cap, visibility, reduced motion); `useTicker.ts`: `sharedTicker()`, `usePixelLoop(element, draw, {fps, endTime, enabled})` (IntersectionObserver pause).
+- `terrain.ts`: `terrainModel(holdings, w, h, shock)` (the height field from holdings), `paintTerrain(ctx, model, seconds, palette)` (`DAY_TERRAIN` / `NIGHT_TERRAIN`: moonlit bands by NIGHT), `layoutTerrain`, `snappedBy`, `landBand`, `placeLabels` (labels clamped onto the map, never touching), `SAMPLE_TERRAIN`.
+- `draw.ts`: `drawGrid`, `drawSilhouette`, `drawDisc`, `fixedScale`, `fitScale`, `withSpriteHalo(color, paint)` + `NIGHT_HALO` (#6E8C7E: by NIGHT every sprite drawn with `drawGrid` gets a one pixel moonlit rim outside its ink outline, 4.5:1 on the NIGHT card; PixelCanvas applies it from the painted sheet).
+- `ticker.ts`: `createTicker(env)` (one rAF loop, per-subscriber fps cap, visibility, reduced motion); `useTicker.ts`: `sharedTicker()`, `usePixelLoop(element, draw(seconds, still), {fps, endTime, enabled, redrawKey})` (IntersectionObserver pause; still canvases repaint the end state only when their inputs change).
 - `herd.ts`: `HERD_TRAITS` (weighted), `herdMember(id)`, `rarityOf`, `nextHerdId`, `herdLabel`.
 - `scene.ts`, `states.ts`, `profile.ts`, `rope.ts`, `route.ts`, `glyphs.ts`, `blockTicks.ts`: the drawings behind the components.
 

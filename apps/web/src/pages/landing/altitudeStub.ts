@@ -11,6 +11,9 @@ import { shade } from "../../pixel/topo";
 import type { Layer } from "../../topo/geometry/relief";
 
 export const STUB_H = 46;
+/** Ely (16 px wide) and the flag (6 px) stand as a pair centred on their column. */
+const ELY_DX = -6;
+const FLAG_DX = 5;
 export const STUB_LAYERS: readonly Layer[] = ["floor", "ridge", "summit"];
 /** Ground height of each step, from the top of the stub. */
 const TOPS: Readonly<Record<Layer, number>> = { floor: 33, ridge: 24, summit: 15 };
@@ -81,7 +84,7 @@ export function paintStub(ctx: PixelSurface & { clearRect(x: number, y: number, 
         let c = pal[pal.length - 1 - k]!;
         if (depth > 0 && depth % 3 === 0) c = shade(c, -0.22);
         if (layer === "summit" && depth < 2) c = "#FFFFFF";
-        ctx.fillStyle = on ? c : mix(c, frame.fog, (x + y) % 2 === 0 ? 0.72 : 0.6);
+        ctx.fillStyle = on ? c : mix(c, frame.fog, (x + y) % 4 === 0 ? 0.7 : 0.58);
         ctx.fillRect(x, y, 1, 1);
       }
       ctx.fillStyle = on ? INK : mix(INK, frame.fog, 0.45);
@@ -94,9 +97,12 @@ export function paintStub(ctx: PixelSurface & { clearRect(x: number, y: number, 
       ctx.fillStyle = INK;
       ctx.fillRect(x0, Math.min(a, b), 1, Math.abs(a - b) + 1);
     }
+    // Every column carries a survey stake at the same spot (so the three
+    // read as one even row): a flag where the route goes, a faint bare stake
+    // in the fog where it does not. Ely stands just left of it (centred pair).
+    const fx = Math.round((x0 + x1) / 2) + FLAG_DX;
+    const top = stubGround(fx, w);
     if (on) {
-      const fx = Math.round((x0 + x1) / 2) + 9;
-      const top = stubGround(fx, w);
       const wave = frame.still ? 0 : Math.floor(frame.seconds * 2) % 2;
       ctx.fillStyle = frame.line ?? INK;
       ctx.fillRect(fx, top - 10, 1, 10);
@@ -104,11 +110,15 @@ export function paintStub(ctx: PixelSurface & { clearRect(x: number, y: number, 
       ctx.fillRect(fx + 1, top - 10, 5, 1);
       ctx.fillRect(fx + 1, top - 9, 5 - wave, 1);
       ctx.fillRect(fx + 1, top - 8, 4 + wave, 1);
+    } else {
+      ctx.fillStyle = mix(frame.line ?? INK, frame.fog, 0.6);
+      ctx.fillRect(fx, top - 6, 1, 6);
+      ctx.fillRect(fx - 1, top - 6, 3, 1);
     }
   }
   // Ely: hop to the new layer in eight steps over 0.64 s
   const [tx0, tx1] = stubColumn(elyLayer(frame.touched), w);
-  const target = (tx0 + tx1) / 2 / w;
+  const target = ((tx0 + tx1) / 2 + ELY_DX) / w;
   const hop = frame.hop;
   if (Math.abs(hop.to - target) > 1e-6) {
     const t0 = Math.min(1, Math.max(0, (frame.seconds - hop.start) / 0.64));

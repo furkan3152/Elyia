@@ -50,6 +50,24 @@ export interface TerrainModel {
 export const LAND = ["#A9D3B4", "#C9DDA0", "#E2D49A", "#D3A66E", "#B07A44", "#8A5A2B", "#E9DFC8", "#FFFFFF"] as const;
 export const WATER = { shallow: "#1F5866", deep: "#173F4C", glint: "#5FB0B8", shore: "#2F7E8C" } as const;
 
+/**
+ * NIGHT bands (moonlit): the same altitude order, darker and cooler so the
+ * map sits on the NIGHT sheet instead of glowing like a DAY sheet; the snow
+ * still catches the moon.
+ */
+export const LAND_NIGHT = ["#29483D", "#3A5539", "#5A5C3A", "#6E5434", "#7D5530", "#5C3D22", "#A7A596", "#E3EAEA"] as const;
+export const WATER_NIGHT = { shallow: "#143F4A", deep: "#0C2A33", glint: "#4F98A2", shore: "#22626E" } as const;
+
+export interface TerrainPalette {
+  readonly land: readonly string[];
+  readonly water: { readonly shallow: string; readonly deep: string; readonly glint: string; readonly shore: string };
+  /** Summit dots on standing peaks. */
+  readonly dot: string;
+}
+
+export const DAY_TERRAIN: TerrainPalette = { land: LAND, water: WATER, dot: "#16201B" };
+export const NIGHT_TERRAIN: TerrainPalette = { land: LAND_NIGHT, water: WATER_NIGHT, dot: "#EEE7D8" };
+
 /** A long's rope snaps when the market falls by its distance; a short's when it rises by it. */
 export function snappedBy(holding: TerrainHolding, shock: number): boolean {
   if (typeof holding.rope !== "number" || !Number.isFinite(holding.rope)) return false;
@@ -135,8 +153,9 @@ export function landBand(v: number, top: number): number {
   return Math.min(LAND.length - 1, Math.floor((v / top) * LAND.length));
 }
 
-/** Paints the terrain: banded land with contour pixels, lakes with a slow glint that drifts with `seconds`. */
-export function paintTerrain(ctx: PixelSurface, model: TerrainModel, seconds = 0): void {
+/** Paints the terrain: banded land with contour pixels, lakes with a slow glint that drifts with `seconds`. NIGHT passes `NIGHT_TERRAIN`. */
+export function paintTerrain(ctx: PixelSurface, model: TerrainModel, seconds = 0, palette: TerrainPalette = DAY_TERRAIN): void {
+  const { land, water } = palette;
   const { field, w, h, top } = model;
   const drift = Math.floor(seconds / 0.3);
   const deep = -top * 0.12;
@@ -146,10 +165,10 @@ export function paintTerrain(ctx: PixelSurface, model: TerrainModel, seconds = 0
       const v = row[x]!;
       let c: string;
       if (v < 0) {
-        c = (x + y + drift) % 7 === 0 ? WATER.glint : v < deep ? WATER.deep : WATER.shallow;
+        c = (x + y + drift) % 7 === 0 ? water.glint : v < deep ? water.deep : water.shallow;
       } else {
         const b = landBand(v, top);
-        c = LAND[b]!;
+        c = land[b]!;
         const r = x + 1 < w ? landBand(row[x + 1]!, top) : b;
         const d = y + 1 < h ? landBand(field[y + 1]![x]!, top) : b;
         if (r !== b || d !== b) c = shade(c, -0.25);
@@ -198,6 +217,9 @@ export function labelBox(spot: LabelSpot, placement: LabelPlacement): Box {
   return { x0, y0, x1: x0 + spot.w, y1: y0 + spot.h };
 }
 
+/** Labels keep this many px from the map's sides. */
+export const LABEL_MARGIN = 2;
+
 const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 
 /**
@@ -211,7 +233,10 @@ export function placeLabels(spots: readonly LabelSpot[], width: number, height: 
   return spots.map((spot) => {
     const inside = (box: Box) => box.x0 >= 0 && box.x1 <= width && box.y0 >= 0 && box.y1 <= height;
     const scored = order.map((placement) => {
-      const box = labelBox(spot, placement);
+      // a label near the side slides back onto the map (as PixelTerrain draws it)
+      const raw = labelBox(spot, placement);
+      const x0 = Math.max(LABEL_MARGIN, Math.min(width - spot.w - LABEL_MARGIN, raw.x0));
+      const box = { ...raw, x0, x1: x0 + spot.w };
       const hits = placed.filter((other) => overlaps(box, other)).length;
       return { placement, box, cost: hits * 10 + (inside(box) ? 0 : 5) };
     });

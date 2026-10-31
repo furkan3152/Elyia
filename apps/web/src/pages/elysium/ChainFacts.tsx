@@ -69,9 +69,9 @@ export function BridgeContracts() {
     <ul className="m-0 flex list-none flex-col p-0">
       {CONTRACTS.map((contract) => (
         <li key={`${contract.network}-${contract.label}`} className="flex min-w-0 items-center justify-between gap-3 border-b border-rule/20 py-[5px]">
-          <span className="flex min-w-0 items-center gap-2 truncate text-[14px] text-ink-2">
+          <span className="flex min-w-0 items-center gap-2 text-[14px] leading-snug text-ink-2">
             <NetworkBadge network={contract.network} iconOnly />
-            <span className="truncate">{contract.label}</span>
+            <span className="min-w-0">{contract.label}</span>
           </span>
           <AddressPill address={contract.address} network={contract.network} className="shrink-0" />
         </li>

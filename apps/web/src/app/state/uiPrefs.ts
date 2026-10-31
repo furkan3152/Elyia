@@ -14,8 +14,8 @@ export type ResolvedTheme = "dark" | "light";
 export type MotionSetting = "on" | "off";
 export type NetworkMode = NetworkEnvironment;
 
-/** Browser chrome colour per theme: the page paper (DAY #F3F0E8, NIGHT #0E1512). */
-export const THEME_COLORS: Readonly<Record<ResolvedTheme, string>> = Object.freeze({ dark: "#0E1512", light: "#F3F0E8" });
+/** Browser chrome colour per theme: the Pixel Survey page paper (DAY #F2ECDD, NIGHT #0E1512; see styles/tokens.css). */
+export const THEME_COLORS: Readonly<Record<ResolvedTheme, string>> = Object.freeze({ dark: "#0E1512", light: "#F2ECDD" });
 
 /** The sheet names painted on <html data-theme>: DAY (paper map) and NIGHT (headlamp). */
 export const THEME_SHEET: Readonly<Record<ResolvedTheme, "day" | "night">> = Object.freeze({ dark: "night", light: "day" });

@@ -60,7 +60,7 @@ export function HeaderGrid({ home, homeLabel, nav, navLabel, actions, strip, sti
         <nav aria-label={navLabel} className="hidden items-center gap-7 lg:flex">
           {nav}
         </nav>
-        <div className="flex min-w-0 items-center justify-self-end gap-3">{actions}</div>
+        <div className="flex min-w-0 items-center justify-self-end gap-2 sm:gap-3">{actions}</div>
       </div>
       <div aria-hidden="true" className="h-1 bg-rule" />
       {strip ? (

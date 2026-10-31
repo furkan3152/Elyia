@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 
+import { useResolvedTheme } from "../app/state/useTheme";
 import { cx, FOCUS_RING } from "../ui/cx";
 import { drawGrid } from "./draw";
-import { elySprite, INK, mini, ROPE_RED, type PixelGrid } from "./ely";
+import { elySprite, mini, ROPE_RED, type PixelGrid } from "./ely";
 import { PixelCanvas } from "./PixelCanvas";
 import { useMeasuredWidth } from "../topo/useMeasuredWidth";
-import { paintTerrain, placeLabels, terrainModel, type LabelPlacement, type TerrainHolding, type TerrainModel, type TerrainPeak } from "./terrain";
+import { DAY_TERRAIN, LABEL_MARGIN, NIGHT_TERRAIN, paintTerrain, placeLabels, terrainModel, type LabelPlacement, type TerrainHolding, type TerrainModel, type TerrainPeak } from "./terrain";
 
 export interface PixelTerrainProps {
   readonly holdings: readonly TerrainHolding[];
@@ -43,6 +44,8 @@ function terrainSummary(model: TerrainModel, format: (n: number) => string): str
  */
 export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null, label, formatUsd = usd, resolution = 200, aspect = 0.55, ground = "wet", className }: PixelTerrainProps) {
   const [hot, setHot] = useState<string | null>(null);
+  const night = useResolvedTheme() === "dark";
+  const palette = night ? NIGHT_TERRAIN : DAY_TERRAIN;
   const cache = useRef<{ readonly holdings: readonly TerrainHolding[]; readonly key: string; readonly model: TerrainModel } | null>(null);
   const modelFor = useCallback(
     (w: number, h: number) => {
@@ -68,12 +71,13 @@ export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null,
     const spots = order.map(({ peak }) => ({
       x: (peak.x / reference.w) * width,
       y: (peak.y / reference.h) * height,
-      w: (peak.snapped ? `${peak.holding.label} · snapped` : peak.holding.label).length * charW + 18,
+      // the plate (text + 16 px padding) plus 6 px of air so neighbours never touch
+      w: (peak.snapped ? `${peak.holding.label} · snapped` : peak.holding.label).length * charW + 24,
       h: boxH,
     }));
     // Ely stands on the tallest standing peak (a 16 x 17 sprite 13-30 px above it): keep it clear.
     const tallest = reference.tallest;
-    const px = width / 200;
+    const px = width / resolution; // CSS px per map pixel
     const obstacles = tallest
       ? [
           {
@@ -85,19 +89,24 @@ export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null,
         ]
       : [];
     const chosen = placeLabels(spots, width, height, obstacles);
-    const out: LabelPlacement[] = Array<LabelPlacement>(reference.peaks.length).fill("right-up");
+    // Each label's left edge in CSS px, kept inside the map (a label near
+    // the edge slides in instead of hanging off the sheet at phone width).
+    const out: Array<{ readonly placement: LabelPlacement; readonly left: number }> = reference.peaks.map(() => ({ placement: "right-up", left: 0 }));
     order.forEach(({ index }, k) => {
-      out[index] = chosen[k]!;
+      const placement = chosen[k]!;
+      const spot = spots[k]!;
+      const x0 = placement.startsWith("left") ? spot.x - 6 - spot.w : spot.x + 6;
+      out[index] = { placement, left: Math.round(Math.max(LABEL_MARGIN, Math.min(width - spot.w - LABEL_MARGIN, x0))) };
     });
     return out;
-  }, [reference, width, height, big]);
+  }, [reference, width, height, big, resolution]);
 
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D, info: { readonly w: number; readonly h: number; readonly seconds: number }) => {
       const model = modelFor(info.w, info.h);
-      paintTerrain(ctx, model, info.seconds);
+      paintTerrain(ctx, model, info.seconds, palette);
       for (const peak of model.peaks) {
-        ctx.fillStyle = peak.snapped ? ROPE_RED : INK;
+        ctx.fillStyle = peak.snapped ? ROPE_RED : palette.dot;
         ctx.fillRect(peak.x - 1, peak.y - 1, 3, 3);
       }
       if (model.tallest) {
@@ -108,7 +117,7 @@ export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null,
         drawGrid(ctx, sprite, model.tallest.x - 8 + shake, Math.max(0, model.tallest.y - 30), 1);
       }
     },
-    [modelFor],
+    [modelFor, palette],
   );
 
   const peakLabel = (peak: TerrainPeak) => (peak.snapped ? `${peak.holding.label} · snapped` : peak.holding.label);
@@ -122,15 +131,13 @@ export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null,
         animate={hasWater || reference.snaps > 0}
         fps={6}
         label={label ?? `Portfolio elevation map. ${terrainSummary(reference, formatUsd)}`}
-        redrawKey={`${shock}|${holdings.length}|${ground}`}
+        redrawKey={`${shock}|${holdings.length}|${ground}|${night}`}
       />
       <ul className="pointer-events-none absolute inset-0 m-0 list-none p-0">
         {reference.peaks.map((peak, index) => {
-          const left = (peak.x / reference.w) * 100;
           const top = (peak.y / reference.h) * 100;
           const selected = selectedId === peak.holding.id;
-          const placement = placements[index] ?? "right-up";
-          const flip = placement.startsWith("left");
+          const { placement, left: leftPx } = placements[index] ?? { placement: "right-up" as const, left: 0 };
           const down = placement.endsWith("down");
           const content = (
             <>
@@ -142,8 +149,7 @@ export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null,
             "pointer-events-auto absolute inline-flex items-center whitespace-nowrap px-2 font-tag uppercase",
             big ? "h-7 text-[14px]" : "h-6 text-[11px]",
             down ? "translate-y-[6px]" : "-translate-y-[calc(100%+6px)]",
-            flip ? "-translate-x-[calc(100%+6px)]" : "translate-x-[6px]",
-            peak.snapped ? "bg-down text-white" : selected ? "bg-signal text-[#16201B]" : "bg-[#16201B] text-[#FFF9EC]",
+            peak.snapped ? (night ? "bg-down text-[#16201B]" : "bg-down text-white") : selected ? "bg-signal text-[#16201B]" : night ? "bg-[#EEE7D8] text-[#16201B]" : "bg-[#16201B] text-[#FFF9EC]",
             onSelect && FOCUS_RING,
           );
           return (
@@ -159,12 +165,12 @@ export function PixelTerrain({ holdings, shock = 0, onSelect, selectedId = null,
                   onFocus={() => setHot(peak.holding.id)}
                   onBlur={() => setHot(null)}
                   className={classes}
-                  style={{ left: `${left}%`, top: `${top}%` }}
+                  style={{ left: leftPx, top: `${top}%` }}
                 >
                   {content}
                 </button>
               ) : (
-                <span aria-hidden="true" className={classes} style={{ left: `${left}%`, top: `${top}%` }}>
+                <span aria-hidden="true" className={classes} style={{ left: leftPx, top: `${top}%` }}>
                   {content}
                 </span>
               )}

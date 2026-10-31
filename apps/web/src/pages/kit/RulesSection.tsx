@@ -21,9 +21,9 @@ const PRIMITIVES = [
 export function RulesSection() {
   return (
     <Section id="rules" tag="07 · Our style · 4 rules" title="Build every page on the axis." lede="The layout primitives make symmetry the default. Page engineers compose with them and never hand-roll grids.">
-      <Cards n={4}>
+      <Cards n={4} phone={1}>
         {RULES.map(([number, title, body]) => (
-          <Panel key={number} as="article" padding="lg" className="flex h-full flex-col">
+          <Panel key={number} as="article" padding="lg" className="flex h-full flex-col items-center text-center">
             <span className="font-tag text-[11px] uppercase text-summit-ink">{number}</span>
             <h3 className="mt-2 font-display text-[22px] font-bold text-ink">{title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>

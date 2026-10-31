@@ -112,18 +112,22 @@ function paintAltitudeStill(ctx: TextSurface, layout: AltitudeLayout, frame: Alt
   const top = ALTITUDE_DECADES[ALTITUDE_DECADES.length - 1]!;
   const ink = night ? "#EEE7D8" : INK;
 
-  // the two scale posts and the decade lines between them
+  // the two scale posts and the decade lines between them; a narrow phone
+  // post drops every "$" (the caption says USD) so "100k" stays on the sheet
+  const widest = Math.max(...ALTITUDE_DECADES.map((decade) => Math.ceil(ctx.measureText(decadeLabel(decade)).width)));
+  const bare = widest + 5 > gutter;
   for (const decade of ALTITUDE_DECADES) {
     const y = Math.round(ground - (decade / top) * (ground - ceiling));
     for (let x = gutter; x < w - gutter; x += 3) {
       ctx.fillStyle = night ? "#3D5E70" : "#C9C0A8";
       ctx.fillRect(x, y, 1, 1);
     }
-    const text = decadeLabel(decade);
+    const text = bare ? decadeLabel(decade).slice(1) : decadeLabel(decade);
     const tw = Math.ceil(ctx.measureText(text).width);
+    const gap = Math.min(5, Math.max(1, gutter - tw - 1));
     ctx.fillStyle = ink;
-    ctx.fillText(text, gutter - tw - 5, y - 4);
-    ctx.fillText(text, w - gutter + 5, y - 4);
+    ctx.fillText(text, gutter - tw - gap, y - 4);
+    ctx.fillText(text, w - gutter + gap, y - 4);
     ctx.fillRect(gutter - 3, y, 3, 1);
     ctx.fillRect(w - gutter, y, 3, 1);
   }

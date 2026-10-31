@@ -50,15 +50,22 @@ export interface PixelLoopOptions {
   readonly endTime?: number;
   /** Extra gate; false draws the end state. */
   readonly enabled?: boolean;
+  /** Repaint the still end state when this changes (inputs `draw` reads outside its identity). */
+  readonly redrawKey?: unknown;
 }
 
+/** Called with the clock in seconds and whether this is the still end state (reduced motion, off, or disabled). */
+export type PixelLoopDraw = (seconds: number, still: boolean) => void;
+
 /**
- * Drives `draw(seconds)` from the shared ticker while `element` is on screen,
- * the tab is visible and motion is allowed. Otherwise it draws once at
- * `endTime` (the end state). Returns whether the loop is live.
+ * Drives `draw(seconds, false)` from the shared ticker while `element` is on
+ * screen, the tab is visible and motion is allowed. Otherwise it paints the
+ * end state once, `draw(endTime, true)`, and again only when `draw`,
+ * `endTime` or `redrawKey` change, so a still canvas never repaints as a
+ * moving frame on an unrelated re-render. Returns whether the loop is live.
  */
-export function usePixelLoop(element: Element | null, draw: (seconds: number) => void, options: PixelLoopOptions = {}): boolean {
-  const { fps = 24, endTime = 0, enabled = true } = options;
+export function usePixelLoop(element: Element | null, draw: PixelLoopDraw, options: PixelLoopOptions = {}): boolean {
+  const { fps = 24, endTime = 0, enabled = true, redrawKey } = options;
   const reduced = useReducedMotion();
   const live = enabled && !reduced;
   const drawRef = useRef(draw);
@@ -69,8 +76,8 @@ export function usePixelLoop(element: Element | null, draw: (seconds: number) =>
   useEffect(() => {
     if (!element || !live) return undefined;
     const ticker = sharedTicker();
-    drawRef.current(ticker.seconds());
-    const subscription = ticker.subscribe((seconds) => drawRef.current(seconds), { fps });
+    drawRef.current(ticker.seconds(), false);
+    const subscription = ticker.subscribe((seconds) => drawRef.current(seconds, false), { fps });
     const unwatch = watch(element, subscription);
     return () => {
       unwatch();
@@ -78,10 +85,10 @@ export function usePixelLoop(element: Element | null, draw: (seconds: number) =>
     };
   }, [element, live, fps]);
 
-  // Still: repaint the end state whenever the inputs change.
+  // Still: paint the end state (flagged still) when the inputs change.
   useEffect(() => {
-    if (element && !live) drawRef.current(endTime);
-  });
+    if (element && !live) draw(endTime, true);
+  }, [element, live, draw, endTime, redrawKey]);
 
   return live;
 }

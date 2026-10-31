@@ -11,3 +11,18 @@
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource/ibm-plex-mono/600.css";
+
+/*
+ * Pixelify Sans draws "~" as a flat dash, so "~8 min" read as "-8 min" (a
+ * negative time) in headings and big numbers. This one-glyph face supplies
+ * the tilde from IBM Plex Mono; font-display / font-pixel list it first and
+ * its unicode-range keeps every other character in Pixelify Sans.
+ */
+@font-face {
+  font-family: "Elyia Tilde";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+007E;
+}

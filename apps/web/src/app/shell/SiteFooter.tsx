@@ -123,7 +123,7 @@ export function SiteFooter() {
             ["Mode", mode === "testnet" ? "Practice wall" : "Mainnet"],
           ]}
         />
-        <div className="flex flex-wrap items-center justify-center gap-6">
+        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
           <ThemeToggle />
           <MotionSwitch />
         </div>

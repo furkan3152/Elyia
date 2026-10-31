@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 import { cx } from "../ui/cx";
-import { fitScale, fixedScale } from "./draw";
+import { useResolvedTheme } from "../app/state/useTheme";
+import { fitScale, fixedScale, NIGHT_HALO, withSpriteHalo } from "./draw";
 import { usePixelLoop } from "./useTicker";
 
 export interface PixelDrawInfo {
@@ -44,6 +45,10 @@ export interface PixelCanvasProps {
   readonly decorative?: boolean;
   /** Redraws when this changes (inputs of `draw` for still canvases). */
   readonly redrawKey?: unknown;
+  /** Draws as NIGHT (sprite rim on) regardless of the sheet: previews and forced-night scenes. Default: the painted sheet. */
+  readonly night?: boolean;
+  /** NIGHT rim on sprites drawn with `drawGrid` (see `withSpriteHalo`). false for art with its own fixed background (Herd portraits). Default true. */
+  readonly halo?: boolean;
   readonly className?: string;
   readonly canvasClassName?: string;
   readonly style?: React.CSSProperties;
@@ -73,6 +78,8 @@ export function PixelCanvas({
   label,
   decorative = false,
   redrawKey,
+  night,
+  halo = true,
   className,
   canvasClassName,
   style,
@@ -83,6 +90,8 @@ export function PixelCanvas({
   const [dpr, setDpr] = useState(devicePixelRatioNow);
   const [fontsReady, setFontsReady] = useState(0);
   const fit = scale === undefined;
+  const theme = useResolvedTheme();
+  const isNight = night ?? theme === "dark";
 
   useLayoutEffect(() => {
     if (!fit || !box) return undefined;
@@ -131,17 +140,16 @@ export function PixelCanvas({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       ctx.imageSmoothingEnabled = false;
-      draw(ctx, { w: logicalW, h: logicalH, seconds, still });
+      withSpriteHalo(halo && isNight ? NIGHT_HALO : null, () => draw(ctx, { w: logicalW, h: logicalH, seconds, still }));
     },
-    [canvas, draw, logicalW, logicalH],
+    [canvas, draw, logicalW, logicalH, halo, isNight],
   );
 
-  const live = usePixelLoop(canvas, (seconds) => paint(seconds, false), { fps, endTime, enabled: animate });
-
-  // Still canvases (and every resize) paint here.
-  useEffect(() => {
-    if (!live) paint(endTime, true);
-  }, [live, paint, endTime, redrawKey, fontsReady]);
+  const stillKey = useMemo(() => [redrawKey, fontsReady], [redrawKey, fontsReady]);
+  // Live: the shared ticker paints moving frames. Still (reduced motion, the
+  // Motion switch, or animate off): the end state, flagged still, repainted
+  // only when the inputs, the size, the redraw key or the fonts change.
+  usePixelLoop(canvas, paint, { fps, endTime, enabled: animate, redrawKey: stillKey });
 
   const canvasEl = (
     <canvas

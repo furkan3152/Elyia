@@ -62,8 +62,7 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
   return (
     <div className="flex flex-col gap-8">
       <article className="relative bg-card px-frame px-drop-lg" aria-label="Trading key">
-        <span aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 bg-paper px-frame-thin" />
-        <header className="flex flex-col items-center gap-2 border-b-4 border-rule bg-paper-2 py-3 pl-10 pr-4 text-center sm:flex-row sm:justify-between sm:text-left">
+        <header className="flex flex-col items-center gap-2 border-b-4 border-rule bg-paper-2 px-4 py-3 text-center sm:flex-row sm:justify-between sm:px-6 sm:text-left">
           <h3 className="flex items-center gap-3 font-tag text-[12px] uppercase text-ink">
             <PixelGlyph rows={ITEM.key} scale={3} label={null} />
             elyia-web · trade-only key
@@ -77,7 +76,7 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
             <span className="font-tag text-[11px] uppercase text-ink-2">no wallet connected</span>
           )}
         </header>
-        <div className="flex flex-col gap-6 py-6 pl-10 pr-4 sm:pr-6">
+        <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
           {!connected ? (
             <ElyEmpty compact title="No wallet connected" description="Connect the wallet you trade with. Your wallet key never leaves it; it signs one approval for this key." action={<WalletButton />} />
           ) : meta ? (
@@ -163,13 +162,14 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
           ) : null}
           {api.progress.step === "error" && api.progress.error ? <p className="text-[13px] text-down">{api.progress.error}</p> : null}
         </div>
-        <footer className="flex flex-col items-center gap-1 border-t-4 border-dashed border-rule/30 py-3 pl-10 pr-4 text-center font-mono text-[11px] text-ink-3 sm:flex-row sm:justify-between">
+        <footer className="flex flex-col items-center gap-1 border-t-4 border-dashed border-rule/30 px-4 py-3 text-center font-mono text-[11px] text-ink-3 sm:flex-row sm:justify-between sm:px-6">
           <span>AES-GCM in this browser · never sent anywhere</span>
           <span className="font-tag uppercase text-down">Trade only · cannot withdraw</span>
         </footer>
       </article>
 
       <Toggle
+        className="self-center"
         checked={oneClick}
         onChange={(on) => useAgentStore.getState().setOneClick(on)}
         disabled={session.phase !== "ready"}

@@ -82,7 +82,8 @@ export function drawElyState(ctx: Clearable, frame: StateFrame): void {
     }
     case "climb": {
       for (let y = 0; y < STATE_H; y += 2) {
-        ctx.fillStyle = (y / 2 + Math.floor(T * 8)) % 2 ? SUN : ROPE_RED;
+        // the braid climbs 5 steps a second: each pixel changes colour 2.5 times a second, under the 3 Hz flash limit
+        ctx.fillStyle = (y / 2 + Math.floor(T * 5)) % 2 ? SUN : ROPE_RED;
         ctx.fillRect(19, y, 2, 2);
       }
       dy = still ? 8 : 8 + Math.round(Math.sin(T * 5) * 3);

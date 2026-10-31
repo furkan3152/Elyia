@@ -32,10 +32,10 @@ export function HerdPortrait({ id = 777, member, scale = 4, fluid = false, label
   const name = label === null ? undefined : (label ?? `Ely ${herdLabel(ely.id)}: ${ely.traits.map((trait) => trait.name).join(", ")}; ${RARITY_LABEL[ely.rarity]}`);
   if (fluid) {
     return (
-      <PixelCanvas width={ELY_W} height={ELY_H} contain draw={draw} label={name} decorative={label === null} redrawKey={ely.id} className={className} style={{ background: LAYERS[ely.layer][0] }} />
+      <PixelCanvas width={ELY_W} height={ELY_H} contain halo={false} draw={draw} label={name} decorative={label === null} redrawKey={ely.id} className={className} style={{ background: LAYERS[ely.layer][0] }} />
     );
   }
-  return <PixelCanvas width={ELY_W} height={ELY_H} scale={scale} draw={draw} label={name} decorative={label === null} redrawKey={ely.id} className={className} />;
+  return <PixelCanvas width={ELY_W} height={ELY_H} scale={scale} halo={false} draw={draw} label={name} decorative={label === null} redrawKey={ely.id} className={className} />;
 }
 
 export function RarityBadge({ rarity, className }: { readonly rarity: HerdMember["rarity"]; readonly className?: string }) {

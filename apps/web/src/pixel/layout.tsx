@@ -101,6 +101,8 @@ export interface CardsProps {
   /** Cards per row on wide screens (1-6). Narrower screens use the largest divisor that fits (4: 4/2/2, 3: 3/1/1, 6: 6/3/2/2), so rows stay full. */
   readonly n?: 1 | 2 | 3 | 4 | 5 | 6;
   readonly as?: "div" | "ul" | "ol";
+  /** Cards per row on phones (default: 2 for sets of 4 and 6, else 1). Pass 1 for text-heavy cards. */
+  readonly phone?: 1 | 2;
   readonly className?: string;
   readonly children: React.ReactNode;
 }
@@ -111,14 +113,14 @@ function largestDivisorAtMost(n: number, max: number): number {
 }
 
 /** Equal cards in centred rows: same widths, rows stretch to equal heights, a short last row stays on the axis. */
-export function Cards({ n = 3, as = "div", className, children }: CardsProps) {
+export function Cards({ n = 3, as = "div", phone, className, children }: CardsProps) {
   const Element = as;
   const style = {
     "--cards-lg": n,
     "--cards-md": largestDivisorAtMost(n, 3),
     "--cards-sm": largestDivisorAtMost(n, 2),
     // phones keep two small cards per row only for wide sets (4 and 6)
-    "--cards-xs": n >= 4 ? largestDivisorAtMost(n, 2) : 1,
+    "--cards-xs": phone ?? (n >= 4 ? largestDivisorAtMost(n, 2) : 1),
   } as React.CSSProperties;
   return (
     <Element className={cx("px-cards", as !== "div" && "m-0 list-none p-0", className)} style={style}>

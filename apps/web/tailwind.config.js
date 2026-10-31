@@ -68,12 +68,12 @@ export default {
       sans: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       // Pixelify Sans: headings and big numbers.
-      display: ['"Pixelify Sans"', '"Courier New"', "monospace"],
-      pixel: ['"Pixelify Sans"', '"Courier New"', "monospace"],
+      display: ['"Elyia Tilde"', '"Pixelify Sans"', '"Courier New"', "monospace"],
+      pixel: ['"Elyia Tilde"', '"Pixelify Sans"', '"Courier New"', "monospace"],
       // Silkscreen: tags, labels, nav.
       tag: ["Silkscreen", '"Courier New"', "monospace"],
       // legacy names
-      sign: ['"Pixelify Sans"', '"Courier New"', "monospace"],
+      sign: ['"Elyia Tilde"', '"Pixelify Sans"', '"Courier New"', "monospace"],
       map: ["Silkscreen", '"Courier New"', "monospace"],
       numeral: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
     },

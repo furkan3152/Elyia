@@ -164,13 +164,24 @@ export function paintSkyline(ctx: LayerSurface, layout: SkylineLayout, frame: Sk
   }
 
   // the APR over each summit (or over each lake); the names sit in the buttons under the frame
-  mountains.forEach((m, index) => {
-    const row = rows[index]!;
-    const chosen = row.id === frame.selectedId;
-    const apr = formatApr(row.aprPct);
-    const labelY = m.lake ? ground - 12 : ground - m.rise - (chosen ? 34 : 12);
-    paintLabel(ctx, apr, m.cx, Math.max(1, labelY), chosen ? INK : CARD, "center", chosen ? "#F2C200" : INK);
-  });
+  // Left to right, each plate kept on the sheet and lifted one row while it
+  // would touch a plate already placed (narrow phone skylines crowd them).
+  const plates: Array<{ readonly x0: number; readonly x1: number; readonly y: number }> = [];
+  mountains
+    .map((m, index) => ({ m, index }))
+    .sort((a, b) => a.m.cx - b.m.cx)
+    .forEach(({ m, index }) => {
+      const row = rows[index]!;
+      const chosen = row.id === frame.selectedId;
+      const apr = formatApr(row.aprPct);
+      const width = Math.ceil(ctx.measureText(apr).width);
+      const left = Math.max(3, Math.min(w - width - 3, Math.round(m.cx - width / 2)));
+      let y = Math.max(1, m.lake ? ground - 12 : ground - m.rise - (chosen ? 34 : 12));
+      const hits = (top: number) => plates.some((p) => left - 2 < p.x1 + 3 && p.x0 < left + width + 2 + 3 && top - 1 < p.y + 10 && p.y - 1 < top + 10);
+      while (hits(y) && y > 11) y -= 11;
+      plates.push({ x0: left - 2, x1: left + width + 2, y });
+      paintLabel(ctx, apr, left, y, chosen ? INK : CARD, "left", chosen ? "#F2C200" : INK);
+    });
 
   // Ely on the chosen summit, flag planted; at the shore of a losing lake, worried
   const chosenIndex = rows.findIndex((row) => row.id === frame.selectedId);

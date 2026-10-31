@@ -22,7 +22,7 @@ export * from "./glyphs";
 export { TickStore, type TickStoreOptions } from "./blockTicks";
 
 // hooks
-export { sharedTicker, usePixelLoop, type PixelLoopOptions } from "./useTicker";
+export { sharedTicker, usePixelLoop, type PixelLoopDraw, type PixelLoopOptions } from "./useTicker";
 export { useBlockTicks } from "./useBlockTicks";
 export { tileMask, useContourTile } from "./useContourTile";
 

@@ -91,7 +91,8 @@ function paintFull(ctx: CanvasRenderingContext2D, choice: ThemePreference) {
 
 function SheetArt({ choice }: { readonly choice: ThemePreference }) {
   const draw = useCallback((ctx: CanvasRenderingContext2D) => paintFull(ctx, choice), [choice]);
-  return <PixelCanvas width={W} height={H} contain draw={draw} redrawKey={choice} decorative />;
+  // The preview paints its own sheet: the NIGHT rim only on the Night sheet.
+  return <PixelCanvas width={W} height={H} contain night={choice === "dark"} draw={draw} redrawKey={choice} decorative />;
 }
 
 const CHOICES: readonly { readonly value: ThemePreference; readonly name: string; readonly line: string }[] = [

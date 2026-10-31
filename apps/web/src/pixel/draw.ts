@@ -10,8 +10,48 @@ export interface PixelSurface {
   fillRect(x: number, y: number, w: number, h: number): void;
 }
 
-/** Paints a colour grid at (ox, oy) with `s` px per cell; null cells stay transparent. */
+/**
+ * NIGHT rim for sprites: Ely's ink outline (#16201B) all but vanishes on the
+ * NIGHT paper (#0E1512) and card (#16211B), so by NIGHT every sprite gets a
+ * one pixel moonlit rim outside its outline (4.5:1 on the NIGHT card).
+ */
+export const NIGHT_HALO = "#6E8C7E";
+
+let currentHalo: string | null = null;
+
+/**
+ * Runs `paint` with sprites drawn by `drawGrid` rimmed in `halo` (null: no
+ * rim). PixelCanvas wraps every draw in this from the painted theme, so
+ * drawing code stays pure and theme-free.
+ */
+export function withSpriteHalo(halo: string | null, paint: () => void): void {
+  const previous = currentHalo;
+  currentHalo = halo;
+  try {
+    paint();
+  } finally {
+    currentHalo = previous;
+  }
+}
+
+function drawHalo(ctx: PixelSurface, grid: PixelGrid, ox: number, oy: number, s: number, halo: string): void {
+  ctx.fillStyle = halo;
+  const height = grid.length;
+  for (let y = -1; y <= height; y += 1) {
+    const width = Math.max(grid[y - 1]?.length ?? 0, grid[y]?.length ?? 0, grid[y + 1]?.length ?? 0);
+    for (let x = -1; x <= width; x += 1) {
+      if (grid[y]?.[x]) continue;
+      if (grid[y]?.[x - 1] || grid[y]?.[x + 1] || grid[y - 1]?.[x] || grid[y + 1]?.[x]) ctx.fillRect(ox + x * s, oy + y * s, s, s);
+    }
+  }
+}
+
+/**
+ * Paints a colour grid at (ox, oy) with `s` px per cell; null cells stay
+ * transparent. Inside `withSpriteHalo` the grid is first rimmed by one cell.
+ */
 export function drawGrid(ctx: PixelSurface, grid: PixelGrid, ox: number, oy: number, s = 1): void {
+  if (currentHalo) drawHalo(ctx, grid, ox, oy, s, currentHalo);
   for (let y = 0; y < grid.length; y += 1) {
     const row = grid[y]!;
     for (let x = 0; x < row.length; x += 1) {

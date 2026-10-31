@@ -37,16 +37,16 @@ export interface SignpostProps {
 export function Signpost({ destination, eta, grade, direction = "right", onClick, to, highlight = true, chosen, detail, index = 0, swing = true, className }: SignpostProps) {
   const body = (
     <>
-      <span className="flex min-w-0 flex-col">
-        <span className="flex items-center gap-2 font-display text-[16px] font-bold leading-tight">
+      <span className={cx("flex min-w-0 flex-col", direction === "left" && "items-end text-right")}>
+        <span className="flex max-w-full items-center gap-2 font-display text-[16px] font-bold leading-tight">
           {chosen ? <span aria-hidden="true">✓</span> : null}
           <span className="truncate">{destination}</span>
           {eta ? <span className="tnum shrink-0 font-mono text-xs font-medium normal-case tracking-normal opacity-80">{eta}</span> : null}
         </span>
-        {detail ? <span className="mt-0.5 truncate font-mono text-[11px] font-normal normal-case tracking-normal opacity-80">{detail}</span> : null}
+        {detail ? <span className="mt-0.5 max-w-full truncate font-mono text-[11px] font-normal normal-case tracking-normal opacity-80">{detail}</span> : null}
       </span>
       {grade ? <Blaze grade={grade} size={13} className="ml-auto shrink-0" /> : null}
-      <span aria-hidden="true" className={cx("shrink-0 font-tag text-sm", !grade && "ml-auto", direction === "left" && "order-first")}>
+      <span aria-hidden="true" className={cx("shrink-0 font-tag text-sm", direction === "left" ? "order-first mr-auto" : !grade && "ml-auto")}>
         {direction === "left" ? "◀" : "▶"}
       </span>
     </>

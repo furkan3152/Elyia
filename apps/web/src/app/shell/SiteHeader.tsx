@@ -44,7 +44,8 @@ export function SiteHeader() {
             <ThemeToggle compact />
             <MotionToggle compact className="hidden xl:inline-flex" />
             <ButtonLink to={routeHref("deck")} variant="primary" size="sm" className="h-9" rightIcon={<span aria-hidden="true">→</span>}>
-              Open the deck
+              <span className="sm:hidden">Deck</span>
+              <span className="hidden sm:inline">Open the deck</span>
             </ButtonLink>
             <IconButton label="Menu" icon={<Menu className="h-5 w-5" aria-hidden="true" />} variant="ink" size="sm" className="h-9 w-9 lg:hidden" onClick={() => setOpen(true)} />
           </>

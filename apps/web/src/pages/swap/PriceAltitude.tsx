@@ -61,7 +61,7 @@ export function PriceAltitude({ marks, reference, loading = false, className }: 
   return (
     <PixelFigure
       className={className}
-      caption={["◆ 1 HYPE · log altitude", "reference = HyperCore mainnet mid", worst && worst > 1.5 ? `pools ×${Math.round(worst).toLocaleString("en-US")} the market` : "pools at the market"]}
+      caption={["◆ 1 HYPE in USD · log altitude", "reference = HyperCore mainnet mid", worst && worst > 1.5 ? `pools ×${Math.round(worst).toLocaleString("en-US")} the market` : "pools at the market"]}
     >
       <div className="relative">
         <PixelCanvas
@@ -80,9 +80,25 @@ export function PriceAltitude({ marks, reference, loading = false, className }: 
         ) : null}
       </div>
       <ol className="grid border-t-4 border-rule" style={{ gridTemplateColumns: `repeat(${Math.max(1, ordered.length)}, minmax(0, 1fr))`, paddingLeft: gutter, paddingRight: gutter }} aria-label="Prices by venue">
-        {ordered.map((mark) => (
+        {ordered.map((mark, index) => (
           <li key={mark.id} className={cx("flex min-w-0 flex-col items-center gap-1 px-1 py-3 text-center", mark.kind === "reference" && "bg-signal text-signal-ink")}>
-            <span className="w-full truncate font-tag text-[10px] uppercase sm:text-[11px]">{mark.label}</span>
+            {compact ? (
+              // Phone: slots are too narrow for whole names, so names stagger on
+              // two rows and may use the neighbouring slot's width (never cut).
+              <span className="relative block h-[44px] w-full">
+                <span
+                  className={cx(
+                    "absolute left-1/2 w-max max-w-[190%] -translate-x-1/2 break-words font-tag text-[9px] uppercase leading-[11px]",
+                    index % 2 === 0 ? "top-0" : "top-[22px]",
+                    mark.kind === "reference" && "bg-signal px-1",
+                  )}
+                >
+                  {mark.label}
+                </span>
+              </span>
+            ) : (
+              <span className="w-full truncate font-tag text-[10px] uppercase sm:text-[11px]">{mark.label}</span>
+            )}
             <span className="tnum font-display text-[15px] font-bold leading-none sm:text-[20px]">{priceText(mark.price)}</span>
             <span className={cx("hidden w-full truncate font-mono text-[11px] sm:block", mark.kind === "reference" ? "opacity-80" : "text-ink-3")}>{mark.detail}</span>
           </li>

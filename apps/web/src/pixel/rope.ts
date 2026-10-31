@@ -32,9 +32,17 @@ let climberWorried: PixelGrid | null = null;
 
 /**
  * Paints the rope. `seconds` drives the loose strands of a critical rope (one change per second).
- * `ink` colours the route dots, piton, entry tick and flag pole (default the day ink; pass the sheet's ink on NIGHT).
+ * `ink` colours the route dots, piton, entry tick and flag pole (default the day ink; pass the sheet's ink on NIGHT);
+ * `flagColor` the take-profit flag (the sheet's "up" green).
  */
-export function paintRope(ctx: PixelSurface & { clearRect(x: number, y: number, w: number, h: number): void }, rope: RopeGeometry, layout: RopeLayout, seconds = 0, ink: string = INK): void {
+export function paintRope(
+  ctx: PixelSurface & { clearRect(x: number, y: number, w: number, h: number): void },
+  rope: RopeGeometry,
+  layout: RopeLayout,
+  seconds = 0,
+  ink: string = INK,
+  flagColor = "#1F7A4C",
+): void {
   const { w, h, y } = layout;
   ctx.clearRect(0, 0, w, h);
   const compact = h === ROPE_H_COMPACT;
@@ -103,7 +111,7 @@ export function paintRope(ctx: PixelSurface & { clearRect(x: number, y: number, 
     ctx.fillStyle = ink;
     const fh = compact ? 10 : 14;
     ctx.fillRect(goal, y + 2 - fh, 1, fh);
-    ctx.fillStyle = "#1F7A4C";
+    ctx.fillStyle = flagColor;
     ctx.fillRect(goal + 1, y + 2 - fh, compact ? 4 : 6, compact ? 3 : 4);
   }
   // the climber

@@ -196,7 +196,7 @@ function TrailSignCard({ sign }: { readonly sign: TrailSign }) {
     <li className="flex h-full items-center gap-4 bg-card px-4 py-3 px-frame px-drop">
       <PixelGlyph rows={SIGN_GLYPH} scale={4} palette={SIGN_PALETTE[sign.condition]} label={null} className="shrink-0" />
       <span className="flex min-w-0 flex-1 flex-col">
-        <a href={sign.url} target="_blank" rel="noopener noreferrer" className={cx("font-display text-[18px] font-bold leading-tight text-ink underline decoration-transparent decoration-2 underline-offset-4 hover:decoration-accent-line", FOCUS_RING)}>
+        <a href={sign.url} target="_blank" rel="noopener noreferrer" className={cx("font-display text-[18px] font-bold leading-tight text-ink [overflow-wrap:anywhere] underline decoration-transparent decoration-2 underline-offset-4 hover:decoration-accent-line", FOCUS_RING)}>
           {sign.name}
           <span className="sr-only"> (opens in a new tab)</span>
         </a>
@@ -204,7 +204,7 @@ function TrailSignCard({ sign }: { readonly sign: TrailSign }) {
           {sign.category}
           {sign.routable ? " · routable" : ""}
         </span>
-        <span className="truncate text-[12px] leading-snug text-ink-3">{sign.reason}</span>
+        <span className="text-[12px] leading-snug text-ink-3">{sign.reason}</span>
       </span>
       <ConditionSign condition={sign.condition} size="sm" className="shrink-0" />
     </li>

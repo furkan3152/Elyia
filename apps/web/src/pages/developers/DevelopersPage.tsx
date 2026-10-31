@@ -366,7 +366,7 @@ export default function DevelopersPage() {
       </Section>
 
       <Section id="rules" tag="Rules of the range · four" title="What the API will never do.">
-        <Cards n={4} as="ol">
+        <Cards n={4} as="ol" phone={1}>
           {RULES.map(([title, body], index) => (
             <li key={title} className="flex h-full flex-col items-center gap-3 bg-card px-5 pb-6 pt-5 text-center px-frame px-drop">
               <span className={cx("flex h-10 w-10 items-center justify-center font-display text-[20px] font-bold px-frame-thin", index === 0 ? "bg-signal text-[#16201B]" : "bg-paper text-ink")}>{index + 1}</span>
