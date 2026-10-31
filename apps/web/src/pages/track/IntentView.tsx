@@ -6,10 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 
 import { ApiError, apiGet } from "../../lib/api";
 import { RouteCard, type RouteEvidence } from "../../topo/RouteCard";
-import { Skeleton } from "../../ui/Skeleton";
 import { routeFromIntent } from "./flow/routeModel";
-import { StageStrip } from "./TraceView";
+import { ElyLoader } from "../../pixel/ElyLoader";
+import { TraceHead } from "./TraceView";
 import type { Stage } from "./traceRoute";
+import { TraceScene } from "./TraceScene";
+import type { Station } from "./traceTrail";
 
 const PHASE_STAGE: Readonly<Record<string, Stage["state"]>> = { done: "done", skipped: "done", "in-flight": "now", "your-turn": "now", waiting: "todo", failed: "alert", review: "alert", stopped: "alert" };
 
@@ -25,17 +27,23 @@ export function IntentView({ id }: { readonly id: string }) {
     const error = (intent.error ?? journey.error) as unknown;
     const offline = error instanceof ApiError && (error.code === "NETWORK_ERROR" || error.code === "TIMEOUT");
     return (
-      <div className="border-2 border-rule bg-card p-5 shadow-hard-lg" role="status">
-        <p className="caption">Journey · {id.slice(0, 12)}…</p>
-        <h2 className="mt-2 text-[28px] font-bold tracking-[-0.02em] text-ink">{offline ? "The planner is offline" : "Not found on this planner"}</h2>
-        <p className="mt-1.5 max-w-2xl text-[15px] text-ink-2">
-          {offline ? "This journey lives on the Elyia planner, which is not answering. Its transactions are still on chain: paste a tx hash above to follow one directly." : error instanceof Error ? error.message : "No such journey."}
-        </p>
+      <div className="flex flex-col gap-8" role="status">
+        <TraceScene stations={[]} idleText={offline ? "PLANNER OFFLINE" : "NOT ON THIS PLANNER"} caption={[`◆ ${id.slice(0, 12)}…`, "Elyia planner", offline ? "offline" : "not found"]} label={offline ? "The planner is offline" : "Journey not found"} />
+        <TraceHead
+          hash={id}
+          kicker={`Journey · ${id.slice(0, 12)}…`}
+          title={offline ? "The planner is offline" : "Not found on this planner"}
+          detail={offline ? "This journey lives on the Elyia planner, which is not answering. Its transactions are still on chain: paste a tx hash above to follow one directly." : error instanceof Error ? error.message : "No such journey."}
+        />
       </div>
     );
   }
   if (!intent.data || !journey.data) {
-    return <Skeleton className="h-80 w-full" />;
+    return (
+      <div className="flex justify-center py-10">
+        <ElyLoader label="Reading the journey from the planner…" size="lg" />
+      </div>
+    );
   }
   const route = routeFromIntent(intent.data, journey.data, 1);
   const evidence: RouteEvidence[] = intent.data.steps.flatMap((step, index) =>
@@ -56,15 +64,21 @@ export function IntentView({ id }: { readonly id: string }) {
       };
     }),
   );
-  const stages: Stage[] = journey.data.stops.map((stop, index) => ({ label: `W${index + 1} ${stop.title.split(" ").slice(0, 3).join(" ")}`, state: PHASE_STAGE[stop.phase] ?? "todo" }));
+  const stations: Station[] = journey.data.stops.map((stop, index) => {
+    const step = route.steps[index];
+    return { label: `W${index + 1} ${stop.title.split(" ").slice(0, 3).join(" ")}`, layer: step?.toLayer ?? step?.layer ?? "summit", state: PHASE_STAGE[stop.phase] ?? "todo" };
+  });
+  const title = journey.data.next === "none" ? "Journey complete" : journey.data.next === "sign" ? "Your turn to sign" : journey.data.next === "review" ? "Needs a look" : "Climbing";
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="caption">Journey · {journey.data.done} of {journey.data.total} settled · verified by the planner</p>
-        <h2 className="mt-1.5 text-[32px] font-bold leading-tight tracking-[-0.02em] text-ink">{journey.data.next === "none" ? "Journey complete" : journey.data.next === "sign" ? "Your turn to sign" : journey.data.next === "review" ? "Needs a look" : "Climbing"}</h2>
-      </div>
-      <StageStrip stages={stages} />
-      <RouteCard className="grid-cols-[minmax(0,1fr)]" id={route.id} sentence={route.sentence} grade={route.grade} steps={route.steps} fees={route.fees} signatures={route.signatures} rules={route.rules} binding={route.binding} evidence={evidence} note="Sign the next step from the page that planned it; this page follows." />
+    <div className="flex flex-col gap-10">
+      <TraceScene
+        stations={stations}
+        idleText=""
+        caption={[`◆ route ${route.id}`, "verified by the planner", `${journey.data.done} of ${journey.data.total} settled`]}
+        label={`Journey ${route.id}: ${stations.map((station, index) => `${index + 1} ${station.label} on the ${station.layer}, ${station.state}`).join("; ")}`}
+      />
+      <TraceHead hash={id} kicker={`Journey · ${journey.data.done} of ${journey.data.total} settled · verified by the planner`} title={title} detail={`“${route.sentence}”`} />
+      <RouteCard id={route.id} sentence={route.sentence} grade={route.grade} steps={route.steps} fees={route.fees} signatures={route.signatures} rules={route.rules} binding={route.binding} evidence={evidence} note="Sign the next step from the page that planned it; this page follows." />
     </div>
   );
 }

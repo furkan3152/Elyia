@@ -5,16 +5,19 @@ import { useAccount } from "wagmi";
 
 import { routeHref } from "../../app/routes/routeTable";
 import { useSearchParam } from "../../app/routes/useRoute";
-import { Page } from "../../app/shell/Page";
 import { useUiStore } from "../../app/state/uiStore";
 import { infoClient } from "../../lib/hypercore/runtime";
-import { Reveal } from "../../motion/Reveal";
+import { Ely } from "../../pixel/Ely";
+import { Cards, Page, Section, Split } from "../../pixel/layout";
+import { PixelGlyph } from "../../pixel/PixelGlyph";
 import { Signpost } from "../../topo/Signpost";
 import { ButtonLink } from "../../ui/Button";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { NumberField } from "../../ui/NumberInput";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { FlowCard } from "../track/flow/FlowCard";
+import { FlowEmpty } from "../track/flow/FlowPixel";
+import { sheetTag } from "../track/flow/pixelHooks";
 import { useDebounced, useFlowPlan, type FlowAsk, type FlowPlan } from "../track/flow/useFlowPlan";
 import { useFlowRun } from "../track/flow/useFlowRun";
 import { packFigure, usePacks } from "../track/flow/usePacks";
@@ -46,6 +49,25 @@ function probeMarks(plan: FlowPlan | undefined): AltitudeMark[] {
     return price ? [{ id: quote.protocol, label: venue?.label ?? quote.protocol, price, kind: "pool" as const, detail: "test-USDC pool" }] : [];
   });
 }
+
+/** The three guards, each with its pixel glyph (k ink, w card, y sun, r rope red, s paper). */
+const GUARDS = [
+  {
+    title: "Minimum out, on chain",
+    body: "The swap carries amountOutMinimum. If the pool moves past your slippage before it lands, it reverts and nothing is spent but gas.",
+    glyph: ["...kkkkk...", "..k.....k..", "..k.....k..", "..k.....k..", ".kkkkkkkkk.", ".kyyyyyyyk.", ".kyyykyyyk.", ".kyyykyyyk.", ".kyyyyyyyk.", ".kkkkkkkkk."],
+  },
+  {
+    title: "Verified tokens only",
+    body: "Canonical WHYPE and USDC from the pinned address book. At least seven look-alike WHYPEs exist on Elysium; Elyia never routes through them.",
+    glyph: [".kkkkkkkkk.", "kwwwwwwwwwk", "kwwwwwwwkwk", "kwwwwwwkkwk", "kwkwwwkkwwk", "kwkkwkkwwwk", ".kwkkkkwwk.", ".kwwkkwwwk.", "..kwwwwwk..", "...kwwwk...", "....kkk...."],
+  },
+  {
+    title: "Native HYPE in",
+    body: "Kalos wraps into canonical WHYPE inside the router. Dex Da Costa wraps into its own WETH; the card says which one you get.",
+    glyph: ["..kkkkkkk..", ".krrrkrrrk.", "kkkkkkkkkkk", "kwwwkykwwwk", "kwwwkykwwwk", "kkkkkykkkkk", "kwwwkykwwwk", "kwwwkykwwwk", "kwwwkykwwwk", "kkkkkkkkkkk"],
+  },
+] as const;
 
 /**
  * "/app/swap": swap at the hut. The ticket (pay, receive, venue, slippage)
@@ -103,24 +125,20 @@ export default function SwapPage() {
   const reset = () => run.reset();
 
   return (
-    <Page className="pb-16">
-      <section className="max-w-[1040px] pb-8 pt-4 sm:pt-10" aria-labelledby="swap-title">
-        <p className="label-tab mb-5">Sheet 04 · Swap at the hut · {mode === "testnet" ? "practice wall" : "mainnet"}</p>
-        <h1 id="swap-title" className="text-[44px] font-bold leading-[0.98] tracking-[-0.03em] text-ink sm:text-[72px]">
-          Swap at the hut.
-        </h1>
-        <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-ink-2 sm:text-[19px]">Kalos V3 and Dex Da Costa on the Summit, HyperSwap on the Ridge, the order book on the Floor. The minimum out goes into the transaction: a worse price reverts instead of filling.</p>
-      </section>
+    <Page className="!pt-0">
+      <Section level={1} tag={sheetTag("04", "Swap at the hut", mode)} title="Swap at the hut." lede="Kalos V3 and Dex Da Costa on the Summit, HyperSwap on the Ridge, the order book on the Floor. The minimum out goes into the transaction: a worse price reverts instead of filling.">
+        <PriceAltitude marks={marks} reference={referencePx} loading={reference.isPending} />
+        <p className="mx-auto mt-6 max-w-[760px] text-center text-[13px] leading-relaxed text-ink-2 text-pretty">
+          <span className="font-semibold text-ink">Reference</span> = the HyperCore mainnet mid, the only price Elyia shows as USD. Test USDC is unbacked, so practice-wall pools price HYPE in fantasy dollars; the route card still quotes the real pool and writes its minimum out into the transaction.
+        </p>
+      </Section>
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 xl:gap-8">
-        <section className="el-laminate relative flex flex-col border-2 border-rule bg-card shadow-hard-lg lg:col-span-5" aria-labelledby="swap-ticket">
-          <header className="flex items-center justify-between gap-3 border-b-2 border-rule px-4 py-3 sm:px-5">
-            <h2 id="swap-ticket" className="text-[22px] font-bold leading-none tracking-[-0.02em] text-ink">
-              Swap ticket
-            </h2>
-            <span className="caption">grade T1 · verified tokens</span>
-          </header>
-          <div className="flex flex-col gap-4 p-4 sm:p-5">
+      <Section id="ticket" tag="Swap ticket · grade T1 · verified tokens" title="Pay one, receive the other." lede="Pick the layer, name the amount, keep the best quote or choose the venue. The slippage you set becomes the floor of the trade.">
+        <Split>
+          <section className="flex flex-col gap-5 bg-card p-5 px-frame px-drop sm:p-6" aria-labelledby="swap-ticket">
+            <h3 id="swap-ticket" className="text-center font-display text-[24px] font-bold leading-none text-ink">
+              Ticket
+            </h3>
             <SegmentedControl
               label="Layer"
               fullWidth
@@ -133,10 +151,10 @@ export default function SwapPage() {
               options={(["summit", "ridge", "floor"] as const).map((value) => ({ value, label: value === "summit" ? "Summit" : value === "ridge" ? "Ridge" : "Floor", hint: LAYER_LABEL[value] }))}
             />
             {layer === "floor" ? (
-              <div className="flex flex-col gap-3 border-2 border-dashed border-rule/60 p-4">
-                <p className="text-[15px] leading-snug text-ink">The Floor swaps on the HyperCore order book: HYPE/USDC spot, with limits, TWAP and your Rule Book in the terminal.</p>
-                <p className="tnum font-mono text-sm text-ink-2">book mid · {bookPx ? bookPx.toFixed(3) : "—"} USDC {mode === "testnet" ? "(testnet)" : ""}</p>
-                <ButtonLink to={routeHref("trade", { market: "HYPE-USDC" })} variant="primary" size="lg" fullWidth>
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+                <Ely state="idle" size={88} label={null} />
+                <p className="max-w-[420px] text-[15px] leading-snug text-ink text-pretty">The Floor swaps on the HyperCore order book: HYPE/USDC spot, with limits, TWAP and your Rule Book in the terminal.</p>
+                <ButtonLink to={routeHref("trade", { market: "HYPE-USDC" })} variant="primary" size="lg">
                   Open HYPE/USDC on the Floor →
                 </ButtonLink>
               </div>
@@ -156,7 +174,7 @@ export default function SwapPage() {
                   hint={address ? `in your pack: ${packFigure(balance, from === "HYPE" ? 4 : 2)} ${from}` : "connect to read your pack"}
                 />
                 <div className="relative flex items-center justify-center">
-                  <span aria-hidden="true" className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-rule/50" />
+                  <span aria-hidden="true" className="absolute inset-x-0 top-1/2 border-t-4 border-dashed border-rule/30" />
                   <button
                     type="button"
                     onClick={() => {
@@ -164,60 +182,92 @@ export default function SwapPage() {
                       setAmount("");
                       reset();
                     }}
-                    className={cx("relative border-2 border-rule bg-card px-3 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-ink shadow-hard hover:bg-paper-2", FOCUS_RING)}
+                    className={cx("relative bg-card px-4 py-1.5 font-tag text-[12px] uppercase text-ink px-frame-thin px-drop px-press", FOCUS_RING)}
                     aria-label={`Flip: pay ${to}, receive ${from}`}
                   >
-                    ⇅ flip
+                    ▲▼ flip
                   </button>
                 </div>
-                <div className="border-2 border-rule bg-paper/50 px-3 py-2.5">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2">You receive · {to}</p>
-                  <p className="tnum mt-1 font-mono text-[30px] font-semibold leading-none text-ink" aria-live="polite">
+                <div className="flex flex-col items-center gap-1 bg-paper-2 px-4 py-4 text-center px-frame-thin">
+                  <p className="font-tag text-[11px] uppercase text-ink-2">You receive · {to}</p>
+                  <p className="tnum font-display text-[34px] font-bold leading-none text-ink" aria-live="polite">
                     {routed?.arrives ?? (plan.isFetching ? "…" : "—")}
                   </p>
-                  <p className="tnum mt-1.5 font-mono text-xs text-ink-2">{routed?.minimum ? `at least ${routed.minimum} · or it reverts` : "the minimum out is set when the route is quoted"}</p>
-                </div>
-                <div>
-                  <p className="caption mb-2">Venues · {quotes.length > 0 ? `${quotes.length} quoted` : VENUES[layer].length}</p>
-                  <ul className="flex flex-col gap-2">
-                    <li>
-                      <Signpost destination="Best quote" detail="the planner picks the venue" highlight={venue === null} chosen={venue === null} swing={false} onClick={() => { setVenue(null); reset(); }} />
-                    </li>
-                    {VENUES[layer].map((item) => {
-                      const quote = quotes.find((entry) => entry.protocol === item.id);
-                      return (
-                        <li key={item.id}>
-                          <Signpost
-                            destination={item.label}
-                            eta={quote ? quote.out : undefined}
-                            detail={quote?.excluded ? `not quoted: ${quote.excluded}` : quote?.winner ? `${item.note} · best` : item.note}
-                            highlight={venue === item.id}
-                            chosen={venue === item.id}
-                            swing={false}
-                            onClick={() => {
-                              setVenue(item.id);
-                              reset();
-                            }}
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="caption">Max slippage</span>
-                  <SegmentedControl label="Max slippage" size="sm" value={String(slippage) as `${SlippageBps}`} onChange={(next) => { setSlippage(Number(next) as SlippageBps); reset(); }} options={SLIPPAGE_CHOICES.map((bps) => ({ value: String(bps) as `${SlippageBps}`, label: `${bps / 100}%` }))} />
+                  <p className="tnum font-mono text-xs text-ink-2">{routed?.minimum ? `at least ${routed.minimum} · or it reverts` : "the minimum out is set when the route is quoted"}</p>
                 </div>
               </>
             )}
-          </div>
-        </section>
+          </section>
 
-        <PriceAltitude className="lg:col-span-7" marks={marks} reference={referencePx} />
-      </div>
+          <section className="flex flex-col gap-5 bg-card p-5 px-frame px-drop sm:p-6" aria-labelledby="swap-venues">
+            <h3 id="swap-venues" className="text-center font-display text-[24px] font-bold leading-none text-ink">
+              Venues
+            </h3>
+            <p className="caption text-center">{layer === "floor" ? "the order book" : quotes.length > 0 ? `${quotes.length} quoted · best wins` : `${VENUES[layer].length + 1} signposts`}</p>
+            {layer === "floor" ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+                <Signpost destination="HyperCore book" detail="HYPE/USDC spot · in the terminal" highlight swing={false} />
+                <p className="tnum font-mono text-sm text-ink-2">
+                  book mid · <span className="font-semibold text-ink">{bookPx ? bookPx.toFixed(3) : "—"}</span> USDC {mode === "testnet" ? "(testnet)" : ""}
+                </p>
+              </div>
+            ) : (
+              <>
+                <ul className="flex flex-col gap-4">
+                  <li>
+                    <Signpost
+                      destination="Best quote"
+                      detail="the planner picks the venue"
+                      highlight={venue === null}
+                      chosen={venue === null}
+                      swing={false}
+                      onClick={() => {
+                        setVenue(null);
+                        reset();
+                      }}
+                    />
+                  </li>
+                  {VENUES[layer].map((item) => {
+                    const quote = quotes.find((entry) => entry.protocol === item.id);
+                    return (
+                      <li key={item.id}>
+                        <Signpost
+                          destination={item.label}
+                          eta={quote ? quote.out : undefined}
+                          detail={quote?.excluded ? `not quoted: ${quote.excluded}` : quote?.winner ? `${item.note} · best` : item.note}
+                          highlight={venue === item.id}
+                          chosen={venue === item.id}
+                          swing={false}
+                          onClick={() => {
+                            setVenue(item.id);
+                            reset();
+                          }}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="mt-auto flex flex-col items-center gap-3 border-t-4 border-dashed border-rule/30 pt-5">
+                  <span className="caption">Max slippage</span>
+                  <SegmentedControl
+                    label="Max slippage"
+                    size="sm"
+                    value={String(slippage) as `${SlippageBps}`}
+                    onChange={(next) => {
+                      setSlippage(Number(next) as SlippageBps);
+                      reset();
+                    }}
+                    options={SLIPPAGE_CHOICES.map((bps) => ({ value: String(bps) as `${SlippageBps}`, label: `${bps / 100}%` }))}
+                  />
+                </div>
+              </>
+            )}
+          </section>
+        </Split>
+      </Section>
 
       {layer !== "floor" ? (
-        <section className="mt-10" aria-label="Route card">
+        <Section id="route" tag="Route card · quoted, bound, signed" title="The swap, stamped as it lands." lede="Every venue quoted, the best one bound, its minimum out written into the swap. Each settled step gets its stamp from the chain.">
           <FlowCard
             ask={ask}
             plan={plan.data}
@@ -225,28 +275,22 @@ export default function SwapPage() {
             updatedAt={plan.dataUpdatedAt}
             run={run}
             fineprint="Pool prices on the practice wall are not market prices; the card quotes the real pool."
-            empty={
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-2 border-dashed border-rule/60 px-5 py-6">
-                <p className="font-mono text-[15px] text-ink-2">“{swapSentence(layer, from, "", venue)}”</p>
-                <p className="text-[15px] text-ink-2">Enter an amount: the planner quotes every venue, binds the best and writes its minimum out into the swap.</p>
-              </div>
-            }
+            empty={<FlowEmpty sentence={swapSentence(layer, from, "", venue)} help="Enter an amount: the planner quotes every venue, binds the best and writes its minimum out into the swap." />}
           />
-        </section>
+        </Section>
       ) : null}
 
-      <Reveal className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
-        {[
-          ["Minimum out, on chain", "The swap carries amountOutMinimum. If the pool moves past your slippage before it lands, it reverts and nothing is spent but gas."],
-          ["Verified tokens only", "Canonical WHYPE and USDC from the pinned address book. At least seven look-alike WHYPEs exist on Elysium; Elyia never routes through them."],
-          ["Native HYPE in", "Kalos wraps into canonical WHYPE inside the router. Dex Da Costa wraps into its own WETH; the card says which one you get."],
-        ].map(([title, body]) => (
-          <div key={title} className="border-2 border-rule bg-card p-4 shadow-hard">
-            <p className="text-[17px] font-bold text-ink">{title}</p>
-            <p className="mt-1.5 text-[14px] leading-snug text-ink-2">{body}</p>
-          </div>
-        ))}
-      </Reveal>
+      <Section id="guards" tag="Field notes · three guards" title="What protects the swap.">
+        <Cards n={3}>
+          {GUARDS.map((guard) => (
+            <div key={guard.title} className="flex flex-col items-center gap-3 bg-card px-5 py-6 text-center px-frame px-drop">
+              <PixelGlyph rows={guard.glyph} scale={4} label={null} />
+              <h3 className="font-display text-[20px] font-bold leading-tight text-ink">{guard.title}</h3>
+              <p className="text-[14px] leading-relaxed text-ink-2 text-pretty">{guard.body}</p>
+            </div>
+          ))}
+        </Cards>
+      </Section>
     </Page>
   );
 }

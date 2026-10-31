@@ -10,14 +10,14 @@ import { useUiStore } from "../../app/state/uiStore";
 import { useNow } from "../../hooks/useNow";
 import { RouteCard, type RouteEvidence } from "../../topo/RouteCard";
 import { Button } from "../../ui/Button";
-import { cx } from "../../ui/cx";
-import { Skeleton } from "../../ui/Skeleton";
 import { ARB_RETRYABLE_TX_ABI } from "./flow/abis";
 import { ARB_RETRYABLE_TX } from "./flow/orbit";
-import { formatEta, shortRouteId } from "./flow/routeModel";
+import { formatEta, layerOf, shortRouteId } from "./flow/routeModel";
 import { traceHash, traceMoving, type Trace } from "./flow/trace";
 import { explainRunError } from "./flow/useFlowRun";
-import { traceRoute, type Stage } from "./traceRoute";
+import { traceRoute } from "./traceRoute";
+import { HashMark, TraceScene } from "./TraceScene";
+import { stationsOf } from "./traceTrail";
 
 /** Gas paid, in HYPE ("<0.001 HYPE" for the usual Elysium dust). */
 function gasText(gasUsed: bigint, price: bigint | undefined): string {
@@ -30,30 +30,15 @@ function short(hash: string): string {
   return `${hash.slice(0, 10)}…${hash.slice(-6)}`;
 }
 
-/** The ticket-watch strip: stages as stations, the current one inked. */
-export function StageStrip({ stages, className }: { readonly stages: readonly Stage[]; readonly className?: string }) {
-  if (stages.length === 0) return null;
+/** The trace's head, centred: the hash's pixel fingerprint, the headline, one line of detail. */
+export function TraceHead({ hash, title, detail, kicker }: { readonly hash: string; readonly title: string; readonly detail?: string; readonly kicker?: string }) {
   return (
-    <ol className={cx("flex flex-wrap items-center gap-x-1.5 gap-y-2", className)} aria-label="Stages">
-      {stages.map((stage, index) => (
-        <li key={stage.label} className="flex items-center gap-1.5">
-          <span
-            className={cx(
-              "border-2 px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em]",
-              stage.state === "done" && "border-rule bg-ink text-paper",
-              stage.state === "now" && "border-rule bg-signal text-signal-ink shadow-hard-sm",
-              stage.state === "alert" && "border-down bg-card text-down shadow-hard-sm",
-              stage.state === "todo" && "border-dashed border-rule/60 bg-card text-ink-3",
-            )}
-          >
-            {stage.state === "done" ? "✓ " : stage.state === "alert" ? "! " : ""}
-            {stage.label}
-            <span className="sr-only"> ({stage.state})</span>
-          </span>
-          {index < stages.length - 1 ? <span aria-hidden="true" className="font-mono text-ink-3">→</span> : null}
-        </li>
-      ))}
-    </ol>
+    <div className="mx-auto flex max-w-[760px] flex-col items-center gap-3 text-center">
+      <HashMark hash={hash} />
+      <p className="caption">{kicker ?? `Trace · ${short(hash)} · read from chain`}</p>
+      <h2 className="font-display text-[34px] font-bold leading-none text-ink">{title}</h2>
+      {detail ? <p className="text-[15px] leading-relaxed text-ink-2 text-pretty">{detail}</p> : null}
+    </div>
   );
 }
 
@@ -103,10 +88,13 @@ export function TraceView({ hash }: { readonly hash: Hex }) {
 
   if (!trace.data) {
     return (
-      <div className="border-2 border-rule bg-card p-5 shadow-hard-lg" aria-busy="true">
-        <p className="caption">Tracing {short(hash)} · Elysium and HyperEVM</p>
-        <Skeleton className="mt-4 h-48 w-full" />
-        {trace.error ? <p className="mt-3 text-sm text-down">{explainRunError(trace.error)}</p> : null}
+      <div className="flex flex-col gap-6" aria-busy="true">
+        <TraceScene stations={[]} idleText="READING THE CHAIN" idleMood="climb" caption={[`◆ ${short(hash)}`, "Elysium and HyperEVM", "tracing…"]} label={`Tracing ${short(hash)} on Elysium and HyperEVM`} />
+        {trace.error ? (
+          <p className="text-center text-sm text-down" role="alert">
+            {explainRunError(trace.error)}
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -134,10 +122,9 @@ export function TraceView({ hash }: { readonly hash: Hex }) {
 
   if (trace.data.kind === "not-found") {
     return (
-      <div className="border-2 border-rule bg-card p-5 shadow-hard-lg" role="status">
-        <p className="caption">Trace · {short(hash)}</p>
-        <h2 className="mt-2 text-[28px] font-bold tracking-[-0.02em] text-ink">{view.headline}</h2>
-        <p className="mt-1.5 max-w-2xl text-[15px] text-ink-2">{view.detail}</p>
+      <div className="flex flex-col gap-8" role="status">
+        <TraceScene stations={[]} idleText="NOT ON THE MAP YET" caption={[`◆ ${short(hash)}`, "searched Elysium and HyperEVM", "no receipt"]} label={`${view.headline}: ${view.detail}`} />
+        <TraceHead hash={hash} title={view.headline} detail={view.detail} />
       </div>
     );
   }
@@ -157,23 +144,18 @@ export function TraceView({ hash }: { readonly hash: Hex }) {
         </ConnectButton.Custom>
       )
     ) : null;
+  const stations = stationsOf(view.stages.length > 0 ? view.stages : [{ label: view.steps[0]?.layer === "summit" ? "On the Summit" : "HyperEVM", state: view.steps[0]?.state === "failed" ? "alert" : "done" }], layerOf(trace.data.found.network));
+  const open = view.claimableAt ? now / 1000 >= view.claimableAt : false;
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="caption">Trace · {short(hash)} · read from chain</p>
-          <h2 className="mt-1.5 text-[32px] font-bold leading-tight tracking-[-0.02em] text-ink">{view.headline}</h2>
-          <p className="mt-1 max-w-2xl text-[15px] leading-snug text-ink-2">{view.detail}</p>
-        </div>
-        {view.claimableAt ? (
-          <p className="tnum border-2 border-rule bg-card px-3 py-2 font-mono text-sm text-ink shadow-hard">
-            claim {now / 1000 >= view.claimableAt ? "open" : `in ${formatEta(view.claimableAt - now / 1000)}`}
-          </p>
-        ) : null}
-      </div>
-      <StageStrip stages={view.stages} />
+    <div className="flex flex-col gap-10">
+      <TraceScene
+        stations={stations}
+        idleText=""
+        caption={[`◆ ${short(hash)}`, `${trace.data.kind === "ascent" ? "ascent" : trace.data.kind === "descent" ? "descent" : trace.data.kind === "ticket" ? "retryable ticket" : "one layer"} · read from chain`, view.claimableAt ? (open ? "claim open" : `claim in ${formatEta(view.claimableAt - now / 1000)}`) : "following live"]}
+        label={`Trace of ${short(hash)} across the layers: ${stations.map((station, index) => `${index + 1} ${station.label} on the ${station.layer}, ${station.state}`).join("; ")}`}
+      />
+      <TraceHead hash={hash} title={view.headline} detail={view.detail} />
       <RouteCard
-        className="grid-cols-[minmax(0,1fr)]"
         id={shortRouteId(hash)}
         sentence={`track ${short(hash)}`}
         grade={1}

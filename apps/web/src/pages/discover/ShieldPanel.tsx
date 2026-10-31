@@ -2,10 +2,12 @@ import { assessToken, tokensFor } from "@elyia/core/assets";
 import { NETWORKS, type NetworkEnvironment, type NetworkKey } from "@elyia/core/networks";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { Split } from "../../pixel/layout";
 import { ConditionSign } from "../../topo/ConditionSign";
 import { Button } from "../../ui/Button";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { SegmentedControl } from "../../ui/SegmentedControl";
+import { ShieldSign } from "./ShieldSign";
 import { factsFrom, shieldCalls, shieldReport, type CheckResult, type RawAnswer, type ShieldReport } from "./shield";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u;
@@ -106,138 +108,153 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
   const explorer = doneNetwork && doneNetwork.vm === "evm" ? doneNetwork.explorer : null;
 
   return (
-    <section aria-labelledby="shield-title" className="flex min-w-0 flex-col border-2 border-rule bg-card shadow-hard-xl">
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b-2 border-rule px-4 py-2.5">
-        <h2 id="shield-title" className="caption !text-ink">
-          Shield · route condition for any token
-        </h2>
-        <span className="caption">read from the public RPC</span>
-      </header>
-      <form
-        className="flex flex-col gap-3 p-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void run(value, network);
-        }}
-      >
-        {networks.length > 1 ? (
-          <SegmentedControl
-            size="sm"
-            label="Network"
-            value={network}
-            onChange={(next) => {
-              setNetwork(next);
-              setState({ kind: "idle" });
-            }}
-            options={networks.map((key) => ({ value: key, label: LAYER_WORD[key] ?? NETWORKS[key].name }))}
-          />
-        ) : null}
-        <div className="flex h-12 w-full min-w-0 items-stretch border-2 border-rule bg-paper shadow-hard focus-within:shadow-hard-lg">
-          <label htmlFor={id} className="flex shrink-0 items-center bg-ink px-3 font-sans text-[13px] font-bold uppercase tracking-[0.06em] text-paper">
-            Token
-          </label>
-          <input
-            id={id}
-            value={value}
-            onChange={(event) => {
-              setValue(event.target.value);
-              if (inputError) setInputError(null);
-            }}
-            placeholder="0x… contract address"
-            autoComplete="off"
-            spellCheck={false}
-            aria-invalid={inputError ? true : undefined}
-            aria-describedby={inputError ? `${id}-error` : undefined}
-            className="min-w-0 flex-1 bg-transparent px-3 font-mono text-sm text-ink outline-none placeholder:text-ink-3"
-          />
-          <Button type="submit" variant="primary" className="!h-auto !border-y-0 !border-r-0 !shadow-none" loading={state.kind === "reading"}>
-            Check →
-          </Button>
-        </div>
-        {inputError ? (
-          <p id={`${id}-error`} role="alert" className="text-[13px] text-down">
-            {inputError}
-          </p>
-        ) : (
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-ink-2">
-            <span>try</span>
-            {examples.map((token) => (
-              <button
-                key={token.id}
-                type="button"
-                onClick={() => {
-                  setValue(token.address!);
-                  void run(token.address!, network);
+    <Split>
+      <section aria-labelledby="shield-title" className="flex min-w-0 flex-col bg-card px-frame px-drop">
+        <header className="flex flex-col items-center gap-2 border-b-4 border-rule px-5 py-5 text-center">
+          <p className="caption">read from the public RPC</p>
+          <h3 id="shield-title" className="font-display text-[24px] font-bold leading-none text-ink">
+            Check a token
+          </h3>
+        </header>
+        <form
+          className="flex flex-col gap-4 p-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void run(value, network);
+          }}
+        >
+          {networks.length > 1 ? (
+            <div className="flex justify-center">
+              <SegmentedControl
+                size="sm"
+                label="Network"
+                value={network}
+                onChange={(next) => {
+                  setNetwork(next);
+                  setState({ kind: "idle" });
                 }}
-                className={cx("border-1.5 border-rule/40 px-1.5 py-0.5 text-ink hover:border-rule hover:bg-paper-2", FOCUS_RING)}
-              >
-                {token.symbol}
-              </button>
-            ))}
-            <span>or paste any contract</span>
-          </p>
-        )}
-      </form>
+                options={networks.map((key) => ({ value: key, label: LAYER_WORD[key] ?? NETWORKS[key].name }))}
+              />
+            </div>
+          ) : null}
+          <div className="flex min-h-12 w-full min-w-0 items-stretch bg-paper px-frame-thin">
+            <label htmlFor={id} className="flex shrink-0 items-center bg-ink px-3 font-tag text-[12px] uppercase text-paper">
+              Token
+            </label>
+            <input
+              id={id}
+              value={value}
+              onChange={(event) => {
+                setValue(event.target.value);
+                if (inputError) setInputError(null);
+              }}
+              placeholder="0x… contract address"
+              autoComplete="off"
+              spellCheck={false}
+              aria-invalid={inputError ? true : undefined}
+              aria-describedby={inputError ? `${id}-error` : undefined}
+              className={cx("min-w-0 flex-1 bg-transparent px-3 font-mono text-sm text-ink outline-none placeholder:text-ink-3", FOCUS_RING)}
+            />
+          </div>
+          <Button type="submit" variant="primary" size="lg" fullWidth loading={state.kind === "reading"}>
+            Check the trail →
+          </Button>
+          {inputError ? (
+            <p id={`${id}-error`} role="alert" className="text-center text-[13px] text-down">
+              {inputError}
+            </p>
+          ) : (
+            <p className="flex flex-wrap items-center justify-center gap-3 font-mono text-[11px] text-ink-2">
+              <span>try</span>
+              {examples.map((token) => (
+                <button
+                  key={token.id}
+                  type="button"
+                  onClick={() => {
+                    setValue(token.address!);
+                    void run(token.address!, network);
+                  }}
+                  className={cx("bg-card px-2 py-0.5 font-tag text-[11px] uppercase text-ink px-frame-thin px-press", FOCUS_RING)}
+                >
+                  {token.symbol}
+                </button>
+              ))}
+              <span>or paste any contract</span>
+            </p>
+          )}
+        </form>
 
-      <div className="border-t-1.5 border-rule" aria-live="polite">
-        {state.kind === "idle" ? (
-          <div className="flex flex-col gap-3 px-4 py-5">
-            <div className="flex flex-wrap gap-2">
-              <ConditionSign condition="open" size="sm" />
-              <ConditionSign condition="caution" size="sm" />
-              <ConditionSign condition="closed" size="sm" />
-            </div>
-            <p className="max-w-[34rem] text-[14px] leading-relaxed text-ink-2">
-              OPEN means checked and verified. CAUTION means something on the trail needs your eyes. CLOSED means do not climb: no contract, a look-alike, or not a token at all. Nothing here signs or spends.
+        <div className="flex flex-1 flex-col border-t-4 border-rule" aria-live="polite">
+          {state.kind === "done" ? (
+            <>
+              <ol className="relative">
+                {state.report.checks.map((check, index) => {
+                  const mark = MARK[check.result];
+                  return (
+                    <li key={check.id} className="el-rise grid grid-cols-[1.25rem_7.5rem_minmax(0,1fr)] items-baseline gap-x-3 border-b-2 border-dashed border-rule/20 px-5 py-2 sm:grid-cols-[1.25rem_9.5rem_minmax(0,1fr)]" style={{ animationDelay: `${index * 60}ms` }}>
+                      <span className={cx("font-mono text-[12px]", mark.tone)} aria-hidden="true">
+                        {mark.glyph}
+                      </span>
+                      <span className="text-[13px] font-semibold text-ink">
+                        {check.label}
+                        <span className="sr-only">: {mark.word}</span>
+                      </span>
+                      <span className="min-w-0 break-words font-mono text-[11.5px] text-ink-2">{check.detail}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+              <p className="mt-auto flex flex-wrap items-center justify-between gap-2 px-5 py-3 font-mono text-[11px] text-ink-3">
+                <span>
+                  {state.address.slice(0, 10)}…{state.address.slice(-6)} · read {new Date(state.at).toLocaleTimeString("en-GB")}
+                </span>
+                {explorer ? (
+                  <a href={`${explorer.url}${explorer.addressPath}${state.address}`} target="_blank" rel="noopener noreferrer" className={cx("text-ink underline decoration-2 underline-offset-4", FOCUS_RING)}>
+                    explorer ↗<span className="sr-only"> (opens in a new tab)</span>
+                  </a>
+                ) : null}
+              </p>
+            </>
+          ) : state.kind === "error" ? (
+            <p className="px-5 py-6 text-center text-[14px] text-down" role="alert">
+              {state.message}
             </p>
-          </div>
-        ) : state.kind === "reading" ? (
-          <p className="px-4 py-5 font-mono text-[13px] text-ink-2">Reading the contract on {NETWORKS[network].name}…</p>
-        ) : state.kind === "error" ? (
-          <p className="px-4 py-5 text-[14px] text-down" role="alert">
-            {state.message}
-          </p>
-        ) : (
-          <div className="flex flex-col">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b-1.5 border-dashed border-rule/60 px-4 py-4">
-              <div className="min-w-0">
-                <p className="truncate text-[22px] font-bold leading-tight tracking-[-0.01em] text-ink">{state.report.facts.symbol ?? "Unknown contract"}</p>
-                <p className="truncate font-mono text-[11px] text-ink-2">
-                  {state.report.facts.name ?? "no name()"} · {NETWORKS[state.network].name}
-                </p>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 px-5 py-6 text-center">
+              <div className="flex flex-wrap justify-center gap-4">
+                <ConditionSign condition="open" size="sm" />
+                <ConditionSign condition="caution" size="sm" />
+                <ConditionSign condition="closed" size="sm" />
               </div>
-              <ConditionSign condition={state.report.condition} score={state.report.score} reason={state.report.reason} />
+              <p className="max-w-[34rem] text-[14px] leading-relaxed text-ink-2 text-pretty">OPEN means checked and verified. CAUTION means something on the trail needs your eyes. CLOSED means do not climb: no contract, a look-alike, or not a token at all. Nothing here signs or spends.</p>
             </div>
-            <ol className="el-logbook relative">
-              {state.report.checks.map((check, index) => {
-                const mark = MARK[check.result];
-                return (
-                  <li key={check.id} className="el-rise grid grid-cols-[1.25rem_7.5rem_minmax(0,1fr)] sm:grid-cols-[1.25rem_9.5rem_minmax(0,1fr)] items-baseline gap-x-3 border-b border-rule/10 px-4 py-2 last:border-b-0" style={{ animationDelay: `${index * 60}ms` }}>
-                    <span className={cx("font-mono text-[12px]", mark.tone)} aria-hidden="true">
-                      {mark.glyph}
-                    </span>
-                    <span className="text-[13px] font-semibold text-ink">
-                      {check.label}
-                      <span className="sr-only">: {mark.word}</span>
-                    </span>
-                    <span className="min-w-0 break-words font-mono text-[11.5px] text-ink-2">{check.detail}</span>
-                  </li>
-                );
-              })}
-            </ol>
-            <p className="flex flex-wrap items-center justify-between gap-2 border-t-1.5 border-dashed border-rule/60 px-4 py-2.5 font-mono text-[11px] text-ink-3">
-              <span>
-                {state.address.slice(0, 10)}…{state.address.slice(-6)} · read {new Date(state.at).toLocaleTimeString("en-GB")}
-              </span>
-              {explorer ? (
-                <a href={`${explorer.url}${explorer.addressPath}${state.address}`} target="_blank" rel="noopener noreferrer" className={cx("text-ink underline decoration-accent-line decoration-2 underline-offset-4", FOCUS_RING)}>
-                  explorer ↗<span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              ) : null}
+          )}
+        </div>
+      </section>
+
+      <section aria-label="Shield verdict" className="flex min-w-0 flex-col items-center justify-center gap-6 bg-card px-5 py-8 px-frame px-drop">
+        <p className="caption">Route condition · Ely inspects</p>
+        <ShieldSign condition={state.kind === "done" ? state.report.condition : null} reading={state.kind === "reading"} score={state.kind === "done" ? state.report.score : undefined} reason={state.kind === "done" ? state.report.reason : undefined} />
+        {state.kind === "done" ? (
+          <div className="flex flex-col items-center gap-1 text-center">
+            <p className="font-display text-[22px] font-bold leading-none text-ink">{state.report.facts.symbol ?? "Unknown contract"}</p>
+            <p className="font-mono text-[11px] text-ink-2">
+              {state.report.facts.name ?? "no name()"} · {NETWORKS[state.network].name}
             </p>
           </div>
-        )}
-      </div>
-    </section>
+        ) : null}
+        <dl className="grid w-full max-w-[480px] grid-cols-2 gap-4 sm:grid-cols-4">
+          {(["pass", "warn", "fail", "unknown"] as const).map((result) => (
+            <div key={result} className="flex flex-col items-center gap-1 bg-paper-2 px-2 py-3 px-frame-thin">
+              <dt className="font-tag text-[10px] uppercase text-ink-2">{MARK[result].word}</dt>
+              <dd className={cx("tnum font-display text-[22px] font-bold leading-none", MARK[result].tone)}>
+                <span aria-hidden="true">{MARK[result].glyph} </span>
+                {state.kind === "done" ? state.report.checks.filter((check) => check.result === result).length : "—"}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    </Split>
   );
 }
