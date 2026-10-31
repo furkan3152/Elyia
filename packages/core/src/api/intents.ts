@@ -30,6 +30,8 @@ export type IntentSigner = "agent" | "keeper";
 /** POST /v1/intents. Send `text`, `actions` or `goals`. */
 export interface CreateIntentBody {
   readonly text?: string;
+  /** With `text`: the signed answers of earlier turns (`details.thread` of a 422 INTENT_CLARIFY). */
+  readonly thread?: string;
   readonly actions?: readonly IntentActionSpec[];
   /** Goal IR from the language layer (core goals.ts); compiled to actions by the planner. */
   readonly goals?: readonly GoalItem[];
@@ -80,9 +82,58 @@ export interface VenueQuoteView {
   readonly symbol: string;
   readonly decimals: number;
   readonly winner: boolean;
-  /** Why the venue cannot win, when it cannot. */
-  readonly excluded?: "slow" | "unpriced" | "asset" | "failed";
+  /** Why the venue cannot win, when it cannot (`price`: on mainnet, too far from the reference price). */
+  readonly excluded?: "slow" | "unpriced" | "asset" | "failed" | "price";
   readonly note?: string;
+  /**
+   * Expected output value vs input value at reference prices (HyperCore mainnet mids), basis points:
+   * 0 = fair, -300 = 3% worse than the reference, +5000 = 50% better (a fake or stale pool price).
+   * Absent when either side is unpriced.
+   */
+  readonly referenceDeviationBps?: number;
+  /** USD of the expected output at reference prices (2 decimals), when priced. */
+  readonly referenceUsd?: string;
+}
+
+/** Kind of venue Elyia lists (GET /v1/venues). */
+export type VenueKind = "dex" | "bridge" | "link" | "trading" | "transfer" | "wrap" | "staking" | "vault" | "lending" | "names" | "launchpad" | "aggregator" | "perps";
+
+/**
+ * - live: Elyia plans, prepares and verifies it (simulated against the network);
+ * - read-only: Elyia reads it (quotes, info) but does not build transactions for it;
+ * - unavailable: known but not executable on this deployment (mainnet not open, no RPC).
+ */
+export type VenueStatus = "live" | "read-only" | "unavailable";
+
+export interface VenueContractView {
+  readonly role: string;
+  readonly address: EvmAddress;
+  readonly network: NetworkKey;
+}
+
+export interface VenueView {
+  /** Protocol id intents name (`protocol` / `constraints.preferProtocols`). */
+  readonly id: string;
+  readonly label: string;
+  readonly kind: VenueKind;
+  readonly network: NetworkKey;
+  readonly environment: NetworkEnvironment;
+  readonly status: VenueStatus;
+  /** Step kinds the venue executes. */
+  readonly actions: readonly string[];
+  /** Served only when the request names it (venue-specific, unverified tokens). */
+  readonly explicitOnly: boolean;
+  /** Research census row (elysium-protocols.json), when the venue is on Elysium. */
+  readonly census?: string;
+  readonly contracts: readonly VenueContractView[];
+  readonly notes: readonly string[];
+  readonly evidence?: string;
+}
+
+/** GET /v1/venues (`?network=`, `?kind=`, `?status=`). */
+export interface VenuesResponse {
+  readonly venues: readonly VenueView[];
+  readonly priceSource: "reference:hypercore-mainnet-mids";
 }
 
 export interface CreateIntentResponse {
