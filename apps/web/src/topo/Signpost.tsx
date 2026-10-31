@@ -38,7 +38,7 @@ export function Signpost({ destination, eta, grade, direction = "right", onClick
   const body = (
     <>
       <span className="flex min-w-0 flex-col">
-        <span className="flex items-center gap-2 font-sans text-[15px] font-bold uppercase leading-tight tracking-[0.03em]">
+        <span className="flex items-center gap-2 font-display text-[16px] font-bold leading-tight">
           {chosen ? <span aria-hidden="true">✓</span> : null}
           <span className="truncate">{destination}</span>
           {eta ? <span className="tnum shrink-0 font-mono text-xs font-medium normal-case tracking-normal opacity-80">{eta}</span> : null}
@@ -46,13 +46,15 @@ export function Signpost({ destination, eta, grade, direction = "right", onClick
         {detail ? <span className="mt-0.5 truncate font-mono text-[11px] font-normal normal-case tracking-normal opacity-80">{detail}</span> : null}
       </span>
       {grade ? <Blaze grade={grade} size={13} className="ml-auto shrink-0" /> : null}
+      <span aria-hidden="true" className={cx("shrink-0 font-tag text-sm", !grade && "ml-auto", direction === "left" && "order-first")}>
+        {direction === "left" ? "◀" : "▶"}
+      </span>
     </>
   );
   const blade = cx(
-    "el-signpost relative flex min-h-[42px] w-full min-w-0 items-center gap-3 border-2 border-rule py-1.5 text-left text-ink",
-    direction === "right" ? "el-signpost--right pl-3 pr-8" : "el-signpost--left pl-8 pr-3",
+    "relative flex min-h-[42px] w-full min-w-0 items-center gap-3 px-3 py-1.5 text-left text-ink px-frame-thin px-drop",
     highlight ? "bg-signal text-signal-ink" : "bg-card",
-    (onClick || to) && "transition-[transform] duration-fast ease-standard hover:translate-x-0.5",
+    (onClick || to) && "px-press",
     swing && "el-swing",
     FOCUS_RING,
     className,
@@ -96,8 +98,8 @@ export function SignpostCluster({ blades, caption, swing = true, label = "Routes
     <div className={cx("relative", className)} role="group" aria-label={label}>
       {caption ? <p className="caption mb-2">{caption}</p> : null}
       <div className="relative pl-3">
-        <span aria-hidden="true" className="absolute bottom-[-10px] left-0 top-[-6px] w-[7px] border-2 border-rule bg-ridge" />
-        <ul className="flex flex-col gap-2">
+        <span aria-hidden="true" className="absolute bottom-[-10px] left-0 top-[-6px] w-[8px] bg-ridge px-frame-thin" />
+        <ul className="flex flex-col gap-3 pl-2">
           {blades.map((blade, index) => (
             <li key={index} className="relative">
               <Signpost {...blade} index={index} swing={swing} />

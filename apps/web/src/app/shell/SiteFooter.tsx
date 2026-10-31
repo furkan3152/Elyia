@@ -1,6 +1,5 @@
 import { NETWORKS } from "@elyia/core/networks";
 
-import { TitleBlockBox } from "../../topo/MapSheet";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { Link } from "../routes/Link";
 import { routeHref } from "../routes/routeTable";
@@ -53,38 +52,52 @@ function today(): string {
   return new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
 }
 
-/** The cartographic margin under every page: survey line, scale and the network mode. */
+/** The cartographic margin under every page, centred on the axis. */
 function MarginLine() {
   const mode = useUiStore((state) => state.mode);
   return (
-    <div className="flex flex-col gap-1 border-t-2 border-rule pt-3 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-2 sm:flex-row sm:items-center sm:justify-between">
-      <span>Survey: Elyia · Elysium 99801 · 114 ms per block</span>
-      <span>Not to scale · {mode === "testnet" ? "Practice wall (testnet)" : "Mainnet"}</span>
-    </div>
+    <p className="flex flex-col items-center gap-1 text-center font-tag text-[11px] uppercase text-ink-2 sm:flex-row sm:justify-center sm:gap-3">
+      <span>Survey · Elyia · Elysium 99801 · 114 ms per block</span>
+      <span aria-hidden="true" className="hidden sm:inline">
+        ·
+      </span>
+      <span>1 pixel = 1 block · {mode === "testnet" ? "Practice wall (testnet)" : "Mainnet"}</span>
+    </p>
   );
 }
 
-/** Site footer: the mark, link columns, a cartographic title block, the switches, and the independence notice. */
+/** The centred pixel title block: four equal cells. */
+function TitleBlock({ cells }: { readonly cells: ReadonlyArray<readonly [string, string]> }) {
+  return (
+    <dl className="mx-auto grid w-full max-w-[720px] grid-cols-2 gap-[4px] bg-rule px-frame sm:grid-cols-4">
+      {cells.map(([term, value]) => (
+        <div key={term} className="flex flex-col items-center gap-1 bg-card px-3 py-2.5 text-center">
+          <dt className="font-tag text-[11px] uppercase text-ink-2">{term}</dt>
+          <dd className="tnum font-display text-[15px] font-bold uppercase text-ink">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Site footer, centred: Ely and the wordmark, three equal link columns, the pixel title block, the switches and the independence notice. */
 export function SiteFooter() {
   const { route } = useRoute();
   const mode = useUiStore((state) => state.mode);
   const sheet = sheetFor(route.id);
   return (
-    <footer className="relative z-10 mt-16">
-      <div className="mx-auto max-w-[1440px] px-4 pb-8 sm:px-6 lg:px-10">
-        <div className="grid gap-10 border-t-2 border-rule pt-10 lg:grid-cols-[1.3fr_repeat(3,minmax(0,1fr))_auto]">
-          <div className="flex flex-col gap-4">
-            <ElyiaLogo />
-            <p className="max-w-xs text-[15px] leading-relaxed text-ink-2">The intent, trading and portfolio deck for Elysium, HyperEVM and HyperCore. Your keys stay in your wallet.</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <ThemeToggle />
-              <MotionSwitch />
-            </div>
-          </div>
+    <footer className="relative z-10 mt-8">
+      <div aria-hidden="true" className="px-rule" />
+      <div className="mx-auto flex max-w-[1248px] flex-col items-center gap-10 px-6 pb-12 pt-14 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <ElyiaLogo size="lg" />
+          <p className="max-w-[460px] text-[15px] leading-relaxed text-ink-2">The intent, trading and portfolio deck for Elysium, HyperEVM and HyperCore. Your keys stay in your wallet.</p>
+        </div>
+        <nav aria-label="Footer" className="grid w-full max-w-[720px] grid-cols-1 gap-8 sm:grid-cols-3">
           {COLUMNS.map((column) => (
-            <div key={column.title}>
-              <p className="caption mb-3">{column.title}</p>
-              <ul className="flex flex-col gap-2 text-[15px]">
+            <div key={column.title} className="flex flex-col items-center">
+              <p className="caption mb-3 !text-ink">{column.title}</p>
+              <ul className="flex flex-col items-center gap-2 text-[15px]">
                 {column.links.map((link) => (
                   <li key={link.label}>
                     {link.external ? (
@@ -101,22 +114,36 @@ export function SiteFooter() {
               </ul>
             </div>
           ))}
-          <TitleBlockBox className="self-start" block={{ name: `Sheet ${sheet.number} · ${sheet.name}`, date: today(), mode: mode === "testnet" ? "testnet" : "mainnet" }} />
+        </nav>
+        <TitleBlock
+          cells={[
+            ["Sheet", `${sheet.number} · ${sheet.name}`],
+            ["Date", today()],
+            ["Scale", "1 px = 1 block"],
+            ["Mode", mode === "testnet" ? "Practice wall" : "Mainnet"],
+          ]}
+        />
+        <div className="flex flex-wrap items-center justify-center gap-6">
+          <ThemeToggle />
+          <MotionSwitch />
         </div>
-        <div className="mt-10">
+        <div className="flex flex-col items-center gap-2">
           <MarginLine />
-          <p className="mt-2 text-xs text-ink-3">Elyia is an independent, non-custodial interface. Not affiliated with Kinetiq, Elysium or Hyperliquid.</p>
+          <p className="text-xs text-ink-3">Elyia is an independent, non-custodial interface. Not affiliated with Kinetiq, Elysium or Hyperliquid.</p>
         </div>
       </div>
     </footer>
   );
 }
 
-/** The deck's footer: just the margin line, so the sheet ends like a map. */
+/** The deck's footer: the margin line, centred, so the sheet ends like a map. */
 export function AppFooter() {
   return (
-    <footer className="mx-auto mt-10 hidden max-w-[1440px] px-4 pb-6 sm:px-6 md:block lg:px-8">
-      <MarginLine />
+    <footer className="mt-10 hidden md:block">
+      <div aria-hidden="true" className="px-rule" />
+      <div className="mx-auto max-w-[1248px] px-6 py-6">
+        <MarginLine />
+      </div>
     </footer>
   );
 }

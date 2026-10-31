@@ -1,0 +1,337 @@
+/*
+ * Pixel Survey: frames, block shadows, stamps, digits, sliders and the
+ * stepped motion. The pixel unit is 4 px (--pu). A frame is four flat
+ * box-shadows (top, bottom, left, right) that leave the corners stepped; the
+ * drop is one solid block offset, itself stepped at its corner. No radius,
+ * no blur. Classes:
+ *
+ *   .px-frame          4 px stepped frame in --pf-c (default: rule)
+ *   .px-frame-thin     2 px frame (tags, chips, dense controls)
+ *   .px-drop           + a 1-unit stepped block shadow
+ *   .px-drop-lg        + a 2-unit stepped block shadow
+ *   .px-press          hover lifts 2 px, active pushes 2 px (buttons, cards)
+ *   .pixelated         crisp nearest-neighbour scaling for canvases and images
+ */
+
+.px-frame,
+.px-frame-thin {
+  --pf-c: rgb(var(--rule));
+  --pf-u: var(--pu, 4px);
+  --pf-s: rgb(var(--shadow-ink));
+  --pf-drop: 0 0 0 0 transparent;
+  box-shadow:
+    0 calc(-1 * var(--pf-u)) 0 0 var(--pf-c),
+    0 var(--pf-u) 0 0 var(--pf-c),
+    calc(-1 * var(--pf-u)) 0 0 0 var(--pf-c),
+    var(--pf-u) 0 0 0 var(--pf-c),
+    var(--pf-drop);
+}
+.px-frame-thin {
+  --pf-u: 2px;
+}
+/* The drop: a block one unit right and down, with a stepped corner (three shadows). */
+.px-drop {
+  --pf-drop:
+    var(--pf-u) calc(3 * var(--pf-u)) 0 0 var(--pf-s),
+    calc(3 * var(--pf-u)) var(--pf-u) 0 0 var(--pf-s),
+    calc(2 * var(--pf-u)) calc(2 * var(--pf-u)) 0 0 var(--pf-s);
+}
+.px-drop-lg {
+  --pf-drop:
+    calc(2 * var(--pf-u)) calc(4 * var(--pf-u)) 0 0 var(--pf-s),
+    calc(4 * var(--pf-u)) calc(2 * var(--pf-u)) 0 0 var(--pf-s),
+    calc(3 * var(--pf-u)) calc(3 * var(--pf-u)) 0 0 var(--pf-s);
+}
+.px-press {
+  transition: transform 120ms steps(2, end);
+}
+.px-press:hover {
+  transform: translate(-2px, -2px);
+}
+.px-press:active {
+  transform: translate(2px, 2px);
+}
+.px-tone-down {
+  --pf-c: rgb(var(--down));
+}
+.px-tone-accent {
+  --pf-c: rgb(var(--accent));
+}
+.px-tone-signal {
+  --pf-c: rgb(var(--signal));
+}
+.px-tone-up {
+  --pf-c: rgb(var(--up));
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* Stepped section rule: a dashed 4 px line, like the reference's section seams. */
+.px-rule {
+  height: 4px;
+  background-image: linear-gradient(to right, rgb(var(--ink) / 0.3) 0 12px, transparent 12px 20px);
+  background-size: 20px 4px;
+}
+
+/* Rubber stamp --------------------------------------------------------------- */
+.px-stamp {
+  --stamp-c: rgb(var(--down));
+  --pf-c: var(--stamp-c);
+  --pf-u: 2px;
+  color: var(--stamp-c);
+  transform: rotate(var(--stamp-rot, -6deg));
+}
+.px-stamp[data-go="true"] {
+  animation: px-thump 360ms steps(4, end) both;
+  animation-delay: var(--el-delay, 0ms);
+}
+@keyframes px-thump {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1.5) rotate(calc(var(--stamp-rot, -6deg) + 8deg));
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(0.94) rotate(var(--stamp-rot, -6deg));
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(var(--stamp-rot, -6deg));
+  }
+}
+
+/* Altimeter digit blocks: only changed digits roll, in steps ----------------- */
+.px-digit-roll-up {
+  animation: px-roll-up 320ms steps(4, end) both;
+  animation-delay: var(--el-delay, 0ms);
+}
+.px-digit-roll-down {
+  animation: px-roll-down 320ms steps(4, end) both;
+  animation-delay: var(--el-delay, 0ms);
+}
+@keyframes px-roll-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes px-roll-down {
+  from {
+    transform: translateY(-100%);
+  }
+}
+
+/* Toast pop: Ely and the message rise from the bottom edge in four steps. */
+.px-pop {
+  animation: px-pop 280ms steps(4, end) both;
+}
+@keyframes px-pop {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+/* Pixel slider ------------------------------------------------------------------ */
+.el-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+.el-range::-webkit-slider-runnable-track {
+  height: 12px;
+  background: linear-gradient(
+    to right,
+    rgb(var(--accent)) 0%,
+    rgb(var(--accent)) var(--el-range-fill, 0%),
+    rgb(var(--card)) var(--el-range-fill, 0%),
+    rgb(var(--card)) 100%
+  );
+  box-shadow:
+    0 -4px 0 0 rgb(var(--rule)),
+    0 4px 0 0 rgb(var(--rule)),
+    -4px 0 0 0 rgb(var(--rule)),
+    4px 0 0 0 rgb(var(--rule));
+}
+.el-range::-moz-range-track {
+  height: 12px;
+  background: rgb(var(--card));
+  box-shadow:
+    0 -4px 0 0 rgb(var(--rule)),
+    0 4px 0 0 rgb(var(--rule)),
+    -4px 0 0 0 rgb(var(--rule)),
+    4px 0 0 0 rgb(var(--rule));
+}
+.el-range::-moz-range-progress {
+  height: 12px;
+  background: rgb(var(--accent));
+}
+.el-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 28px;
+  margin-top: -8px;
+  background: rgb(var(--signal));
+  box-shadow: 0 0 0 4px rgb(var(--rule));
+  border: 0;
+  cursor: grab;
+}
+.el-range::-moz-range-thumb {
+  width: 16px;
+  height: 24px;
+  border-radius: 0;
+  background: rgb(var(--signal));
+  border: 4px solid rgb(var(--rule));
+  cursor: grab;
+}
+.el-range:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+.el-range:focus-visible {
+  outline: 4px dashed rgb(var(--signal));
+  outline-offset: 8px;
+}
+.el-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Theme switch: DAY -> NIGHT is a pixel sunset wipe, top to bottom in eight bands. */
+html[data-el-vt="theme"]::view-transition-old(root),
+html[data-el-vt="theme"]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-el-vt="theme"]::view-transition-new(root) {
+  animation: px-sunset 640ms steps(8, end) both;
+}
+@keyframes px-sunset {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Reduced motion: stamps, digits and pops show their end state. */
+html[data-motion="off"] .px-stamp,
+html[data-motion="off"] .px-digit-roll-up,
+html[data-motion="off"] .px-digit-roll-down,
+html[data-motion="off"] .px-pop {
+  animation: none !important;
+  opacity: 1 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .px-stamp,
+  .px-digit-roll-up,
+  .px-digit-roll-down,
+  .px-pop {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Inline loader: three blocks light up in turn (steps, 2.5 changes per second). */
+.px-loader > span {
+  opacity: 0.25;
+  animation: px-loader 1.2s steps(1, end) infinite;
+}
+.px-loader > span:nth-child(2) {
+  animation-delay: 400ms;
+}
+.px-loader > span:nth-child(3) {
+  animation-delay: 800ms;
+}
+@keyframes px-loader {
+  0%,
+  33% {
+    opacity: 1;
+  }
+  34%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+/* Skeleton: a 4 px checker dither that shifts one pixel unit in steps. */
+.el-skeleton {
+  min-height: 0.5rem;
+  -webkit-mask: none;
+  mask: none;
+  background-color: rgb(var(--ink) / 0.06);
+  background-image:
+    linear-gradient(45deg, rgb(var(--ink) / 0.12) 25%, transparent 25%, transparent 75%, rgb(var(--ink) / 0.12) 75%),
+    linear-gradient(45deg, rgb(var(--ink) / 0.12) 25%, transparent 25%, transparent 75%, rgb(var(--ink) / 0.12) 75%);
+  background-size: 8px 8px;
+  background-position:
+    0 0,
+    4px 4px;
+  animation: px-dither 1.2s steps(2, end) infinite;
+}
+@keyframes px-dither {
+  to {
+    background-position:
+      8px 0,
+      12px 4px;
+  }
+}
+
+/* Layout (src/pixel/layout.tsx) ------------------------------------------- */
+.px-cards {
+  --cards-gap: 24px;
+  --cards-c: var(--cards-xs, 1);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 28px var(--cards-gap);
+}
+.px-cards.px-cards > * {
+  flex: 0 0 calc((100% - (var(--cards-c) - 1) * var(--cards-gap)) / var(--cards-c));
+  min-width: 0;
+  /* equal heights in a row, whatever the card's own height class says */
+  height: auto;
+  align-self: stretch;
+}
+@media (max-width: 559px) {
+  .px-cards {
+    --cards-gap: 16px;
+  }
+}
+@media (min-width: 560px) {
+  .px-cards {
+    --cards-c: var(--cards-sm);
+  }
+}
+@media (min-width: 900px) {
+  .px-cards {
+    --cards-c: var(--cards-md);
+  }
+}
+@media (min-width: 1100px) {
+  .px-cards {
+    --cards-c: var(--cards-lg);
+  }
+}
+/* Sections after the first get a dashed pixel seam, edge to edge of the sheet. */
+.px-section + .px-section:not(.px-section-noseam)::before,
+.px-section-seam::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 100vw;
+  height: 4px;
+  transform: translateX(-50%);
+  background-image: linear-gradient(to right, rgb(var(--ink) / 0.28) 0 12px, transparent 12px 20px);
+  background-size: 20px 4px;
+  pointer-events: none;
+}

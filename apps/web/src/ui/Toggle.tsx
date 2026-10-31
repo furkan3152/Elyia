@@ -14,7 +14,7 @@ export interface ToggleProps {
   readonly className?: string;
 }
 
-/** On/off switch (role="switch"): an ink slot with a yellow nub that slides across; ON fills the slot with ink. */
+/** On/off switch (role="switch"): a pixel slot with a block nub that steps across; ON fills the slot with glacier and the nub turns sun. */
 export function Toggle({ checked, onChange, label, description, disabled, hideLabel = false, size = "md", className }: ToggleProps) {
   const id = useId();
   const small = size === "sm";
@@ -29,23 +29,23 @@ export function Toggle({ checked, onChange, label, description, disabled, hideLa
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cx(
-          "relative inline-flex shrink-0 items-center border-2 border-rule transition-[background-color] duration-base ease-standard disabled:cursor-not-allowed disabled:opacity-50",
-          small ? "h-5 w-9" : "h-6 w-11",
-          checked ? "bg-ink" : "bg-paper-2",
+          "relative inline-flex shrink-0 items-center px-frame-thin transition-[background-color] duration-fast ease-standard disabled:cursor-not-allowed disabled:opacity-50",
+          small ? "h-4 w-8" : "h-5 w-10",
+          checked ? "bg-accent" : "bg-paper-2",
           FOCUS_RING,
         )}
       >
         <span
           aria-hidden="true"
           className={cx(
-            "inline-block border-2 border-rule transition-transform duration-base ease-spring",
-            small ? "h-3 w-3" : "h-4 w-4",
-            checked ? cx("bg-signal", small ? "translate-x-[18px]" : "translate-x-[22px]") : "translate-x-[1px] bg-card",
+            "inline-block bg-ink transition-transform duration-fast ease-spring",
+            small ? "h-4 w-4" : "h-5 w-5",
+            checked ? cx("shadow-[inset_0_0_0_4px_rgb(var(--ink)),inset_0_0_0_10px_rgb(var(--signal))]", small ? "translate-x-4" : "translate-x-5") : "translate-x-0",
           )}
         />
       </button>
       <span className={cx("flex min-w-0 flex-col", hideLabel && "sr-only")}>
-        <span id={`${id}-label`} className="text-sm font-medium text-ink">
+        <span id={`${id}-label`} className="font-tag text-xs uppercase text-ink">
           {label}
         </span>
         {description ? (

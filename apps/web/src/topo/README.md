@@ -1,4 +1,6 @@
-# src/topo: Elyia's drawn artifacts (Survey)
+# src/topo: Elyia's drawn artifacts (Pixel Survey)
+
+> The Pixel Survey re-skin: the artifacts keep these props and now draw through `src/pixel` (see `src/pixel/README.md`). Relief, Rope, ElevationProfile, HutStamp, Altimeter and Barograph wrap PixelTerrain, PixelRope, PixelProfile, PixelStamp, PixelAltimeter and PixelBarograph. The "Look" section below is superseded by the pixel README.
 
 Every artifact is hand-drawn SVG, has its own accessible name, honours reduced
 motion (OS setting or `html[data-motion=off]`: end state, no loops), pauses

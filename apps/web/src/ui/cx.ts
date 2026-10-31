@@ -8,5 +8,5 @@ export function cx(...parts: ReadonlyArray<string | false | null | undefined | 0
   return out;
 }
 
-/** Focus ring for custom controls: a square glacier outline, offset from the ink border. */
-export const FOCUS_RING = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-line";
+/** Focus ring for custom controls: a dashed sun outline, clear of the 4 px pixel frame. */
+export const FOCUS_RING = "focus-visible:outline-dashed focus-visible:outline-4 focus-visible:outline-offset-[6px] focus-visible:outline-signal";

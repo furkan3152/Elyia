@@ -1,5 +1,6 @@
 /*
- * Survey artifacts: shapes and motion for src/topo and the kit. Contours
+ * Survey artifacts (legacy helpers kept for pages not yet rebuilt; the
+ * Pixel Survey styles live in pixel.css): shapes and motion for src/topo. Contours
  * draw on, blades swing in on a spring, stamps thump, windsocks flutter,
  * altimeter digits roll. Every loop is an `.el-loop` (paused in hidden tabs
  * and off screen), and reduced motion jumps to the end state (global.css),
@@ -291,17 +292,23 @@ a.el-blade {
   z-index: 2;
 }
 
-/* Folded-map corner crease (top right). */
+/* Folded corner (top right), in pixels: a stepped notch of paper with an ink step. */
 .el-fold::after {
   content: "";
   position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 22px;
-  height: 22px;
-  background: linear-gradient(225deg, rgb(var(--paper)) 0 50%, rgb(var(--paper-3)) 50% 100%);
-  border-left: 2px solid rgb(var(--rule));
-  border-bottom: 2px solid rgb(var(--rule));
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  background:
+    linear-gradient(rgb(var(--paper)), rgb(var(--paper))) top right / 16px 4px no-repeat,
+    linear-gradient(rgb(var(--paper)), rgb(var(--paper))) top right / 12px 8px no-repeat,
+    linear-gradient(rgb(var(--paper)), rgb(var(--paper))) top right / 8px 12px no-repeat,
+    linear-gradient(rgb(var(--paper)), rgb(var(--paper))) top right / 4px 16px no-repeat,
+    linear-gradient(rgb(var(--rule)), rgb(var(--rule))) top right / 20px 8px no-repeat,
+    linear-gradient(rgb(var(--rule)), rgb(var(--rule))) top right / 16px 12px no-repeat,
+    linear-gradient(rgb(var(--rule)), rgb(var(--rule))) top right / 12px 16px no-repeat,
+    linear-gradient(rgb(var(--rule)), rgb(var(--rule))) top right / 8px 20px no-repeat;
   pointer-events: none;
 }
 

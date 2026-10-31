@@ -78,7 +78,7 @@ export function Tabs<V extends string = string>({
         aria-label={label}
         className={cx(
           "scrollbar-none flex items-center overflow-x-auto",
-          variant === "underline" ? "gap-1 border-b-1.5 border-rule/30" : "gap-0 border-2 border-rule bg-card",
+          variant === "underline" ? "gap-1 border-b-4 border-rule/20" : "gap-[2px] bg-rule px-frame-thin",
         )}
       >
         {items.map((item, index) => {
@@ -113,19 +113,19 @@ export function Tabs<V extends string = string>({
                 }
               }}
               className={cx(
-                "relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-sans font-bold uppercase tracking-[0.08em] transition-colors duration-fast disabled:opacity-40",
-                size === "sm" ? "h-8 px-2.5 text-[11px]" : "h-10 px-3 text-xs",
+                "relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-tag uppercase tracking-[0.04em] transition-colors duration-fast disabled:opacity-40",
+                size === "sm" ? "h-8 px-2.5 text-[11px]" : "h-10 px-3.5 text-[13px]",
                 variant === "underline"
                   ? cx(
-                      "-mb-[1.5px] border-b-[3px]",
-                      selected ? "border-accent-line text-ink" : "border-transparent text-ink-3 hover:text-ink",
+                      "-mb-[4px] border-b-4",
+                      selected ? "border-signal text-ink" : "border-transparent text-ink-3 hover:text-ink",
                     )
-                  : cx("border-r-1.5 border-rule last:border-r-0", selected ? "bg-ink text-paper" : "text-ink-2 hover:bg-paper-2 hover:text-ink"),
+                  : cx(selected ? "bg-ink text-paper" : "bg-card text-ink-2 hover:bg-paper-2 hover:text-ink"),
                 FOCUS_RING,
               )}
             >
               {item.label}
-              {item.badge !== undefined ? <span className="tnum border-1.5 border-current px-1 font-mono text-[10px] font-semibold tracking-normal opacity-80">{item.badge}</span> : null}
+              {item.badge !== undefined ? <span className="tnum bg-current/10 px-1 font-mono text-[11px] font-semibold tracking-normal opacity-80 px-frame-thin">{item.badge}</span> : null}
             </button>
           );
         })}

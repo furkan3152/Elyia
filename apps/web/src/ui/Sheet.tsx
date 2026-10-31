@@ -32,15 +32,15 @@ export function Sheet({ open, onClose, title, description, side = "right", foote
       panelClassName={cx(
         "flex flex-col border-rule bg-card",
         side === "right"
-          ? "h-full w-full max-w-md animate-sheet-in-right border-l-2 shadow-[-6px_0_0_rgb(var(--shadow-ink)/0.9)]"
-          : "max-h-[85dvh] w-full animate-sheet-in-bottom border-t-2",
+          ? "h-full w-full max-w-md animate-sheet-in-right border-l-4 shadow-[-8px_0_0_rgb(var(--shadow-ink))]"
+          : "max-h-[85dvh] w-full animate-sheet-in-bottom border-t-4",
         className,
       )}
     >
-      {side === "bottom" ? <span aria-hidden="true" className="mx-auto mt-2.5 h-1 w-12 bg-ink/40" /> : null}
+      {side === "bottom" ? <span aria-hidden="true" className="mx-auto mt-3 h-1 w-12 bg-ink/40" /> : null}
       <div className="flex items-start justify-between gap-4 px-6 pb-3 pt-5">
         <div className="min-w-0">
-          <h2 id={`${id}-title`} className="text-[22px] font-bold leading-tight tracking-[-0.02em] text-ink">
+          <h2 id={`${id}-title`} className="font-display text-[24px] font-bold leading-tight text-ink">
             {title}
           </h2>
           {description ? (
@@ -52,7 +52,7 @@ export function Sheet({ open, onClose, title, description, side = "right", foote
         <IconButton label="Close" icon={<X className="h-4 w-4" aria-hidden="true" />} size="sm" variant="ink" onClick={onClose} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">{children}</div>
-      {footer ? <div className="safe-bottom flex flex-wrap justify-end gap-2.5 border-t-2 border-dashed border-rule/60 px-6 py-4">{footer}</div> : null}
+      {footer ? <div className="safe-bottom flex flex-wrap justify-end gap-2.5 border-t-4 border-dashed border-rule/40 px-6 py-4">{footer}</div> : null}
     </ModalLayer>
   );
 }

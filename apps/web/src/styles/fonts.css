@@ -1,12 +1,13 @@
 /*
  * Web fonts (all OFL-1.1, self-hosted through @fontsource):
- * - Space Grotesk (variable 300-700): headings, body, UI.
- * - IBM Plex Mono 400/500/600: every number, address and caption.
- * - Instrument Serif italic: cartographic labels on maps only.
+ * - Pixelify Sans 500/700: headings and big numbers (font-display).
+ * - Silkscreen 400: tags, labels, nav (font-tag).
+ * - IBM Plex Mono 400/500/600: body and data, tabular (font-sans / font-mono).
  * index.html preloads the Latin files of the same packages.
  */
-@import "@fontsource-variable/space-grotesk/wght.css";
+@import "@fontsource/pixelify-sans/500.css";
+@import "@fontsource/pixelify-sans/700.css";
+@import "@fontsource/silkscreen/400.css";
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource/ibm-plex-mono/600.css";
-@import "@fontsource/instrument-serif/latin-400-italic.css";

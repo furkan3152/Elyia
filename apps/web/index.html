@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <title>Elyia — your money, surveyed like a mountain</title>
+    <title>Elyia — every block a step, Ely climbs to the summit</title>
     <meta
       name="description"
       content="Elyia is the trading, DeFi and portfolio deck for Elysium, HyperEVM and HyperCore: one sentence becomes a route card, every position is a rope, your portfolio is a relief map. Non-custodial, testnet first."
     />
-    <meta name="theme-color" content="#F3F0E8" />
+    <meta name="theme-color" content="#F2ECDD" />
     <meta name="color-scheme" content="light dark" />
     <meta name="robots" content="index,follow" />
     <meta property="og:type" content="website" />
@@ -55,12 +55,12 @@
         root.setAttribute("data-theme", sheet);
         root.style.colorScheme = sheet === "night" ? "dark" : "light";
         var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute("content", sheet === "night" ? "#0E1512" : "#F3F0E8");
+        if (meta) meta.setAttribute("content", sheet === "night" ? "#0E1512" : "#F2ECDD");
         if (motion === "off") root.setAttribute("data-motion", "off");
       })();
     </script>
     <style>
-      html { background-color: #f3f0e8; }
+      html { background-color: #f2ecdd; }
       html[data-theme="night"] { background-color: #0e1512; }
     </style>
     <!--
@@ -70,9 +70,9 @@
       cannot serve them at these paths, so nothing is preloaded under it.
     -->
     <template id="el-font-preloads">
-      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2" />
+      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/pixelify-sans/files/pixelify-sans-latin-700-normal.woff2" />
+      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2" />
       <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2" />
-      <link rel="preload" as="font" type="font/woff2" crossorigin href="../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-600-normal.woff2" />
     </template>
     <script>
       (function () {

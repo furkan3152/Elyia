@@ -44,7 +44,7 @@ export function AddressPill({ address, network, label, head = 4, tail = 4, class
   };
 
   return (
-    <span className={cx("inline-flex min-w-0 items-center gap-0.5 border-1.5 border-rule/50 bg-card py-0.5 pl-2.5 pr-0.5", className)}>
+    <span className={cx("inline-flex min-w-0 items-center gap-0.5 bg-card py-0.5 pl-2.5 pr-0.5 px-frame-thin", className)}>
       {label ? <span className="mr-1.5 truncate font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">{label}</span> : null}
       <span className="tnum truncate font-mono text-xs text-ink" title={address}>
         {shortAddress(address, head, tail)}

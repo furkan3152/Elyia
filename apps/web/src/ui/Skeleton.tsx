@@ -2,17 +2,17 @@ import { cx } from "./cx";
 
 export interface SkeletonProps {
   readonly className?: string;
-  /** Rounded pill (badges, avatars) instead of a block. */
+  /** Kept for compatibility: pixel art has no round shapes, so this is a block too. */
   readonly round?: boolean;
 }
 
 /**
- * Loading placeholder: faint contour lines where the data will stand, never
- * a spinner. It breathes slowly (one breath per 2.4 s) and stops under
- * reduced motion.
+ * Loading placeholder: a dithered pixel block where the data will stand. It
+ * steps slowly (one shift per 600 ms) and stops under reduced motion. For a
+ * whole panel that is loading, prefer `ElyLoader`.
  */
-export function Skeleton({ className, round = false }: SkeletonProps) {
-  return <span aria-hidden="true" className={cx("el-skeleton el-loop block", round && "rounded-full", className)} />;
+export function Skeleton({ className }: SkeletonProps) {
+  return <span aria-hidden="true" className={cx("el-skeleton el-loop block", className)} />;
 }
 
 export interface SkeletonTextProps {

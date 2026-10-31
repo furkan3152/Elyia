@@ -1,13 +1,15 @@
 import { cx, FOCUS_RING } from "./cx";
 
 /**
- * Survey button variants:
- * - primary: THE action of a view. Filled glacier, 2 px ink border, hard shadow.
- * - signpost: a pointed wayfinding blade (yellow highlight): "go there" links, suggestions.
- * - ink: outline on card stock with a hard shadow (the secondary action).
- * - solid-ink: ink block with paper text (strong neutral, selected states).
- * - danger: red outline; destructive or risky.
- * - ghost: text only (toolbars, dense rows).
+ * Pixel Survey button variants. Every framed button is a 4 px stepped pixel
+ * frame (2 px at xs/sm) with one block drop; hover lifts it 2 px, pressing
+ * pushes it 2 px. Labels are Pixelify Sans.
+ * - primary: THE action of a view. Glacier fill.
+ * - signpost: sun-yellow wayfinding ("go there" links, suggestions).
+ * - ink: card stock (the secondary action).
+ * - solid-ink: an ink block with paper text (strong neutral, selected).
+ * - danger: rope-red frame and words; destructive or risky.
+ * - ghost: no frame (toolbars, dense rows).
  * - long / short: trade sides (up / down fills).
  * Legacy names map onto these: violet/gold -> primary, soft/outline -> ink.
  */
@@ -28,35 +30,34 @@ export type ButtonVariant =
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 const BASE =
-  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-sans font-bold uppercase tracking-[0.06em] transition-[background-color,border-color,color,box-shadow,transform] duration-instant ease-standard disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45";
+  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-display font-bold tracking-[0.02em] disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45";
 
-/* Pressing pushes the sheet into its shadow: translate by the shadow, drop the shadow. */
-const PRESS = "shadow-hard hover:-translate-x-px hover:-translate-y-px hover:shadow-hard-lg active:translate-x-[3px] active:translate-y-[3px] active:shadow-none";
-
-const PRIMARY = cx("border-2 border-rule bg-accent text-accent-ink", PRESS);
-const INK = cx("border-2 border-rule bg-card text-ink hover:bg-paper-2", PRESS);
+const FRAMED = "px-frame px-drop px-press";
 
 const VARIANTS: Readonly<Record<ButtonVariant, string>> = {
-  primary: PRIMARY,
-  violet: PRIMARY,
-  gold: PRIMARY,
-  signpost: "el-blade border-0 bg-signal pr-7 text-signal-ink hover:brightness-[1.04] active:translate-x-px",
-  ink: INK,
-  soft: INK,
-  outline: INK,
-  "solid-ink": cx("border-2 border-rule bg-ink text-paper", PRESS),
-  danger: cx("border-2 border-down bg-card text-down hover:bg-down hover:text-card", PRESS),
-  ghost: "border-2 border-transparent bg-transparent text-ink-2 hover:border-rule/25 hover:text-ink",
-  long: cx("border-2 border-rule bg-up text-card", PRESS),
-  short: cx("border-2 border-rule bg-down text-card", PRESS),
+  primary: cx(FRAMED, "bg-accent text-accent-ink"),
+  violet: cx(FRAMED, "bg-accent text-accent-ink"),
+  gold: cx(FRAMED, "bg-accent text-accent-ink"),
+  signpost: cx(FRAMED, "bg-signal text-signal-ink"),
+  ink: cx(FRAMED, "bg-card text-ink hover:bg-paper-2"),
+  soft: cx(FRAMED, "bg-card text-ink hover:bg-paper-2"),
+  outline: cx(FRAMED, "bg-card text-ink hover:bg-paper-2"),
+  "solid-ink": cx(FRAMED, "bg-ink text-paper"),
+  danger: cx(FRAMED, "px-tone-down bg-card text-down hover:bg-down hover:text-card"),
+  ghost: "bg-transparent text-ink-2 transition-colors duration-fast hover:bg-paper-2 hover:text-ink",
+  long: cx(FRAMED, "bg-up text-card"),
+  short: cx(FRAMED, "bg-down text-card"),
 };
 
+/** xs and sm use the 2 px frame so dense rows stay readable. */
+const THIN: Readonly<Record<ButtonSize, boolean>> = { xs: true, sm: true, md: false, lg: false, xl: false };
+
 const SIZES: Readonly<Record<ButtonSize, string>> = {
-  xs: "h-7 px-2.5 text-[11px]",
-  sm: "h-8 px-3 text-xs",
-  md: "h-10 px-4 text-[13px]",
-  lg: "h-12 px-5 text-sm",
-  xl: "h-14 px-6 text-[15px]",
+  xs: "h-7 px-2.5 text-[13px]",
+  sm: "h-8 px-3 text-sm",
+  md: "h-10 px-4 text-[15px]",
+  lg: "h-12 px-5 text-[17px]",
+  xl: "h-14 px-6 text-lg",
 };
 
 const ICON_SIZES: Readonly<Record<ButtonSize, string>> = {
@@ -77,5 +78,5 @@ export interface ButtonStyleOptions {
 
 /** Class recipe shared by Button, ButtonLink and anything that must look like a button. */
 export function buttonClasses({ variant = "primary", size = "md", fullWidth, iconOnly, className }: ButtonStyleOptions = {}): string {
-  return cx(BASE, FOCUS_RING, VARIANTS[variant], iconOnly ? cx(ICON_SIZES[size], "px-0") : SIZES[size], fullWidth && "w-full", className);
+  return cx(BASE, FOCUS_RING, VARIANTS[variant], THIN[size] && variant !== "ghost" && "px-frame-thin", iconOnly ? cx(ICON_SIZES[size], "px-0") : SIZES[size], fullWidth && "w-full", className);
 }

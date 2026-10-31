@@ -1,9 +1,17 @@
+import { PixelGlyph } from "../../pixel/PixelGlyph";
 import { useMotionToggle } from "../../motion/useReducedMotion";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { Toggle } from "../../ui/Toggle";
 
-/** Header Motion switch: stops every loop (contours, needles, flutter) and shows end states. Never turns motion on against the OS. */
-export function MotionToggle({ className }: { readonly className?: string }) {
+const MOVING = ["..........", ".kk....kk.", "k..k..k..k", "....kk....", ".........."];
+const STILL = ["..........", "..........", "kkkkkkkkkk", "..........", ".........."];
+
+/**
+ * Motion switch: stops every loop (Ely, the range, the barograph) and shows
+ * end states. Never turns motion on against the OS. `compact`: a square
+ * button with a pixel wave (the header).
+ */
+export function MotionToggle({ className, compact = false }: { readonly className?: string; readonly compact?: boolean }) {
   const motion = useMotionToggle();
   return (
     <button
@@ -14,15 +22,14 @@ export function MotionToggle({ className }: { readonly className?: string }) {
       disabled={motion.disabled}
       onClick={() => motion.setOn(!motion.checked)}
       className={cx(
-        "inline-flex h-9 shrink-0 items-center gap-1.5 border-2 border-rule px-2 font-mono text-[11px] font-semibold tracking-[0.1em] text-ink disabled:opacity-50",
+        "inline-flex h-9 shrink-0 items-center justify-center gap-2 bg-card font-tag text-[11px] uppercase text-ink px-frame-thin px-drop px-press disabled:opacity-50",
+        compact ? "w-9" : "px-2.5",
         FOCUS_RING,
         className,
       )}
     >
-      <svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true">
-        <path d="M1 7c2-4 4-4 6 0s4 4 6 0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeDasharray={motion.checked ? undefined : "2 2"} />
-      </svg>
-      {motion.checked ? "MOTION" : "STILL"}
+      <PixelGlyph rows={motion.checked ? MOVING : STILL} scale={2} label={null} />
+      {compact ? null : motion.checked ? "Motion" : "Still"}
     </button>
   );
 }

@@ -3,10 +3,11 @@ import React from "react";
 import { cx } from "./cx";
 
 /**
- * Survey panels are sheets of card stock: square, 2 px ink border, hard
- * offset shadow. `flat` drops the shadow for dense app grids; `raised` is the
- * default card; `sheet` is the bigger 4 px shadow for the one thing that
- * matters on a view; `well` is a sunk paper area without a border.
+ * Pixel Survey panels are card stock in a 4 px stepped pixel frame. `flat`
+ * is the frame alone (dense app grids); `raised` (default) adds one block
+ * drop; `sheet` a two-unit drop for the one thing that matters on a view;
+ * `well` is a sunk paper area without a frame. Frames are drawn outside the
+ * box: keep at least 12 px between panels (the layout primitives do).
  * Legacy names: glass -> raised, glow -> sheet.
  */
 export type PanelVariant = "flat" | "raised" | "sheet" | "well" | "glass" | "glow";
@@ -24,19 +25,19 @@ export interface PanelProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 const VARIANTS: Readonly<Record<PanelVariant, string>> = {
-  flat: "bg-card border-2 border-rule",
-  raised: "bg-card border-2 border-rule shadow-hard",
-  glass: "bg-card border-2 border-rule shadow-hard",
-  sheet: "bg-card border-2 border-rule shadow-hard-lg",
-  glow: "bg-card border-2 border-rule shadow-hard-lg",
+  flat: "bg-card px-frame",
+  raised: "bg-card px-frame px-drop",
+  glass: "bg-card px-frame px-drop",
+  sheet: "bg-card px-frame px-drop-lg",
+  glow: "bg-card px-frame px-drop-lg",
   well: "bg-paper-2/70",
 };
 
 const PADDING: Readonly<Record<PanelPadding, string>> = {
   none: "",
   sm: "p-3",
-  md: "p-4 sm:p-5",
-  lg: "p-5 sm:p-7",
+  md: "p-4 sm:p-6",
+  lg: "p-6 sm:p-8",
 };
 
 export const Panel = React.forwardRef<HTMLElement, PanelProps>(function Panel(
@@ -51,7 +52,7 @@ export const Panel = React.forwardRef<HTMLElement, PanelProps>(function Panel(
         "relative",
         VARIANTS[variant],
         PADDING[padding],
-        interactive && "transition-[transform,box-shadow] duration-fast ease-standard hover:-translate-x-px hover:-translate-y-px hover:shadow-hard-lg",
+        interactive && "px-press",
         fold && "el-fold",
         className,
       )}
@@ -78,11 +79,11 @@ export interface PanelHeaderProps {
 /** The mono caps header row used by every panel. */
 export function PanelHeader({ title, aside, id, className, ruled = false }: PanelHeaderProps) {
   return (
-    <div className={cx("flex min-h-6 items-center justify-between gap-3", ruled ? "border-b-1.5 border-rule px-3.5 py-2.5" : "mb-4", className)}>
-      <h2 id={id} className="caption truncate !text-ink">
+    <div className={cx("flex min-h-6 items-center justify-between gap-3", ruled ? "border-b-4 border-rule px-4 py-2.5" : "mb-4", className)}>
+      <h2 id={id} className="caption truncate !font-tag !text-ink">
         {title}
       </h2>
-      {aside ? <div className="flex shrink-0 items-center gap-2 font-mono text-[11px] text-ink-2">{aside}</div> : null}
+      {aside ? <div className="flex shrink-0 items-center gap-2 font-mono text-xs text-ink-2">{aside}</div> : null}
     </div>
   );
 }
@@ -119,7 +120,7 @@ export function SectionHeader({ parts, title, description, aside, id, level = 2,
         {title ? (
           <>
             <p>{caption}</p>
-            <Heading id={id} className={cx("mt-1.5 font-bold tracking-[-0.02em] text-ink", level === 2 ? "text-[28px] leading-tight sm:text-[32px]" : "text-xl")}>
+            <Heading id={id} className={cx("mt-2 font-display font-bold text-ink", level === 2 ? "text-[28px] leading-tight sm:text-[32px]" : "text-[22px]")}>
               {title}
             </Heading>
           </>

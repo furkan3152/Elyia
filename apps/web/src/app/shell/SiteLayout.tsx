@@ -1,5 +1,6 @@
 import React, { useLayoutEffect } from "react";
 
+import { TopoBackdrop } from "../../pixel/TopoBackdrop";
 import { TopoDefs } from "../../topo/TopoDefs";
 import { setThemeSurface } from "../state/documentSync";
 import { SiteFooter } from "./SiteFooter";
@@ -15,7 +16,8 @@ export default function SiteLayout({ children }: { readonly children: React.Reac
   return (
     <div className="relative isolate min-h-[100dvh] overflow-x-clip bg-paper">
       <TopoDefs />
-      <a href="#main-content" className="sr-only z-[100] border-2 border-rule bg-signal px-4 py-2 font-bold text-signal-ink focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
+      <TopoBackdrop />
+      <a href="#main-content" className="sr-only z-[100] bg-signal px-4 py-2 font-tag text-[#16201B] px-frame-thin focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Skip to content
       </a>
       <SiteHeader />

@@ -60,7 +60,7 @@ export function Slider({
   const risky = dangerFrom !== undefined && value >= dangerFrom;
   const labelledAt: number[] = [];
   return (
-    <div className={cx("flex flex-col gap-1", className)}>
+    <div className={cx("flex flex-col gap-2", className)}>
       <div className="flex items-baseline justify-between gap-3">
           {label ? (
             <label htmlFor={inputId} className="caption !text-ink-2">
@@ -69,7 +69,7 @@ export function Slider({
           ) : (
             <span />
           )}
-          <span className={cx("tnum inline-flex items-center gap-1.5 font-mono text-sm font-semibold", risky ? "text-down" : "text-ink")}>
+          <span className={cx("tnum inline-flex items-center gap-1.5 font-display text-base font-bold", risky ? "text-down" : "text-ink")}>
             {gradeOf ? <Blaze grade={gradeOf(value)} size={13} /> : null}
             {aside ?? format(value)}
           </span>
@@ -103,13 +103,13 @@ export function Slider({
                 disabled={disabled}
                 onClick={() => onChange(tick)}
                 className={cx(
-                  "absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1 font-mono text-[11px] transition-colors duration-fast",
+                  "absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1 whitespace-nowrap font-tag text-[11px] transition-colors duration-fast",
                   active ? "text-ink" : "text-ink-3",
                   FOCUS_RING,
                 )}
-                style={{ left: `calc(${left}% + ${(0.5 - left / 100) * 18}px)` }}
+                style={{ left: `calc(${left}% + ${(0.5 - left / 100) * 20}px)` }}
               >
-                <span className={cx("h-2 w-0.5", active ? "bg-ink" : "bg-ink/30")} />
+                <span className={cx("h-2 w-1", active ? "bg-ink" : "bg-ink/30")} />
                 {labelled ? format(tick) : <span className="sr-only">{format(tick)}</span>}
                 {gradeOf && labelled ? <Blaze grade={gradeOf(tick)} size={10} label={null} /> : null}
               </button>

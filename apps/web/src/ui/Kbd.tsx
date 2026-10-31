@@ -13,7 +13,7 @@ export function Kbd({ children, className }: KbdProps) {
   return (
     <kbd
       className={cx(
-        "inline-flex h-6 min-w-6 items-center justify-center border-1.5 border-rule bg-card px-1.5 font-mono text-[11px] font-semibold leading-none text-ink shadow-hard-sm",
+        "inline-flex h-5 min-w-5 items-center justify-center bg-card px-1 font-tag text-[11px] leading-none text-ink px-frame-thin px-drop",
         className,
       )}
     >
@@ -36,7 +36,7 @@ export function KbdCombo({ keys, joiner = "plus", className }: KbdComboProps) {
     <span className={cx("inline-flex items-center gap-1", className)}>
       {keys.map((key, index) => (
         <span key={`${key}-${index}`} className="inline-flex items-center gap-1">
-          {index > 0 && joiner === "then" ? <span className="font-mono text-[11px] text-ink-3">then</span> : null}
+          {index > 0 && joiner === "then" ? <span className="font-tag text-[11px] text-ink-3">then</span> : null}
           <Kbd>{key === "mod" ? (apple ? "⌘" : "Ctrl") : key}</Kbd>
         </span>
       ))}

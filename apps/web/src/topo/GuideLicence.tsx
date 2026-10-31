@@ -1,5 +1,7 @@
 import React, { useId } from "react";
 
+import { Ely } from "../pixel/Ely";
+import { PixelStamp } from "../pixel/PixelStamp";
 import { cx } from "../ui/cx";
 
 export interface GuideLicenceProps {
@@ -32,7 +34,7 @@ const short = (address: string) => (address.length > 12 ? `${address.slice(0, 6)
 const dayLabel = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase();
 
 /**
- * The Guide's licence: a laminated permit for keeper mode. Licence number =
+ * The Guide's licence: a pixel permit for keeper mode, with Ely on watch. Licence number =
  * the agent address; printed scope and limits; one punch hole per day of
  * validity (punched = used, ringed = today); the scope stamp TRADE ONLY ·
  * CANNOT WITHDRAW. Revoking tears a VOID perforation across it.
@@ -44,91 +46,81 @@ export function GuideLicence({ agent, holder, markets, actions, limits, validFro
   const expired = now >= validUntil;
   const status = revoked ? "Void" : expired ? "Expired" : `Valid · ${days - used} of ${days} days left`;
   return (
-    <article className={cx("relative overflow-hidden border-2 border-rule bg-card shadow-hard-lg", className)} aria-labelledby={`${id}-title`}>
-      <header className="flex items-center justify-between gap-3 border-b-2 border-rule bg-signal px-4 py-2.5 text-signal-ink">
-        <h3 id={`${id}-title`} className="text-lg font-bold uppercase tracking-[0.04em]">
+    <article className={cx("relative bg-card px-frame px-drop", className)} aria-labelledby={`${id}-title`}>
+      <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-signal px-4 py-2.5 text-signal-ink">
+        <h3 id={`${id}-title`} className="font-display text-xl font-bold">
           Guide&apos;s licence
         </h3>
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em]">
+        <span className="font-tag text-[11px] uppercase">
           {mode}
           {sample ? " · sample" : ""}
         </span>
       </header>
-      <div className={cx("el-laminate relative px-4 pb-3 pt-3.5", revoked && "opacity-60")}>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 font-mono text-[13px]">
+      <div className={cx("relative overflow-hidden px-4 pb-4 pt-4", revoked && "opacity-60")}>
+        <div className="flex items-start gap-4">
+        <Ely state="watch" size={88} label={null} className="shrink-0 bg-paper-2 px-frame-thin" />
+        <dl className="grid flex-1 grid-cols-2 gap-x-4 gap-y-2.5 font-mono text-[13px]">
           <div>
-            <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-3">Licence no. · agent</dt>
+            <dt className="font-tag text-[11px] uppercase text-ink-3">Licence no. · agent</dt>
             <dd className="tnum font-semibold text-ink" title={agent}>
               {short(agent)}
             </dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-3">Holder</dt>
+            <dt className="font-tag text-[11px] uppercase text-ink-3">Holder</dt>
             <dd className="tnum font-semibold text-ink" title={holder}>
               {short(holder)}
             </dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-3">Markets</dt>
+            <dt className="font-tag text-[11px] uppercase text-ink-3">Markets</dt>
             <dd className="text-ink">{markets.join(" · ")}</dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-3">Actions</dt>
+            <dt className="font-tag text-[11px] uppercase text-ink-3">Actions</dt>
             <dd className="text-ink">{actions.join(" · ")}</dd>
           </div>
           {limits.map(([label, value]) => (
             <div key={label}>
-              <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-3">{label}</dt>
+              <dt className="font-tag text-[11px] uppercase text-ink-3">{label}</dt>
               <dd className="tnum text-ink">{value}</dd>
             </div>
           ))}
         </dl>
-        <div className="mt-3.5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
+        </div>
+        <div className="mt-4">
+          <p className="font-tag text-[11px] uppercase text-ink-3">
             Valid · punched days (max 30) · <span className={cx(revoked || expired ? "text-down" : "text-ink")}>{status}</span>
           </p>
-          <ol className="mt-1.5 flex flex-wrap gap-[5px]" aria-label={`${used} of ${days} days used`}>
+          <ol className="mt-2 flex flex-wrap gap-[6px]" aria-label={`${used} of ${days} days used`}>
             {Array.from({ length: days }, (_, index) => {
               const today = index === used && !expired && !revoked;
               return (
                 <li
                   key={index}
                   aria-hidden="true"
-                  className={cx("h-3.5 w-3.5 rounded-full border-1.5 border-rule", index < used ? "bg-ink" : "bg-paper", today && "outline outline-2 outline-offset-1 outline-signal")}
+                  className={cx("h-3 w-3 px-frame-thin", index < used ? "bg-ink" : "bg-paper", today && "bg-signal")}
                 />
               );
             })}
           </ol>
-          <p className="mt-1 flex justify-between font-mono text-[11px] text-ink-3">
+          <p className="mt-2 flex justify-between font-tag text-[11px] text-ink-3">
             <span>{dayLabel(validFrom)}</span>
             <span>{dayLabel(validUntil)}</span>
           </p>
         </div>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
           <p className="max-w-[17rem] text-[13px] leading-snug text-ink-2">The key is born for this licence and never sees your wallet. Every order is checked against your Rule Book and radioed to you.</p>
-          <svg viewBox="0 0 220 64" className="w-[200px] shrink-0 rotate-[-6deg] text-down" role="img" aria-label="Scope: trade only, cannot withdraw">
-            <g filter="url(#el-ink)">
-            <rect x="3" y="3" width="214" height="58" fill="none" stroke="currentColor" strokeWidth="3" />
-            <rect x="9" y="9" width="202" height="46" fill="none" stroke="currentColor" strokeWidth="1.2" />
-            <text x="110" y="33" textAnchor="middle" fontFamily="Space Grotesk Variable, Space Grotesk, sans-serif" fontWeight="700" fontSize="19" letterSpacing="1" fill="currentColor">
-              TRADE ONLY
-            </text>
-            <text x="110" y="49" textAnchor="middle" fontFamily="IBM Plex Mono, monospace" fontWeight="600" fontSize="10.5" letterSpacing="1.6" fill="currentColor">
-              CANNOT WITHDRAW
-            </text>
-          </g>
-        </svg>
+          <PixelStamp state="settled" text="TRADE ONLY" detail="CANNOT WITHDRAW" size="lg" label="Scope: trade only, cannot withdraw" className="mr-2" />
         </div>
       </div>
       {revoked ? (
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <svg viewBox="0 0 400 260" preserveAspectRatio="none" className="h-full w-full">
-            <path d="M-10 230 410 30" stroke="rgb(var(--ink))" strokeWidth="2.5" strokeDasharray="6 5" />
-          </svg>
-          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-25deg] border-4 border-down px-4 py-1 font-sans text-5xl font-bold tracking-[0.18em] text-down">VOID</span>
+          <span className="absolute left-0 right-0 top-1/2 h-1 -rotate-[14deg] bg-[repeating-linear-gradient(to_right,rgb(var(--ink))_0_12px,transparent_12px_20px)]" />
+          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-[14deg] bg-card px-5 py-1 font-display text-5xl font-bold tracking-[0.18em] text-down px-frame px-tone-down">VOID</span>
         </div>
       ) : null}
-      {footer ? <footer className="el-perf-h flex flex-wrap items-center justify-between gap-3 px-4 py-3">{footer}</footer> : null}
+      {footer ? <footer className="flex flex-wrap items-center justify-between gap-3 border-t-4 border-dashed border-rule/40 px-4 py-3">{footer}</footer> : null}
       {revoked ? <p className="sr-only">This licence is void: the keeper can no longer trade for you.</p> : null}
     </article>
   );

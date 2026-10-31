@@ -1,6 +1,7 @@
 @import "./fonts.css";
 @import "./tokens.css";
 @import "./topo.css";
+@import "./pixel.css";
 
 @tailwind base;
 @tailwind components;
@@ -23,13 +24,19 @@
     color: rgb(var(--ink));
     font-family: theme("fontFamily.sans");
     font-size: 0.9375rem;
-    line-height: 1.5;
+    line-height: 1.6;
+    font-variant-numeric: tabular-nums;
   }
 
+  /* Headings are Pixelify Sans: pixel letters, balanced lines. */
   h1,
   h2,
   h3 {
-    letter-spacing: -0.015em;
+    font-family: theme("fontFamily.display");
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+    text-wrap: balance;
   }
 
   ::selection {
@@ -41,10 +48,10 @@
     outline: none;
   }
 
-  /* Visible focus everywhere: a glacier ring, square like the paper. */
+  /* Visible focus everywhere: a dashed sun outline, clear of the 4 px frame. */
   :focus-visible {
-    outline: 2px solid rgb(var(--accent-line));
-    outline-offset: 2px;
+    outline: 4px dashed rgb(var(--signal));
+    outline-offset: 6px;
   }
 
   /* Inputs draw their own focus treatment on the field wrapper. */
@@ -86,66 +93,75 @@
 }
 
 @layer components {
-  /* Section label: mono micro-caps, tracked, " · " separated. */
+  /* Section label: Silkscreen caps, " · " separated. */
   .eyebrow,
   .caption {
-    font-family: theme("fontFamily.mono");
+    font-family: theme("fontFamily.tag");
     font-size: 0.75rem;
     line-height: 1rem;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: rgb(var(--ink-2));
   }
 
   .label-caps {
-    font-family: theme("fontFamily.mono");
+    font-family: theme("fontFamily.tag");
     font-size: 0.75rem;
     line-height: 1rem;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: rgb(var(--ink-3));
   }
 
-  /* The bordered mono caps box above a headline (Kletia lineage). */
+  /* The tag chip above a headline: Silkscreen caps in a 2 px stepped frame. */
   .label-tab {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 6px 11px;
-    border: var(--border) solid rgb(var(--rule));
+    padding: 4px 10px;
     background: rgb(var(--card));
-    box-shadow: var(--shadow-hard);
-    font-family: theme("fontFamily.mono");
-    font-size: 0.6875rem;
+    box-shadow:
+      0 -2px 0 0 rgb(var(--rule)),
+      0 2px 0 0 rgb(var(--rule)),
+      -2px 0 0 0 rgb(var(--rule)),
+      2px 0 0 0 rgb(var(--rule));
+    font-family: theme("fontFamily.tag");
+    font-size: 0.75rem;
     line-height: 1rem;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: rgb(var(--ink));
   }
 
-  /* A paper sheet: card stock, ink border, hard offset shadow. */
+  /* A card sheet: card stock in a 4 px stepped frame with a block drop. */
   .sheet {
     background: rgb(var(--card));
-    border: var(--border) solid rgb(var(--rule));
-    box-shadow: var(--shadow-hard);
+    box-shadow:
+      0 -4px 0 0 rgb(var(--rule)),
+      0 4px 0 0 rgb(var(--rule)),
+      -4px 0 0 0 rgb(var(--rule)),
+      4px 0 0 0 rgb(var(--rule)),
+      4px 12px 0 0 rgb(var(--shadow-ink)),
+      12px 4px 0 0 rgb(var(--shadow-ink)),
+      8px 8px 0 0 rgb(var(--shadow-ink));
   }
 
   .glass {
     background-color: rgb(var(--card));
   }
 
-  /* Legacy italic accent: Survey keeps headings upright and lets colour carry the accent. */
   .display-italic {
     font-style: normal;
     color: rgb(var(--summit-ink));
   }
 
-  /* Instrument Serif italic: cartographic labels on maps only. */
+  /* Map labels: Silkscreen caps (the survey pins). */
   .map-label {
-    font-family: theme("fontFamily.map");
-    font-style: italic;
+    font-family: theme("fontFamily.tag");
+    font-style: normal;
     font-weight: 400;
-    letter-spacing: 0;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 }
 
@@ -245,30 +261,12 @@ html[data-motion="off"]::view-transition-new(*) {
   animation: none !important;
 }
 
-/* Theme switch: the new sheet is laid over the old one, sliding in from the switch like a map being unfolded. */
-html[data-el-vt="theme"]::view-transition-old(root),
-html[data-el-vt="theme"]::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-html[data-el-vt="theme"]::view-transition-new(root) {
-  animation: el-theme-reveal 520ms var(--ease-out) both;
-}
-@keyframes el-theme-reveal {
-  from {
-    clip-path: circle(0 at var(--el-vt-x, 50%) var(--el-vt-y, 0));
-  }
-  to {
-    clip-path: circle(150vmax at var(--el-vt-x, 50%) var(--el-vt-y, 0));
-  }
-}
-
 /* Route change: the old sheet fades, the new one rises 8 px. */
 html[data-el-vt="route"]::view-transition-old(root) {
   animation: 150ms ease-out both el-fade-out;
 }
 html[data-el-vt="route"]::view-transition-new(root) {
-  animation: 240ms var(--ease-out) both el-sheet-in;
+  animation: 240ms steps(4, end) both el-sheet-in;
 }
 @keyframes el-fade-out {
   to {
@@ -280,67 +278,4 @@ html[data-el-vt="route"]::view-transition-new(root) {
     opacity: 0;
     transform: translateY(8px);
   }
-}
-
-/* Range input (Slider): an ink track and a yellow diamond thumb. */
-.el-range {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  width: 100%;
-  height: 30px;
-  cursor: pointer;
-}
-.el-range::-webkit-slider-runnable-track {
-  height: 4px;
-  background: linear-gradient(
-    to right,
-    rgb(var(--ink)) 0%,
-    rgb(var(--ink)) var(--el-range-fill, 0%),
-    rgb(var(--ink) / 0.22) var(--el-range-fill, 0%),
-    rgb(var(--ink) / 0.22) 100%
-  );
-}
-.el-range::-moz-range-track {
-  height: 4px;
-  background: rgb(var(--ink) / 0.22);
-}
-.el-range::-moz-range-progress {
-  height: 4px;
-  background: rgb(var(--ink));
-}
-.el-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  margin-top: -7px;
-  background: rgb(var(--signal));
-  border: 2px solid rgb(var(--rule));
-  transform: rotate(45deg);
-  transition: transform var(--dur-fast) var(--ease-spring);
-}
-.el-range::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 0;
-  background: rgb(var(--signal));
-  border: 2px solid rgb(var(--rule));
-  transform: rotate(45deg);
-}
-.el-range:active::-webkit-slider-thumb {
-  transform: rotate(45deg) scale(1.15);
-}
-.el-range:focus-visible {
-  outline: none;
-}
-.el-range:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 2px rgb(var(--paper)), 0 0 0 4px rgb(var(--accent-line));
-}
-.el-range:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 2px rgb(var(--paper)), 0 0 0 4px rgb(var(--accent-line));
-}
-.el-range:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
 }

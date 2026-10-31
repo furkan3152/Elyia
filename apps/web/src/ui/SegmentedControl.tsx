@@ -60,7 +60,7 @@ export function SegmentedControl<V extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cx("inline-flex border-2 border-rule bg-card", fullWidth && "flex w-full", className)}
+      className={cx("inline-flex gap-[2px] bg-rule px-frame-thin", fullWidth && "flex w-full", className)}
     >
       {options.map((option, index) => {
         const selected = option.value === value;
@@ -88,10 +88,10 @@ export function SegmentedControl<V extends string>({
               }
             }}
             className={cx(
-              "inline-flex items-center justify-center gap-1.5 whitespace-nowrap border-r-1.5 border-rule font-sans font-bold uppercase tracking-[0.06em] transition-[background-color,color] duration-fast ease-standard last:border-r-0 disabled:cursor-not-allowed disabled:opacity-45",
-              size === "sm" ? "h-7 px-2.5 text-[11px]" : "h-9 px-3.5 text-xs",
+              "inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-tag text-ink transition-[background-color,color] duration-fast ease-standard disabled:cursor-not-allowed disabled:opacity-45",
+              size === "sm" ? "h-7 px-2.5 text-[11px]" : "h-9 px-3.5 text-[13px]",
               fullWidth && "flex-1",
-              selected ? SELECTED[tone] : "text-ink-2 hover:bg-paper-2 hover:text-ink",
+              selected ? SELECTED[tone] : "bg-card text-ink-2 hover:bg-paper-2 hover:text-ink",
               FOCUS_RING,
             )}
           >

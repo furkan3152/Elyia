@@ -94,7 +94,7 @@ export function DataTable<T>({
                   aria-sort={ariaSort}
                   style={column.width ? { width: column.width } : undefined}
                   className={cx(
-                    "whitespace-nowrap border-b-2 border-rule font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-ink-2",
+                    "whitespace-nowrap border-b-4 border-rule font-tag text-[11px] uppercase tracking-[0.04em] text-ink-2",
                     cellPad,
                     ALIGN[align],
                     stickyHeader && "sticky top-0 z-[1] bg-card",

@@ -32,8 +32,8 @@ export function NetworkBadge({ network, showEnvironment = true, size = "sm", ico
   return (
     <span
       className={cx(
-        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-1.5 font-mono",
-        size === "sm" ? "h-6 px-2 text-[11px]" : "h-7 px-2.5 text-xs",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-frame-thin [--pf-c:currentColor] font-tag",
+        size === "sm" ? "h-5 px-2 text-[11px]" : "h-6 px-2.5 text-xs",
         SOFT_TONE[view.realm.tone],
         className,
       )}

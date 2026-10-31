@@ -17,14 +17,14 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 const VARIANT = { soft: SOFT_TONE, outline: OUTLINE_TONE, solid: SOLID_TONE } as const;
 
-/** Static label: status, network, "sample", "live". Square, bordered, mono caps. */
+/** Static label: status, network, "sample", "live". Silkscreen caps in a 2 px stepped frame of its own colour. */
 export function Badge({ tone = "neutral", variant = "soft", size = "sm", dot = false, mono = true, className, children, ...rest }: BadgeProps) {
   return (
     <span
       className={cx(
-        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-1.5",
-        size === "sm" ? "h-6 px-2 text-[11px]" : "h-7 px-2.5 text-xs",
-        mono && "font-mono uppercase tracking-[0.08em]",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-frame-thin [--pf-c:currentColor]",
+        size === "sm" ? "h-5 px-2 text-[11px]" : "h-6 px-2.5 text-xs",
+        mono && "font-tag uppercase tracking-[0.04em]",
         VARIANT[variant][tone],
         className,
       )}
@@ -57,9 +57,9 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(function Chip
       type={type}
       aria-pressed={selected === undefined ? undefined : selected}
       className={cx(
-        "inline-flex min-h-8 items-center gap-1.5 border-1.5 px-2.5 py-1 text-left text-[13px] transition-[background-color,border-color,color,transform] duration-fast ease-standard active:translate-y-px",
+        "inline-flex min-h-8 items-center gap-1.5 px-2.5 py-1 text-left text-[13px] px-frame-thin transition-[background-color,color,transform] duration-fast ease-standard active:translate-y-[2px]",
         mono && "font-mono text-xs",
-        selected ? "border-rule bg-ink text-paper" : cx(SOFT_TONE[tone], "hover:border-rule hover:text-ink"),
+        selected ? "bg-ink text-paper" : cx(SOFT_TONE[tone], "[--pf-c:currentColor] hover:text-ink"),
         FOCUS_RING,
         className,
       )}
@@ -79,8 +79,8 @@ export interface TagProps {
 }
 
 /**
- * The label tab above a headline (Kletia lineage): a bordered mono caps box
- * with a hard shadow. Separate parts with " · ".
+ * The tag chip above a headline: Silkscreen caps in a 2 px stepped frame
+ * (.label-tab). Separate parts with " · ".
  */
 export function Tag({ children, icon, className, as = "span" }: TagProps) {
   const Element = as;
@@ -114,17 +114,17 @@ export interface LayerChipProps {
 export function LayerChip({ layer, network = false, variant = "plain", className }: LayerChipProps) {
   if (variant === "solid") {
     return (
-      <span className={cx("inline-flex h-6 items-center gap-1.5 border-1.5 border-rule px-2 font-mono text-[11px] font-semibold tracking-[0.1em] text-card", LAYER_FILL[layer], className)}>
+      <span className={cx("inline-flex h-6 items-center gap-1.5 px-2 font-tag text-[11px] tracking-[0.04em] text-card px-frame-thin", LAYER_FILL[layer], className)}>
         {LAYER_LABEL[layer]}
-        {network ? <span className="font-normal tracking-normal opacity-90">· {LAYER_NETWORK[layer]}</span> : null}
+        {network ? <span className="tracking-normal opacity-90">· {LAYER_NETWORK[layer]}</span> : null}
       </span>
     );
   }
   return (
-    <span className={cx("inline-flex items-center gap-1.5 whitespace-nowrap font-sans text-[13px] font-bold tracking-[0.04em]", LAYER_TONE_CLASS[layer], className)}>
-      <span aria-hidden="true" className={cx("h-2 w-2 rotate-45", LAYER_FILL[layer])} />
+    <span className={cx("inline-flex items-center gap-1.5 whitespace-nowrap font-tag text-[12px] tracking-[0.04em]", LAYER_TONE_CLASS[layer], className)}>
+      <span aria-hidden="true" className={cx("h-2 w-2", LAYER_FILL[layer])} />
       {LAYER_LABEL[layer]}
-      {network ? <span className="font-medium text-ink-2">· {LAYER_NETWORK[layer]}</span> : null}
+      {network ? <span className="text-ink-2">· {LAYER_NETWORK[layer]}</span> : null}
     </span>
   );
 }
@@ -137,7 +137,7 @@ export interface GradeChipProps {
 /** Route grade chip: the blaze and "GRADE T3". */
 export function GradeChip({ grade, className }: GradeChipProps) {
   return (
-    <span className={cx("inline-flex h-6 items-center gap-1.5 border-1.5 border-rule bg-card px-2 font-mono text-[11px] font-semibold tracking-[0.1em] text-ink", className)}>
+    <span className={cx("inline-flex h-6 items-center gap-1.5 bg-card px-2 font-tag text-[11px] tracking-[0.04em] text-ink px-frame-thin", className)}>
       <Blaze grade={grade} size={12} label={null} />
       GRADE T{grade}
     </span>

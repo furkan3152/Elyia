@@ -39,15 +39,15 @@ export function UnderConstruction({ icon: Icon, title, eyebrow, description, pla
           </Badge>
         </div>
         <div>
-          <h1 className="text-[36px] font-bold leading-[1.05] tracking-[-0.02em] text-ink sm:text-[44px]">{title}</h1>
+          <h1 className="font-display text-[36px] font-bold leading-[1.05] text-ink sm:text-[44px]">{title}</h1>
           <p className="mt-3 max-w-xl text-[17px] leading-relaxed text-ink-2 text-pretty">{description}</p>
         </div>
         <div>
           <p className="caption mb-3">Arriving on this sheet next</p>
-          <ul className="grid gap-2 sm:grid-cols-2">
+          <ul className="grid gap-3 sm:grid-cols-2">
             {planned.map((item) => (
-              <li key={item} className="flex items-start gap-2.5 border-1.5 border-rule/40 bg-paper/50 px-3 py-2.5 text-sm text-ink">
-                <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rotate-45 bg-summit" />
+              <li key={item} className="flex items-start gap-2.5 bg-paper/50 px-3 py-2.5 text-sm text-ink px-frame-thin">
+                <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 bg-summit" />
                 {item}
               </li>
             ))}
@@ -64,7 +64,7 @@ export function UnderConstruction({ icon: Icon, title, eyebrow, description, pla
             </Chip>
           </div>
         ) : null}
-        <div className="flex flex-wrap gap-3 border-t-2 border-dashed border-rule/50 pt-5">
+        <div className="flex flex-wrap gap-4 border-t-4 border-dashed border-rule/30 pt-6">
           <Button variant="primary" onClick={() => openOracle(example)}>
             Where to?
           </Button>

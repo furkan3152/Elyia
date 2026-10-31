@@ -1,5 +1,5 @@
 /**
- * Tailwind maps every colour to a CSS custom property from src/styles/tokens.css,
+ * Pixel Survey. Tailwind maps every colour to a CSS custom property from src/styles/tokens.css,
  * so one class follows both sheets (DAY paper map, NIGHT headlamp). The palette
  * is replaced, not extended: only Survey tokens exist. Channel variables
  * (`--ink: 22 32 27`) allow alpha modifiers such as `border-ink/20`.
@@ -64,64 +64,73 @@ export default {
       sky: { DEFAULT: channel("sky") },
     },
     fontFamily: {
-      sans: ['"Space Grotesk Variable"', '"Space Grotesk"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
-      sign: ['"Space Grotesk Variable"', '"Space Grotesk"', "system-ui", "sans-serif"],
+      // IBM Plex Mono: body and data (every number is tabular).
+      sans: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
-      map: ['"Instrument Serif"', "Georgia", "Times New Roman", "serif"],
-      // legacy: display headings are Space Grotesk now; numerals are mono.
-      display: ['"Space Grotesk Variable"', '"Space Grotesk"', "system-ui", "sans-serif"],
+      // Pixelify Sans: headings and big numbers.
+      display: ['"Pixelify Sans"', '"Courier New"', "monospace"],
+      pixel: ['"Pixelify Sans"', '"Courier New"', "monospace"],
+      // Silkscreen: tags, labels, nav.
+      tag: ["Silkscreen", '"Courier New"', "monospace"],
+      // legacy names
+      sign: ['"Pixelify Sans"', '"Courier New"', "monospace"],
+      map: ["Silkscreen", '"Courier New"', "monospace"],
       numeral: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
     },
+    // Pixel art has no rounded corners: every radius is 0 (frames step instead).
     borderRadius: {
       none: "0",
-      sm: "1px",
-      DEFAULT: "2px",
-      md: "2px",
-      lg: "2px",
-      xl: "3px",
-      "2xl": "3px",
-      "3xl": "4px",
-      full: "9999px",
+      sm: "0",
+      DEFAULT: "0",
+      md: "0",
+      lg: "0",
+      xl: "0",
+      "2xl": "0",
+      "3xl": "0",
+      full: "0",
     },
     extend: {
       fontSize: {
         // 12 px floor for anything a person must read.
-        micro: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.14em" }],
-        "display-xl": ["clamp(3rem, 7vw, 5rem)", { lineHeight: "1", letterSpacing: "-0.02em", fontWeight: "700" }],
-        "display-lg": ["clamp(2.5rem, 5vw, 4rem)", { lineHeight: "1.02", letterSpacing: "-0.02em", fontWeight: "700" }],
-        "display-md": ["clamp(2rem, 3.6vw, 2.75rem)", { lineHeight: "1.05", letterSpacing: "-0.02em", fontWeight: "700" }],
-        "display-sm": ["clamp(1.75rem, 2.6vw, 2.25rem)", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+        micro: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.08em" }],
+        "display-xl": ["clamp(2.75rem, 7vw, 5.25rem)", { lineHeight: "1", letterSpacing: "0.01em", fontWeight: "700" }],
+        "display-lg": ["clamp(2rem, 4.6vw, 3.25rem)", { lineHeight: "1.05", letterSpacing: "0.01em", fontWeight: "700" }],
+        "display-md": ["clamp(1.75rem, 3.4vw, 2.5rem)", { lineHeight: "1.08", letterSpacing: "0.01em", fontWeight: "700" }],
+        "display-sm": ["clamp(1.5rem, 2.4vw, 1.875rem)", { lineHeight: "1.1", letterSpacing: "0.01em", fontWeight: "700" }],
       },
       borderWidth: {
         DEFAULT: "1px",
-        1.5: "1.5px",
+        1.5: "2px",
         2: "2px",
-        3: "3px",
+        3: "4px",
+        4: "4px",
       },
       boxShadow: {
-        hard: "3px 3px 0 rgb(var(--shadow-ink))",
-        "hard-sm": "2px 2px 0 rgb(var(--shadow-ink))",
-        "hard-lg": "4px 4px 0 rgb(var(--shadow-ink))",
-        "hard-xl": "6px 6px 0 rgb(var(--shadow-ink))",
+        // One solid block offset, in whole pixel units. No blur, ever.
+        hard: "4px 4px 0 0 rgb(var(--shadow-ink))",
+        "hard-sm": "2px 2px 0 0 rgb(var(--shadow-ink))",
+        "hard-lg": "8px 8px 0 0 rgb(var(--shadow-ink))",
+        "hard-xl": "12px 12px 0 0 rgb(var(--shadow-ink))",
         none: "none",
-        // legacy names, now hard shadows
-        panel: "3px 3px 0 rgb(var(--shadow-ink))",
-        raised: "4px 4px 0 rgb(var(--shadow-ink))",
-        "glow-violet": "4px 4px 0 rgb(var(--shadow-ink))",
+        // legacy names, now block shadows
+        panel: "4px 4px 0 0 rgb(var(--shadow-ink))",
+        raised: "8px 8px 0 0 rgb(var(--shadow-ink))",
+        "glow-violet": "4px 4px 0 0 rgb(var(--shadow-ink))",
         "glow-gold": "0 0 0 2px rgb(var(--signal))",
-        sm: "2px 2px 0 rgb(var(--shadow-ink))",
-        focus: "0 0 0 2px rgb(var(--paper)), 0 0 0 4px rgb(var(--accent-line))",
+        sm: "2px 2px 0 0 rgb(var(--shadow-ink))",
+        focus: "0 0 0 2px rgb(var(--paper)), 0 0 0 4px rgb(var(--signal))",
       },
+      // Pixel things move in steps.
       transitionTimingFunction: {
-        draw: "cubic-bezier(.2,.8,.2,1)",
-        spring: "cubic-bezier(.34,1.56,.64,1)",
-        out: "cubic-bezier(.16,1,.3,1)",
-        standard: "cubic-bezier(.2,0,0,1)",
-        pluck: "cubic-bezier(.16,1,.3,1)",
+        draw: "steps(6, end)",
+        spring: "steps(4, end)",
+        out: "steps(5, end)",
+        standard: "steps(3, end)",
+        pluck: "steps(4, end)",
       },
       transitionDuration: {
         instant: "90ms",
-        fast: "150ms",
+        fast: "120ms",
         base: "240ms",
         slow: "420ms",
         draw: "1200ms",
@@ -190,11 +199,11 @@ export default {
         heartbeat: "heartbeat 900ms cubic-bezier(.16,1,.3,1) 1",
         "flash-up": "flash-up 900ms ease-out 1",
         "flash-down": "flash-down 900ms ease-out 1",
-        "rise-in": "rise-in 420ms cubic-bezier(.16,1,.3,1) both",
+        "rise-in": "rise-in 240ms steps(3, end) both",
         "fade-in": "fade-in 240ms ease-out both",
-        "sheet-in-right": "sheet-in-right 280ms cubic-bezier(.16,1,.3,1) both",
-        "sheet-in-bottom": "sheet-in-bottom 280ms cubic-bezier(.16,1,.3,1) both",
-        "dialog-in": "dialog-in 240ms cubic-bezier(.16,1,.3,1) both",
+        "sheet-in-right": "sheet-in-right 240ms steps(5, end) both",
+        "sheet-in-bottom": "sheet-in-bottom 240ms steps(5, end) both",
+        "dialog-in": "dialog-in 200ms steps(3, end) both",
         caret: "caret 1.1s steps(1) infinite",
         "pending-bar": "pending-bar 2.4s cubic-bezier(.16,1,.3,1) forwards",
         "aurora-a": "aurora-a 1s linear 1",

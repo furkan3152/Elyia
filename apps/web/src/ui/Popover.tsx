@@ -49,7 +49,7 @@ export function Popover({ trigger, children, align = "end", label, className }: 
           role="dialog"
           aria-label={label}
           className={cx(
-            "absolute top-full z-[75] mt-2 min-w-[240px] animate-dialog-in border-2 border-rule bg-card p-3 shadow-hard-lg",
+            "absolute top-full z-[75] mt-3 min-w-[240px] animate-dialog-in bg-card p-3 px-frame px-drop",
             align === "end" ? "right-0" : "left-0",
             className,
           )}

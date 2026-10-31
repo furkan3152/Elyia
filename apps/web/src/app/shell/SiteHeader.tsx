@@ -8,8 +8,10 @@ import { Sheet } from "../../ui/Sheet";
 import { Link } from "../routes/Link";
 import { routeHref } from "../routes/routeTable";
 import { useRoute } from "../routes/useRoute";
-import { ElyiaLogo } from "./ElyiaMark";
-import { MotionSwitch } from "./MotionToggle";
+import { useUiStore } from "../state/uiStore";
+import { AltimeterHeads } from "./AltimeterHeads";
+import { HeaderGrid, NAV_LINK, WhereToTrigger } from "./HeaderGrid";
+import { MotionSwitch, MotionToggle } from "./MotionToggle";
 import { PRIMARY_NAV } from "./navItems";
 import { sheetLabel } from "./sheets";
 import { ThemeToggle } from "./ThemeToggle";
@@ -20,55 +22,57 @@ const LINKS = [
   { label: "Developers", to: routeHref("developers") },
 ] as const;
 
-/** Site header (Survey): mark, DECK · TRADE · PORTFOLIO · GUIDE, the sheet label and the one action: Open the deck. Wallet-free. */
+/** Site header on the centre axis: pixel Ely and ELYIA, the nav centred, WHERE TO? ⌘K, DAY/NIGHT, Motion and Open the deck. Wallet-free. */
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { route } = useRoute();
+  const mode = useUiStore((state) => state.mode);
   return (
-    <header className="relative z-30 border-b-2 border-rule bg-paper">
-      <div className="mx-auto flex h-[60px] max-w-[1440px] items-center gap-6 px-4 sm:px-6 lg:gap-8 lg:px-10">
-        <Link to="/" aria-label="Elyia home" className={cx("shrink-0", FOCUS_RING)}>
-          <ElyiaLogo />
-        </Link>
-        <nav aria-label="Primary" className="hidden items-center gap-6 lg:flex">
-          {LINKS.map((link) => (
-            <Link
-              key={link.label}
-              to={link.to}
-              match="prefix"
-              className={cx(
-                "relative inline-flex h-[60px] items-center font-sans text-[13px] font-bold uppercase tracking-[0.1em] text-ink-2 hover:text-ink aria-[current=page]:text-ink after:absolute after:inset-x-0 after:bottom-[14px] after:h-[3px] after:bg-accent-line after:opacity-0 aria-[current=page]:after:opacity-100",
-                FOCUS_RING,
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <span className="ml-auto hidden font-mono text-xs uppercase tracking-[0.06em] text-ink xl:inline">{sheetLabel(route.id)} · 1 : 25 000</span>
-        <div className="ml-auto flex items-center gap-2.5 xl:ml-0">
-          <ThemeToggle className="hidden sm:inline-flex" />
-          <ButtonLink to={routeHref("deck")} variant="primary" size="md" rightIcon={<span aria-hidden="true">→</span>}>
-            Open the deck
-          </ButtonLink>
-          <IconButton label="Menu" icon={<Menu className="h-5 w-5" aria-hidden="true" />} variant="ink" className="lg:hidden" onClick={() => setOpen(true)} />
-        </div>
-      </div>
+    <>
+      <HeaderGrid
+        home="/"
+        homeLabel="Elyia home"
+        navLabel="Primary"
+        nav={PRIMARY_NAV.map((link) => ({ label: link.label, to: link.href })).map((link) => (
+          <Link key={link.label} to={link.to} match="prefix" className={cx(NAV_LINK, FOCUS_RING)}>
+            {link.label}
+          </Link>
+        ))}
+        actions={
+          <>
+            <WhereToTrigger className="hidden xl:inline-flex" />
+            <ThemeToggle compact />
+            <MotionToggle compact className="hidden xl:inline-flex" />
+            <ButtonLink to={routeHref("deck")} variant="primary" size="sm" className="h-9" rightIcon={<span aria-hidden="true">→</span>}>
+              Open the deck
+            </ButtonLink>
+            <IconButton label="Menu" icon={<Menu className="h-5 w-5" aria-hidden="true" />} variant="ink" size="sm" className="h-9 w-9 lg:hidden" onClick={() => setOpen(true)} />
+          </>
+        }
+        strip={
+          <>
+            <span className="hidden truncate justify-self-start text-ink-2 sm:block">{sheetLabel(route.id)}</span>
+            <AltimeterHeads className="hidden justify-self-center sm:inline-flex" />
+            <AltimeterHeads compact className="justify-self-start sm:hidden" />
+            <span className="justify-self-end text-ink-2">{mode === "testnet" ? "Practice wall" : "Mainnet"}</span>
+          </>
+        }
+      />
       <Sheet open={open} onClose={() => setOpen(false)} side="bottom" title="Elyia">
-        <ul className="flex flex-col border-t-2 border-rule">
+        <ul className="flex flex-col">
           {LINKS.map((link) => (
-            <li key={link.label} className="border-b-1.5 border-rule/30">
-              <Link to={link.to} onClick={() => setOpen(false)} className={cx("block px-1 py-3 text-2xl font-bold tracking-[-0.01em] text-ink hover:bg-paper-2", FOCUS_RING)}>
+            <li key={link.label} className="border-b-2 border-dashed border-rule/20">
+              <Link to={link.to} onClick={() => setOpen(false)} className={cx("block px-1 py-3 font-display text-2xl font-bold text-ink hover:bg-paper-2", FOCUS_RING)}>
                 {link.label}
               </Link>
             </li>
           ))}
         </ul>
-        <div className="mt-4 flex items-center justify-between gap-3 border-2 border-rule p-3">
+        <div className="mt-6 flex items-center justify-between gap-3 bg-card p-3 px-frame-thin">
           <MotionSwitch />
           <ThemeToggle />
         </div>
       </Sheet>
-    </header>
+    </>
   );
 }

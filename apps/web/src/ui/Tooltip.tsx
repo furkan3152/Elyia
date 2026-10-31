@@ -56,7 +56,7 @@ export function Tooltip({ content, children, side = "top", align = "center", del
           id={id}
           role="tooltip"
           className={cx(
-            "pointer-events-none absolute z-[70] w-max max-w-[260px] animate-fade-in border-2 border-rule bg-ink px-2.5 py-1.5 font-mono text-[11px] leading-snug text-paper shadow-hard-sm",
+            "pointer-events-none absolute z-[70] w-max max-w-[260px] animate-fade-in bg-ink px-2.5 py-1.5 font-mono text-xs leading-snug text-paper",
             side === "top" ? "bottom-full mb-2" : "top-full mt-2",
             ALIGN[align],
           )}

@@ -1,16 +1,9 @@
-import { X } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { usePageVisible } from "../motion/usePageVisible";
-import { cx, FOCUS_RING } from "./cx";
-import { getToasts, MAX_VISIBLE_TOASTS, subscribeToasts, toast as toastApi, type ToastRecord, type ToastTone } from "./toast";
-
-const TONES: Readonly<Record<ToastTone, { mark: string; markClass: string; label: string }>> = {
-  success: { mark: "◉", markClass: "text-up", label: "Done" },
-  error: { mark: "✕", markClass: "text-down", label: "Alert" },
-  info: { mark: "●", markClass: "text-summit-ink", label: "Note" },
-  warning: { mark: "▲", markClass: "text-warn-ink", label: "Caution" },
-};
+import { ElyToast } from "../pixel/ElyToast";
+import { cx } from "./cx";
+import { getToasts, MAX_VISIBLE_TOASTS, subscribeToasts, toast as toastApi, type ToastRecord } from "./toast";
 
 function clock(at: number | undefined): string {
   if (at === undefined) return "";
@@ -27,7 +20,6 @@ function ToastItem({ item, pageVisible }: { readonly item: ToastRecord; readonly
   const halted = held || !pageVisible || item.leaving || persistent;
   const remainingRef = useRef(duration);
   const revisionRef = useRef(item.revision);
-  const tone = TONES[item.tone];
 
   useEffect(() => {
     if (revisionRef.current !== item.revision) {
@@ -49,47 +41,27 @@ function ToastItem({ item, pageVisible }: { readonly item: ToastRecord; readonly
       onPointerLeave={() => setHeld(false)}
       onFocus={() => setHeld(true)}
       onBlur={() => setHeld(false)}
-      className={cx(
-        "pointer-events-auto relative w-full border-2 border-rule bg-card shadow-hard-lg",
-        item.leaving ? "opacity-0 transition-opacity duration-fast" : "animate-rise-in",
-      )}
+      className={cx("pointer-events-auto relative w-full", item.leaving && "opacity-0 transition-opacity duration-fast")}
     >
-      <div className="flex items-center gap-2 border-b-1.5 border-dashed border-rule/50 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-2">
-        <span aria-hidden="true" className={tone.markClass}>
-          {tone.mark}
-        </span>
-        <span className="tnum">{clock(item.at)}</span>
-        <span aria-hidden="true">·</span>
-        <span className="font-semibold text-ink">{item.from ?? "BASE"}</span>
-        <span aria-hidden="true">→ YOU</span>
-        <button
-          type="button"
-          aria-label="Dismiss message"
-          onClick={() => toastApi.dismiss(item.id)}
-          className={cx("-mr-1 ml-auto inline-flex h-6 w-6 items-center justify-center text-ink-3 transition-colors hover:bg-ink hover:text-paper", FOCUS_RING)}
-        >
-          <X className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
-      </div>
-      <div className="px-3 pb-3 pt-2">
-        <p className="text-sm font-bold text-ink">
-          <span className="sr-only">{tone.label}: </span>
-          {item.title}
-        </p>
-        {item.description ? <p className="mt-0.5 text-[13px] leading-snug text-ink-2">{item.description}</p> : null}
-        {item.action ? (
-          <button
-            type="button"
-            onClick={() => {
-              item.action?.onClick();
-              toastApi.dismiss(item.id);
-            }}
-            className={cx("mt-2 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-summit-ink underline decoration-2 underline-offset-4 hover:text-ink", FOCUS_RING)}
-          >
-            {item.action.label} →
-          </button>
-        ) : null}
-      </div>
+      <ElyToast
+        tone={item.tone}
+        title={item.title}
+        description={item.description}
+        from={item.from ?? "BASE"}
+        time={clock(item.at)}
+        onDismiss={() => toastApi.dismiss(item.id)}
+        action={
+          item.action
+            ? {
+                label: item.action.label,
+                onClick: () => {
+                  item.action?.onClick();
+                  toastApi.dismiss(item.id);
+                },
+              }
+            : undefined
+        }
+      />
     </li>
   );
 }
@@ -104,7 +76,7 @@ export function Toaster() {
   const urgent = visible.filter((item) => item.tone === "error" || item.tone === "warning");
   const calm = visible.filter((item) => item.tone !== "error" && item.tone !== "warning");
   return (
-    <div className="pointer-events-none fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[90] flex flex-col items-end gap-2 md:inset-x-auto md:bottom-6 md:right-6 md:w-[380px]">
+    <div className="pointer-events-none fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[90] flex flex-col items-end gap-2 md:inset-x-auto md:bottom-8 md:right-8 md:w-[420px]">
       <ol aria-live="assertive" aria-relevant="additions" className="flex w-full flex-col gap-2">
         {urgent.map((item) => (
           <ToastItem key={item.id} item={item} pageVisible={pageVisible} />

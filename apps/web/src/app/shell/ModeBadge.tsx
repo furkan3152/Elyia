@@ -22,8 +22,8 @@ export function ModeBadge({ className, compact = false }: { readonly className?:
           type="button"
           {...props}
           className={cx(
-            "inline-flex h-7 shrink-0 items-center gap-2 border-2 border-rule px-2 font-mono text-[11px] font-semibold tracking-[0.1em]",
-            mode === "testnet" ? "bg-signal text-signal-ink" : "bg-ink text-paper",
+            "inline-flex h-6 shrink-0 items-center gap-2 px-2 font-tag text-[11px] uppercase px-frame-thin",
+            mode === "testnet" ? "bg-signal text-[#16201B] [--pf-c:#16201B]" : "bg-ink text-paper",
             FOCUS_RING,
             className,
           )}
@@ -51,7 +51,7 @@ export function ModeBadge({ className, compact = false }: { readonly className?:
               ? "Mainnet uses real funds. The practice wall and mainnet never share an intent."
               : (mainnet.reason ?? "Mainnet is not available yet.")}
           </p>
-          <p className="font-mono text-[11px] text-ink-3">Elysium 99801 · HyperEVM 998 · HyperCore testnet · separate capital</p>
+          <p className="font-mono text-xs text-ink-3">Elysium 99801 · HyperEVM 998 · HyperCore testnet · separate capital</p>
         </div>
       )}
     </Popover>

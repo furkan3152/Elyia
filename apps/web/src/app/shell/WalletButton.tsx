@@ -15,7 +15,7 @@ export function WalletButton({ compact = false }: { readonly compact?: boolean }
       {({ account, chain, mounted, openAccountModal, openChainModal, openConnectModal, authenticationStatus }) => {
         const ready = mounted && authenticationStatus !== "loading";
         const connected = ready && account && chain;
-        if (!ready) return <span aria-hidden="true" className="el-skeleton h-9 w-28" />;
+        if (!ready) return <span aria-hidden="true" className="el-skeleton h-9 w-28 px-frame-thin" />;
         if (!connected) {
           return (
             <Button variant="ink" size="sm" onClick={openConnectModal} className="h-9">
@@ -32,7 +32,7 @@ export function WalletButton({ compact = false }: { readonly compact?: boolean }
         }
         const family = chain.id === 998 || chain.id === 999 ? "hyperevm" : "elysium";
         return (
-          <span className="inline-flex h-9 items-stretch border-2 border-rule bg-card shadow-hard-sm">
+          <span className="inline-flex h-9 items-stretch gap-[2px] bg-rule px-frame-thin px-drop">
             {compact ? null : (
               <button
                 type="button"
@@ -40,7 +40,7 @@ export function WalletButton({ compact = false }: { readonly compact?: boolean }
                 title={`Network: ${chain.name ?? "unknown"}`}
                 aria-label={`Network ${chain.name ?? ""}, change network`}
                 className={cx(
-                  "inline-flex items-center gap-1.5 border-r-2 border-rule px-2 font-mono text-[11px] font-semibold tracking-[0.1em] hover:bg-paper-2",
+                  "inline-flex items-center gap-1.5 bg-card px-2 font-tag text-[11px] uppercase hover:bg-paper-2",
                   family === "elysium" ? "text-summit-ink" : "text-ridge",
                   FOCUS_RING,
                 )}
@@ -49,8 +49,8 @@ export function WalletButton({ compact = false }: { readonly compact?: boolean }
                 <span className="hidden xl:inline">{family === "elysium" ? "SUMMIT" : "RIDGE"}</span>
               </button>
             )}
-            <button type="button" onClick={openAccountModal} aria-label={`Account ${account.address}`} className={cx("inline-flex items-center gap-2 px-2.5 font-mono text-xs text-ink hover:bg-paper-2", FOCUS_RING)}>
-              <span aria-hidden="true" className="h-2 w-2 rotate-45 bg-up" />
+            <button type="button" onClick={openAccountModal} aria-label={`Account ${account.address}`} className={cx("inline-flex items-center gap-2 bg-card px-2.5 font-mono text-xs text-ink hover:bg-paper-2", FOCUS_RING)}>
+              <span aria-hidden="true" className="h-2 w-2 bg-up" />
               <span className="tnum">{account.displayName}</span>
             </button>
           </span>

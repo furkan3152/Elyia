@@ -12,8 +12,8 @@ export interface WhereToInputProps extends Omit<React.InputHTMLAttributes<HTMLIn
 }
 
 /**
- * The "WHERE TO?" signpost input: an ink blade with a pointed end, then a
- * mono line where you write the sentence. Used by the ⌘K command signpost,
+ * The "WHERE TO?" input: an ink tab in Silkscreen inside a 4 px pixel frame,
+ * then a mono line where you write the sentence. Used by the ⌘K command signpost,
  * the deck and the landing.
  */
 export const WhereToInput = React.forwardRef<HTMLInputElement, WhereToInputProps>(function WhereToInput(
@@ -26,7 +26,7 @@ export const WhereToInput = React.forwardRef<HTMLInputElement, WhereToInputProps
   return (
     <div
       className={cx(
-        "group flex w-full min-w-0 items-stretch border-2 border-rule bg-card shadow-hard transition-[box-shadow,transform] duration-fast focus-within:-translate-x-px focus-within:-translate-y-px focus-within:shadow-hard-lg",
+        "group flex w-full min-w-0 items-stretch bg-card px-frame px-drop focus-within:outline-dashed focus-within:outline-4 focus-within:outline-offset-[10px] focus-within:outline-signal",
         tall ? "h-14" : "h-11",
         containerClassName,
       )}
@@ -34,7 +34,7 @@ export const WhereToInput = React.forwardRef<HTMLInputElement, WhereToInputProps
       <label
         htmlFor={inputId}
         className={cx(
-          "el-blade relative flex shrink-0 items-center bg-ink pl-3.5 pr-6 font-sans font-bold uppercase tracking-[0.06em] text-paper",
+          "relative flex shrink-0 items-center bg-ink px-4 font-tag uppercase tracking-[0.04em] text-paper",
           tall ? "text-base sm:text-lg" : "text-sm",
         )}
       >

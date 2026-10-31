@@ -1,6 +1,8 @@
-import React, { useId } from "react";
+import React, { useCallback, useId } from "react";
 
 import { useNow } from "../hooks/useNow";
+import { PixelCanvas } from "../pixel/PixelCanvas";
+import { paintRouteProfile } from "../pixel/route";
 import { GradeChip } from "../ui/Badge";
 import { cx } from "../ui/cx";
 import type { Grade } from "./geometry/conditions";
@@ -77,7 +79,8 @@ const STATE_CLASS: Readonly<Record<RouteStepState, string>> = {
   failed: "font-semibold text-down",
 };
 const LAYER_TEXT: Readonly<Record<Layer, string>> = { floor: "text-floor", ridge: "text-ridge", summit: "text-summit-ink" };
-const LAYER_COLOR: Readonly<Record<Layer, string>> = { floor: "rgb(var(--floor))", ridge: "rgb(var(--ridge))", summit: "rgb(var(--summit-ink))" };
+/* Band names sit on fixed light band colours, so they use fixed dark inks (AA on both sheets). */
+const LAYER_TEXT_ON_BAND: Readonly<Record<Layer, string>> = { floor: "text-[#0F4C5C]", ridge: "text-[#6B4423]", summit: "text-[#1F5866]" };
 
 const PW = 720;
 const PH = 198;
@@ -116,14 +119,19 @@ function Countdown({ expiresAt, boundTo }: { readonly expiresAt: number; readonl
 export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote, rules = [], binding, evidence = [], action, note, sample = false, className }: RouteCardProps) {
   const labelId = useId();
   const profile = routeProfile(steps, PW, PH, undefined, GUTTER);
+  const drawProfile = useCallback(
+    (ctx: CanvasRenderingContext2D, info: { readonly w: number; readonly h: number; readonly seconds: number; readonly still: boolean }) =>
+      paintRouteProfile(ctx, steps, info.w, info.h, (GUTTER / PW) * info.w, info.seconds, info.still),
+    [steps],
+  );
   const layers = new Set(steps.flatMap((step) => [step.layer, step.toLayer].filter(Boolean) as Layer[]));
   const proven = evidence.filter((item) => item.proven).length;
   return (
-    <article className={cx("el-laminate grid border-2 border-rule bg-card shadow-hard-lg lg:grid-cols-[minmax(0,1fr)_240px]", className)} aria-labelledby={labelId}>
+    <article className={cx("grid bg-card px-frame px-drop lg:grid-cols-[minmax(0,1fr)_240px]", className)} aria-labelledby={labelId}>
       <div className="min-w-0">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-rule px-4 py-3 sm:px-5">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-rule px-4 py-3 sm:px-5">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
-            <h3 id={labelId} className="text-[26px] font-bold leading-none tracking-[-0.02em] text-ink">
+            <h3 id={labelId} className="font-display text-[28px] font-bold leading-none text-ink">
               Route {id}
             </h3>
             <p className="caption">
@@ -133,66 +141,58 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
           </div>
           <GradeChip grade={grade} />
         </header>
-        <p className="border-b-1.5 border-dashed border-rule/60 px-4 py-2.5 font-mono text-[15px] leading-snug text-ink sm:px-5">“{sentence}”</p>
+        <p className="border-b-2 border-dashed border-rule/40 px-4 py-3 font-mono text-[15px] leading-snug text-ink sm:px-5">“{sentence}”</p>
         {/* the elevation profile of the route */}
-        <div className="relative overflow-x-auto border-b-2 border-rule bg-paper/40">
-          <div className="relative min-w-[560px]">
-          <svg viewBox={`0 0 ${PW} ${PH}`} width="100%" role="img" aria-label={`Route profile: ${steps.map((s, i) => `${i + 1} ${s.action} on the ${s.toLayer ? `${s.layer} to the ${s.toLayer}` : s.layer}, ${s.state}`).join("; ")}`} className="block">
-            {(["summit", "ridge", "floor"] as const).map((layer, index) => (
-              <g key={layer}>
-                <rect x="0" y={index * (PH / 3)} width={PW} height={PH / 3} fill={LAYER_COLOR[layer]} fillOpacity={0.045 + index * 0.02} />
-                {index > 0 ? <path d={`M0,${index * (PH / 3)}H${PW}`} stroke="rgb(var(--ink))" strokeOpacity="0.4" strokeDasharray="1 4" /> : null}
-                {index === 0 ? <path d={`M${GUTTER - 14},0V${PH}`} stroke="rgb(var(--ink))" strokeOpacity="0.25" strokeDasharray="1 3" /> : null}
-                <text x="12" y={index * (PH / 3) + 30} fontFamily="Instrument Serif, Georgia, serif" fontStyle="italic" fontSize="20" fill={LAYER_COLOR[layer]}>
-                  The {LAYER_NAME[layer]}
-                </text>
-                <text x="12" y={index * (PH / 3) + 47} fontFamily="IBM Plex Mono, monospace" fontSize="11" letterSpacing="0.8" fill={LAYER_COLOR[layer]}>
-                  {LAYER_NETWORK[layer].toUpperCase()}
-                </text>
-              </g>
-            ))}
-            <path d={profile.d} pathLength={1} fill="none" stroke="rgb(var(--ink))" strokeWidth="2.2" strokeLinejoin="round" className="el-draw" />
-            <circle cx={profile.start.x} cy={profile.start.y} r="5" fill="rgb(var(--card))" stroke="rgb(var(--ink))" strokeWidth="2" />
-            {profile.waypoints.map((point, index) => {
-              const step = steps[index]!;
-              const done = step.state === "settled";
-              const live = step.state === "climbing";
-              return (
-                <g key={step.id} className="el-draw-fade" style={{ animationDelay: `${300 + index * 120}ms` }}>
-                  <circle cx={point.x} cy={point.y} r="8" fill={live ? "rgb(var(--signal))" : done ? "rgb(var(--ink))" : "rgb(var(--card))"} stroke="rgb(var(--ink))" strokeWidth="1.8" />
-                  <text x={point.x} y={point.y + 3.5} textAnchor="middle" fontFamily="IBM Plex Mono, monospace" fontSize="10" fontWeight="600" fill={done ? "rgb(var(--card))" : "rgb(var(--ink))"}>
-                    {index + 1}
-                  </text>
-                  <text x={point.x > PW - 70 ? point.x + 8 : point.x} y={point.y - 14} textAnchor={point.x > PW - 70 ? "end" : "middle"} fontFamily="Space Grotesk Variable, Space Grotesk, sans-serif" fontSize="11.5" fontWeight="700" fill="rgb(var(--ink))" paintOrder="stroke" stroke="rgb(var(--card))" strokeWidth="3">
-                    {step.action.toUpperCase()} · {step.eta}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-          {/* hut stamps on settled steps */}
+        <div className="relative border-b-4 border-rule">
+          <PixelCanvas
+            width={240}
+            height={66}
+            pixelSize={3}
+            draw={drawProfile}
+            animate={steps.some((step) => step.state === "climbing")}
+            fps={4}
+            label={`Route profile: ${steps.map((s, i) => `${i + 1} ${s.action} on the ${s.toLayer ? `${s.layer} to the ${s.toLayer}` : s.layer}, ${s.state}`).join("; ")}`}
+            redrawKey={steps}
+          />
+          {(["summit", "ridge", "floor"] as const).map((layer, index) => (
+            <span key={layer} aria-hidden="true" className={cx("pointer-events-none absolute left-3 font-tag text-[11px] uppercase leading-tight", LAYER_TEXT_ON_BAND[layer])} style={{ top: `calc(${(index * 100) / 3}% + 8px)` }}>
+              {LAYER_NAME[layer]}
+              <span className="block text-[10px] opacity-80">{LAYER_NETWORK[layer]}</span>
+            </span>
+          ))}
           {profile.waypoints.map((point, index) => {
             const step = steps[index]!;
-            if (step.state !== "settled") return null;
+            const done = step.state === "settled";
+            const live = step.state === "climbing";
+            const right = point.x > PW - 90;
             return (
-              <span key={step.id} className="pointer-events-none absolute" style={{ left: `${((point.x > PW - 80 ? point.x - 72 : point.x + 10) / PW) * 100}%`, top: `${((point.y + 12) / PH) * 100}%` }}>
-                <HutStamp layer={step.toLayer ?? step.layer} block={step.block} time={step.time} size={56} animate delayMs={500 + index * 160} label={null} />
-              </span>
+              <React.Fragment key={step.id}>
+                <span
+                  aria-hidden="true"
+                  className={cx("pointer-events-none absolute flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center font-tag text-[11px] px-frame-thin", live ? "bg-signal text-[#16201B]" : done ? "bg-[#16201B] text-[#FFF9EC]" : "bg-[#FFF9EC] text-[#16201B]")}
+                  style={{ left: `${(point.x / PW) * 100}%`, top: `${(point.y / PH) * 100}%` }}
+                >
+                  {index + 1}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className={cx("pointer-events-none absolute whitespace-nowrap bg-[#16201B] px-1 font-tag text-[10px] uppercase leading-4 text-[#FFF9EC]", right ? "-translate-x-[calc(100%-10px)]" : "-translate-x-1/2")}
+                  style={{ left: `${(point.x / PW) * 100}%`, top: `calc(${(point.y / PH) * 100}% + 14px)` }}
+                >
+                  {step.action} · {step.eta}
+                </span>
+              </React.Fragment>
             );
           })}
-          <span className="pointer-events-none absolute bottom-1 font-sans text-[11px] font-bold uppercase tracking-[0.06em] text-ink" style={{ left: `${(GUTTER / PW) * 100}%` }}>
-            Pack
-          </span>
-          </div>
         </div>
         {/* waypoints: the log book */}
         <div className="el-logbook relative overflow-x-auto">
           <table className="w-full border-separate border-spacing-0 text-[13px]">
             <caption className="sr-only">Waypoints of route {id}</caption>
             <thead>
-              <tr className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2">
+              <tr className="font-tag text-[11px] uppercase tracking-[0.04em] text-ink-2">
                 {["WP", "Layer", "Action · venue", "In → out", "Hut fee", "Time", "State"].map((heading, index) => (
-                  <th key={heading} scope="col" className={cx("whitespace-nowrap border-b-1.5 border-rule py-2 font-medium", index === 0 ? "pl-5 pr-2 text-left" : "px-3 text-left", (index === 4 || index === 5) && "text-right")}>
+                  <th key={heading} scope="col" className={cx("whitespace-nowrap border-b-4 border-rule py-2 font-normal", index === 0 ? "pl-5 pr-2 text-left" : "px-3 text-left", (index === 4 || index === 5) && "text-right")}>
                     {heading}
                   </th>
                 ))}
@@ -201,8 +201,8 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
             <tbody>
               {steps.map((step, index) => (
                 <tr key={step.id} className={cx(step.state === "climbing" && "bg-signal [&_*]:!text-signal-ink")}>
-                  <td className="tnum border-b border-rule/15 py-2 pl-5 pr-2 font-mono text-ink-2">{index + 1}</td>
-                  <td className="whitespace-nowrap border-b border-rule/15 px-3 py-2 font-mono text-xs font-semibold">
+                  <td className="tnum border-b-2 border-dashed border-rule/15 py-2 pl-5 pr-2 font-mono text-ink-2">{index + 1}</td>
+                  <td className="whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 font-mono text-xs font-semibold">
                     <span className={LAYER_TEXT[step.layer]}>{step.layer.toUpperCase()}</span>
                     {step.toLayer ? (
                       <>
@@ -211,21 +211,27 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
                       </>
                     ) : null}
                   </td>
-                  <td className="whitespace-nowrap border-b border-rule/15 px-3 py-2 text-ink">
+                  <td className="whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 text-ink">
                     {step.action} <span className="text-ink-3">·</span> {step.venue}
                   </td>
-                  <td className="tnum whitespace-nowrap border-b border-rule/15 px-3 py-2 font-mono text-xs text-ink">{step.inOut}</td>
-                  <td className="tnum whitespace-nowrap border-b border-rule/15 px-3 py-2 text-right font-mono text-xs text-ink">{step.fee}</td>
-                  <td className="tnum whitespace-nowrap border-b border-rule/15 px-3 py-2 text-right font-mono text-xs text-ink-2">{step.eta}</td>
-                  <td className={cx("whitespace-nowrap border-b border-rule/15 px-3 py-2 font-mono text-xs", STATE_CLASS[step.state])}>{STATE_LABEL[step.state]}</td>
+                  <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 font-mono text-xs text-ink">{step.inOut}</td>
+                  <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 text-right font-mono text-xs text-ink">{step.fee}</td>
+                  <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 text-right font-mono text-xs text-ink-2">{step.eta}</td>
+                  <td className={cx("whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 font-tag text-[11px] uppercase", STATE_CLASS[step.state])}>
+                    {step.state === "settled" ? (
+                      <HutStamp layer={step.toLayer ?? step.layer} time={step.time} size={48} animate delayMs={300 + index * 160} label={`Settled on the ${step.toLayer ?? step.layer}${step.block !== undefined ? `, block ${step.block}` : ""}`} />
+                    ) : (
+                      STATE_LABEL[step.state]
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         {evidence.length > 0 ? (
-          <div className="m-4 border-1.5 border-rule sm:m-5">
-            <p className="flex justify-between gap-3 border-b-1.5 border-rule px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2">
+          <div className="m-5 px-frame-thin sm:m-6">
+            <p className="flex justify-between gap-3 border-b-2 border-rule px-3 py-1.5 font-tag text-[11px] uppercase text-ink-2">
               <span>Evidence · checked, not trusted</span>
               <span className="tnum">
                 {proven} of {steps.length} proven
@@ -242,17 +248,17 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
         ) : null}
       </div>
       {/* the stub: keep it */}
-      <aside className="el-stub flex flex-col gap-4 px-4 py-4 lg:px-5" aria-label="Route stub">
+      <aside className="flex flex-col gap-4 border-t-4 border-dashed border-rule/50 px-4 py-4 lg:border-l-4 lg:border-t-0 lg:px-5" aria-label="Route stub">
         <p className="caption">Stub · keep</p>
         <div>
           <p className="caption !text-ink-3">Hut fees</p>
-          <p className="tnum mt-0.5 font-mono text-[30px] font-semibold leading-none text-ink">{fees}</p>
+          <p className="tnum mt-1 font-display text-[32px] font-bold leading-none text-ink">{fees}</p>
         </div>
         <div>
           <p className="caption !text-ink-3">Signatures</p>
-          <div className="mt-1.5 flex gap-1.5" role="img" aria-label={`${signatures.done} of ${signatures.needed} signatures`}>
+          <div className="mt-2 flex gap-2.5 pl-0.5" role="img" aria-label={`${signatures.done} of ${signatures.needed} signatures`}>
             {Array.from({ length: signatures.needed }, (_, index) => (
-              <span key={index} className={cx("h-6 w-6 border-2 border-rule", index < signatures.done ? "bg-ink" : index === signatures.done ? "bg-signal" : "bg-card")} />
+              <span key={index} className={cx("h-6 w-6 px-frame-thin", index < signatures.done ? "bg-ink" : index === signatures.done ? "bg-signal" : "bg-card")} />
             ))}
           </div>
           <p className="tnum mt-1 font-mono text-xs text-ink-2">
@@ -281,7 +287,7 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
             {binding ? <p className="tnum mt-1 truncate font-mono text-[11px] text-ink-3">{binding}</p> : null}
           </div>
         ) : null}
-        {action ? <div className="mt-auto flex flex-col gap-2 pt-2">{action}</div> : null}
+        {action ? <div className="mt-auto flex flex-col gap-6 pt-2 pr-3">{action}</div> : null}
         {note ? <p className="text-center font-mono text-[11px] leading-snug text-ink-3">{note}</p> : null}
       </aside>
     </article>

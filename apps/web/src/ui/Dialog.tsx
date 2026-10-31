@@ -31,13 +31,13 @@ export function Dialog({ open, onClose, title, description, footer, size = "md",
       initialFocusRef={initialFocusRef}
       placement="center"
       panelClassName={cx(
-        "flex max-h-[92dvh] w-full animate-dialog-in flex-col overflow-hidden border-2 border-rule bg-card shadow-hard-xl",
+        "flex max-h-[calc(92dvh-24px)] w-full animate-dialog-in flex-col bg-card px-frame px-drop-lg",
         SIZES[size],
       )}
     >
-      <div className="flex items-start justify-between gap-4 border-b-2 border-rule px-5 pb-3.5 pt-4 sm:px-6">
+      <div className="flex items-start justify-between gap-4 border-b-4 border-rule px-5 pb-3.5 pt-4 sm:px-6">
         <div className="min-w-0">
-          <h2 id={`${id}-title`} className="text-[22px] font-bold leading-tight tracking-[-0.02em] text-ink">
+          <h2 id={`${id}-title`} className="font-display text-[24px] font-bold leading-tight text-ink">
             {title}
           </h2>
           {description ? (
@@ -49,7 +49,7 @@ export function Dialog({ open, onClose, title, description, footer, size = "md",
         <IconButton label="Close" icon={<X className="h-4 w-4" aria-hidden="true" />} size="sm" variant="ink" onClick={onClose} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
-      {footer ? <div className="safe-bottom flex flex-wrap justify-end gap-2.5 border-t-2 border-dashed border-rule/60 bg-paper-2/50 px-5 py-4 sm:px-6">{footer}</div> : null}
+      {footer ? <div className="safe-bottom flex flex-wrap justify-end gap-2.5 border-t-4 border-dashed border-rule/40 bg-paper-2/50 px-5 py-4 sm:px-6">{footer}</div> : null}
     </ModalLayer>
   );
 }

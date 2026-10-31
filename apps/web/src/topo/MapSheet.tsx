@@ -65,8 +65,8 @@ export interface MapKeyProps {
 /** The legend box every visual encoding gets. */
 export function MapKey({ items, title = "KEY", className }: MapKeyProps) {
   return (
-    <div className={cx("inline-flex flex-col gap-1 border-1.5 border-rule bg-card px-2.5 py-2 font-mono text-[11px] text-ink-2", className)}>
-      <span className="font-semibold tracking-[0.14em] text-ink">{title}</span>
+    <div className={cx("inline-flex flex-col gap-1 bg-card px-2.5 py-2 font-mono text-[11px] text-ink-2 px-frame-thin", className)}>
+      <span className="font-tag text-ink">{title}</span>
       <ul className="flex flex-col gap-1">
         {items.map((item, index) => (
           <li key={index} className="flex items-center gap-2">
@@ -121,15 +121,15 @@ export interface MapSheetProps {
 export function MapSheet({ label, elevation, titleBlock, furniture, ticks = true, className, bodyClassName, children, as = "section", ...rest }: MapSheetProps) {
   const Element = as;
   return (
-    <Element className={cx("relative border-2 border-rule bg-card shadow-hard-lg", className)} aria-label={rest["aria-label"]}>
+    <Element className={cx("relative bg-card px-frame px-drop", className)} aria-label={rest["aria-label"]}>
       {ticks ? <span aria-hidden="true" className="el-neat-ticks pointer-events-none absolute inset-[5px]" /> : null}
-      <div className="relative flex min-h-[34px] flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b-1.5 border-rule px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2">
+      <div className="relative flex min-h-[34px] flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b-4 border-rule px-4 py-1.5 font-tag text-[11px] uppercase text-ink-2">
         <span className="text-ink">{label}</span>
         {elevation ? <span className="tnum normal-case tracking-normal">{elevation}</span> : null}
       </div>
       <div className={cx("relative", bodyClassName)}>{children}</div>
       {furniture || titleBlock ? (
-        <div className="relative flex flex-wrap items-end justify-between gap-3 border-t-1.5 border-rule px-3.5 py-2.5">
+        <div className="relative flex flex-wrap items-end justify-between gap-3 border-t-4 border-rule px-4 py-2.5">
           <div className="flex flex-wrap items-end gap-4">{furniture}</div>
           {titleBlock ? <TitleBlockBox block={titleBlock} /> : null}
         </div>
@@ -140,8 +140,8 @@ export function MapSheet({ label, elevation, titleBlock, furniture, ticks = true
 
 export function TitleBlockBox({ block, className }: { readonly block: TitleBlock; readonly className?: string }) {
   return (
-    <dl className={cx("grid grid-cols-[auto_auto] border-1.5 border-rule font-mono text-[11px] leading-tight text-ink-2", className)}>
-      <dt className="col-span-2 border-b-1.5 border-rule bg-ink px-2 py-1 font-semibold uppercase tracking-[0.12em] text-paper">{block.name}</dt>
+    <dl className={cx("grid grid-cols-[auto_auto] bg-card font-mono text-[11px] leading-tight text-ink-2 px-frame-thin", className)}>
+      <dt className="col-span-2 bg-ink px-2 py-1 font-tag uppercase text-paper">{block.name}</dt>
       <dt className="border-b border-r border-rule/40 px-2 py-0.5 uppercase tracking-[0.1em]">Scale</dt>
       <dd className="tnum border-b border-rule/40 px-2 py-0.5 text-ink">{block.scale ?? "1 : 25 000"}</dd>
       {block.date ? (
