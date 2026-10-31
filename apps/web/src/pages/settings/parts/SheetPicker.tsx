@@ -1,76 +1,109 @@
+import { useCallback } from "react";
+
 import type { ThemePreference } from "../../../app/state/uiPrefs";
+import { drawDisc } from "../../../pixel/draw";
+import { drawGrid } from "../../../pixel/draw";
+import { elySprite, INK, mini } from "../../../pixel/ely";
+import { PixelCanvas } from "../../../pixel/PixelCanvas";
+import { rngOf, topoField, fieldMax, bandOf } from "../../../pixel/topo";
 import { cx, FOCUS_RING } from "../../../ui/cx";
 
-const PATHS = [
-  "M18 92 C 34 60, 70 52, 96 64 S 150 98, 182 70",
-  "M30 96 C 46 74, 74 68, 96 76 S 140 100, 170 84",
-  "M44 100 C 58 86, 78 82, 96 88 S 128 104, 156 96",
-  "M66 40 C 84 26, 112 24, 128 36 S 150 58, 136 66 S 96 62, 78 56 S 54 50, 66 40 Z",
-  "M86 42 C 96 34, 112 34, 120 42 S 124 54, 112 56 S 92 54, 86 48 Z",
-];
+const W = 64;
+const H = 40;
+const FIELD = topoField(W, H, 4242, [
+  [14, 12, 1, 9],
+  [48, 26, 0.9, 11],
+  [34, 6, 0.5, 7],
+  [6, 34, 0.6, 8],
+  [60, 4, 0.5, 7],
+]);
+const MAX = fieldMax(FIELD);
 
-/** A tiny map sheet drawn in its own tokens (`.el-day` / `.el-night` force the palette on the subtree). */
-function MiniSheet({ sheet }: { readonly sheet: "day" | "night" }) {
-  return (
-    <span className={cx(sheet === "day" ? "el-day" : "el-night", "relative block overflow-hidden border-2 border-rule bg-paper")}>
-      <svg viewBox="0 0 200 120" className="block h-auto w-full" aria-hidden="true">
-        <rect width="200" height="120" fill="rgb(var(--paper))" />
-        {PATHS.map((d, index) => (
-          <path key={d} d={d} fill="none" stroke="rgb(var(--contour))" strokeOpacity={0.45 + index * 0.1} strokeWidth={index === 3 ? 1.6 : 1.1} />
-        ))}
-        <path d="M100 38 l5 8 h-10 z" fill="rgb(var(--ink))" />
-        <text x="12" y="20" fontFamily="Instrument Serif, serif" fontStyle="italic" fontSize="14" fill="rgb(var(--floor))">
-          The Floor
-        </text>
-        <rect x="12" y="98" width="62" height="12" fill="rgb(var(--card))" stroke="rgb(var(--ink))" strokeWidth="1.2" />
-        <text x="17" y="107" fontFamily="IBM Plex Mono, monospace" fontSize="7" fill="rgb(var(--ink))">
-          $48,213 ▲
-        </text>
-        <rect x="128" y="96" width="58" height="16" fill="rgb(var(--accent))" stroke="rgb(var(--ink))" strokeWidth="1.5" />
-        <text x="157" y="107" textAnchor="middle" fontFamily="Space Grotesk Variable, sans-serif" fontWeight="700" fontSize="7.5" fill="rgb(var(--on-accent))">
-          SIGN ▸
-        </text>
-      </svg>
-    </span>
-  );
+const SHEETS = {
+  day: { paper: "#F2ECDD", card: "#FFF9EC", contour: "#7A5230", ink: INK, disc: "#F2C200", glow: "#FFE27A" },
+  night: { paper: "#0E1512", card: "#16211B", contour: "#C9925A", ink: "#EEE7D8", disc: "#DDE6EA", glow: "#2A3D55" },
+} as const;
+
+/** A pocket map sheet: contour pixels on paper, a sun or a moon, Ely on the summit pin and a SIGN button, in the sheet's own colours. */
+function paintSheet(ctx: CanvasRenderingContext2D, sheet: "day" | "night", from = 0, to = W) {
+  const c = SHEETS[sheet];
+  ctx.fillStyle = c.paper;
+  ctx.fillRect(from, 0, to - from, H);
+  ctx.fillStyle = c.contour;
+  for (let y = 0; y < H; y += 1) {
+    for (let x = from; x < to; x += 1) {
+      const b = bandOf(FIELD[y]![x]!, MAX, 6);
+      const r = x + 1 < W ? bandOf(FIELD[y]![x + 1]!, MAX, 6) : b;
+      const d = y + 1 < H ? bandOf(FIELD[y + 1]![x]!, MAX, 6) : b;
+      if (b !== r || b !== d) ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  if (sheet === "night") {
+    const random = rngOf(17);
+    ctx.fillStyle = "#EEE7D8";
+    for (let i = 0; i < 14; i += 1) {
+      const x = Math.floor(random() * W);
+      const y = Math.floor(random() * 14);
+      if (x >= from && x < to) ctx.fillRect(x, y, 1, 1);
+    }
+  }
 }
 
-function SplitSheet() {
-  return (
-    <span className="relative grid grid-cols-2 overflow-hidden border-2 border-rule">
-      <span className="el-day block overflow-hidden">
-        <MiniSheetHalf />
-      </span>
-      <span className="el-night block overflow-hidden">
-        <MiniSheetHalf />
-      </span>
-    </span>
-  );
+function paintFull(ctx: CanvasRenderingContext2D, choice: ThemePreference) {
+  ctx.clearRect(0, 0, W, H);
+  if (choice === "system") {
+    paintSheet(ctx, "day", 0, W / 2);
+    paintSheet(ctx, "night", W / 2, W);
+  } else {
+    paintSheet(ctx, choice === "dark" ? "night" : "day");
+  }
+  const left = choice === "system" ? SHEETS.day : SHEETS[choice === "dark" ? "night" : "day"];
+  const right = choice === "system" ? SHEETS.night : left;
+  // the sky disc: sun by day, moon by night; split on "follow device"
+  if (choice === "system") {
+    drawDisc(ctx, 10, 8, 5, SHEETS.day.disc);
+    drawDisc(ctx, 54, 8, 5, SHEETS.night.disc);
+    drawDisc(ctx, 56, 7, 4, SHEETS.night.paper);
+    ctx.fillStyle = INK;
+    ctx.fillRect(W / 2, 0, 1, H);
+  } else if (choice === "dark") {
+    drawDisc(ctx, 54, 8, 5, left.disc);
+    drawDisc(ctx, 56, 7, 4, left.paper);
+  } else {
+    drawDisc(ctx, 54, 8, 5, left.disc);
+  }
+  // Ely on the centre pin
+  drawGrid(ctx, mini(elySprite(choice === "dark" ? { gear: "goggles", fur: "Night", horn: "Obsidian" } : { gear: "lamp" })), W / 2 - 8, 9, 1);
+  // a net worth tag (left) and a SIGN button (right), each in its half's colours
+  ctx.fillStyle = left.ink;
+  ctx.fillRect(3, 31, 18, 7);
+  ctx.fillStyle = left.card;
+  ctx.fillRect(4, 32, 16, 5);
+  ctx.fillStyle = left.ink;
+  for (let i = 0; i < 5; i += 1) ctx.fillRect(6 + i * 3, 34, 2, 1);
+  ctx.fillStyle = right.ink;
+  ctx.fillRect(43, 31, 18, 7);
+  ctx.fillStyle = choice === "light" ? "#17788C" : "#6FD3E3";
+  ctx.fillRect(44, 32, 16, 5);
+  ctx.fillStyle = choice === "light" ? "#FFFFFF" : "#0E1512";
+  for (let i = 0; i < 4; i += 1) ctx.fillRect(47 + i * 3, 34, 2, 1);
 }
 
-function MiniSheetHalf() {
-  return (
-    <svg viewBox="0 0 100 120" className="block h-auto w-full" aria-hidden="true">
-      <rect width="100" height="120" fill="rgb(var(--paper))" />
-      {PATHS.slice(0, 3).map((d, index) => (
-        <path key={d} d={d} transform="translate(-40 0)" fill="none" stroke="rgb(var(--contour))" strokeOpacity={0.5 + index * 0.12} strokeWidth="1.1" />
-      ))}
-      <circle cx="50" cy="60" r="16" fill="none" stroke="rgb(var(--ink))" strokeWidth="1.5" />
-      <path d="M50 44 v32" stroke="rgb(var(--ink))" strokeWidth="1.5" />
-    </svg>
-  );
+function SheetArt({ choice }: { readonly choice: ThemePreference }) {
+  const draw = useCallback((ctx: CanvasRenderingContext2D) => paintFull(ctx, choice), [choice]);
+  return <PixelCanvas width={W} height={H} contain draw={draw} redrawKey={choice} decorative />;
 }
 
 const CHOICES: readonly { readonly value: ThemePreference; readonly name: string; readonly line: string }[] = [
-  { value: "light", name: "Day", line: "paper map · default on the site" },
+  { value: "light", name: "Day", line: "paper map · the default" },
   { value: "dark", name: "Night", line: "headlamp · easy on the eyes" },
   { value: "system", name: "Follow device", line: "day or night with your system" },
 ];
 
-/** Theme as three sheets of map paper to choose from. */
+/** Theme as three pixel map sheets to choose from, each drawn in its own colours. */
 export function SheetPicker({ value, onChange }: { readonly value: ThemePreference; readonly onChange: (value: ThemePreference) => void }) {
   return (
-    <div role="radiogroup" aria-label="Map sheet (theme)" className="grid grid-cols-3 gap-2.5 sm:gap-4">
+    <div role="radiogroup" aria-label="Map sheet (theme)" className="grid grid-cols-3 gap-4 sm:gap-6">
       {CHOICES.map((choice) => {
         const selected = choice.value === value;
         return (
@@ -80,16 +113,20 @@ export function SheetPicker({ value, onChange }: { readonly value: ThemePreferen
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(choice.value)}
-            className={cx("group relative flex flex-col gap-2 text-left transition-transform duration-fast", selected ? "-translate-y-0.5" : "hover:-translate-y-0.5", FOCUS_RING)}
+            className={cx("flex flex-col bg-card text-center px-frame px-press", selected ? "px-drop-lg" : "px-drop", FOCUS_RING)}
           >
-            <span className={cx("block transition-shadow duration-fast", selected ? "shadow-hard-lg" : "shadow-hard")}>{choice.value === "system" ? <SplitSheet /> : <MiniSheet sheet={choice.value === "light" ? "day" : "night"} />}</span>
-            <span className="flex items-center justify-between gap-2">
-              <span className="text-[14px] font-bold leading-tight text-ink sm:text-[16px]">{choice.name}</span>
-              <span aria-hidden="true" className={cx("flex h-5 w-5 shrink-0 items-center justify-center border-2 border-rule text-[11px] font-bold", selected ? "bg-ink text-paper" : "bg-card text-transparent")}>
-                ✓
-              </span>
+            <span className="block border-b-4 border-rule bg-paper-2 p-1.5 sm:p-3">
+              <SheetArt choice={choice.value} />
             </span>
-            <span className="-mt-1.5 hidden font-mono text-[11px] text-ink-3 sm:block">{choice.line}</span>
+            <span className={cx("flex flex-1 flex-col items-center gap-1 px-2 py-3", selected && "bg-signal text-signal-ink")}>
+              <span className="flex items-center gap-2 font-display text-[16px] font-bold leading-tight sm:text-[20px]">
+                <span aria-hidden="true" className={cx("inline-flex h-4 w-4 items-center justify-center font-tag text-[10px]", selected ? "bg-ink text-paper" : "bg-paper-2")}>
+                  {selected ? "✓" : ""}
+                </span>
+                {choice.name}
+              </span>
+              <span className={cx("hidden font-mono text-[11px] sm:block", selected ? "text-signal-ink" : "text-ink-3")}>{choice.line}</span>
+            </span>
           </button>
         );
       })}

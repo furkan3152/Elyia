@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
 
+import { PixelGlyph } from "../../../pixel/PixelGlyph";
 import { Button } from "../../../ui/Button";
 import { cx, FOCUS_RING } from "../../../ui/cx";
 import { sanitizeDecimalInput } from "../../../ui/numberInput";
 import { evaluateRule, KIND_LABEL, newRuleId, parseRuleSentence, type AlertKind, type AlertRule, type Direction, type RuleReadings } from "../model/rules";
+import { GLYPHS } from "../model/glyphs";
 import { TrailGauge } from "./TrailGauge";
 
-const KINDS: readonly { readonly kind: AlertKind; readonly glyph: string; readonly hint: string }[] = [
-  { kind: "price", glyph: "▲▼", hint: "a mark crosses a level" },
-  { kind: "funding", glyph: "≋", hint: "the wind changes side" },
-  { kind: "rope", glyph: "✕—●", hint: "a rope nears its crevasse" },
-  { kind: "fill", glyph: "◎", hint: "an order fills" },
-  { kind: "bridge", glyph: "⇅", hint: "an ascent or descent lands" },
+const KINDS: readonly { readonly kind: AlertKind; readonly hint: string }[] = [
+  { kind: "price", hint: "a mark crosses a level" },
+  { kind: "funding", hint: "the wind changes side" },
+  { kind: "rope", hint: "a rope nears its crevasse" },
+  { kind: "fill", hint: "an order fills" },
+  { kind: "bridge", hint: "an ascent or descent lands" },
 ];
 
 interface Draft {
@@ -24,21 +26,21 @@ interface Draft {
   readonly once: boolean;
 }
 
-const SLOT = "inline-flex h-11 items-center border-2 border-rule bg-card px-2.5 font-mono text-[17px] font-semibold text-ink shadow-hard sm:h-12 sm:text-[20px]";
+const SLOT = "inline-flex h-11 items-center bg-card px-3 font-display text-[20px] font-bold text-ink px-frame px-drop sm:h-14 sm:text-[26px]";
 
 function Slot({ label, value, onChange, options }: { readonly label: string; readonly value: string; readonly onChange: (value: string) => void; readonly options: readonly { readonly value: string; readonly label: string }[] }) {
   return (
     <label className="relative inline-flex">
       <span className="sr-only">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className={cx(SLOT, "cursor-pointer appearance-none pr-7", FOCUS_RING)}>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className={cx(SLOT, "cursor-pointer appearance-none pr-8", FOCUS_RING)}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}
       </select>
-      <span aria-hidden="true" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-ink-3">
-        ▾
+      <span aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 font-tag text-[11px] text-ink-3">
+        ▼
       </span>
     </label>
   );
@@ -46,7 +48,7 @@ function Slot({ label, value, onChange, options }: { readonly label: string; rea
 
 function NumberSlot({ label, value, onChange, prefix, suffix, placeholder = "0" }: { readonly label: string; readonly value: string; readonly onChange: (value: string) => void; readonly prefix?: string; readonly suffix?: string; readonly placeholder?: string }) {
   return (
-    <label className={cx(SLOT, "gap-1 focus-within:shadow-hard-lg")}>
+    <label className={cx(SLOT, "gap-1 focus-within:outline-dashed focus-within:outline-4 focus-within:outline-offset-[8px] focus-within:outline-signal")}>
       <span className="sr-only">{label}</span>
       {prefix ? <span className="text-ink-3">{prefix}</span> : null}
       <input
@@ -61,7 +63,7 @@ function NumberSlot({ label, value, onChange, prefix, suffix, placeholder = "0" 
         placeholder={placeholder}
         className="tnum w-[7.5ch] bg-transparent text-right outline-none placeholder:text-ink-3"
       />
-      {suffix ? <span className="text-[13px] text-ink-3 sm:text-[15px]">{suffix}</span> : null}
+      {suffix ? <span className="font-tag text-[11px] uppercase text-ink-3 sm:text-[13px]">{suffix}</span> : null}
     </label>
   );
 }
@@ -137,14 +139,14 @@ export function RuleBuilder({ coins, ropeCoins, readings, telegramLinked, priceW
   };
 
   return (
-    <section className="border-2 border-rule bg-card shadow-hard-lg" aria-labelledby="rule-builder-title">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-rule px-4 py-2">
-        <h2 id="rule-builder-title" className="caption !text-ink">
+    <section className="bg-card px-frame px-drop-lg" aria-labelledby="rule-builder-title">
+      <header className="flex flex-col items-center gap-1 border-b-4 border-rule bg-paper-2 px-4 py-2.5 text-center sm:flex-row sm:justify-between">
+        <h2 id="rule-builder-title" className="font-tag text-[12px] uppercase text-ink">
           New alert · one sentence · watched live
         </h2>
-        <span className="font-mono text-[11px] text-ink-2">{priceWord}</span>
+        <span className="font-tag text-[11px] uppercase text-ink-2">{priceWord}</span>
       </header>
-      <div role="radiogroup" aria-label="What to watch" className="grid grid-cols-2 border-b-1.5 border-rule/40 sm:grid-cols-5">
+      <div role="radiogroup" aria-label="What to watch" className="grid grid-cols-5 border-b-4 border-rule">
         {KINDS.map((entry) => {
           const selected = entry.kind === draft.kind;
           return (
@@ -153,23 +155,23 @@ export function RuleBuilder({ coins, ropeCoins, readings, telegramLinked, priceW
               type="button"
               role="radio"
               aria-checked={selected}
+              title={entry.hint}
               onClick={() => patch({ kind: entry.kind, value: "", coin: entry.kind === "rope" || entry.kind === "fill" ? "ANY" : (coins.includes(draft.coin) ? draft.coin : (coins[0] ?? "BTC")), direction: entry.kind === "rope" ? "below" : draft.direction })}
-              className={cx("flex flex-col items-start gap-0.5 border-r-1.5 border-rule/25 px-3 py-2.5 text-left transition-colors duration-fast last:border-r-0", selected ? "bg-ink text-paper" : "text-ink hover:bg-paper-2", FOCUS_RING)}
+              className={cx("relative flex flex-col items-center gap-1.5 border-r-4 border-rule px-1 pb-3 pt-3.5 text-center transition-colors duration-fast last:border-r-0 focus-visible:z-10", selected ? "bg-signal text-signal-ink" : "text-ink hover:bg-paper-2", FOCUS_RING)}
             >
-              <span className="flex items-center gap-2 font-sans text-[13px] font-bold uppercase tracking-[0.06em]">
-                <span aria-hidden="true" className={cx("font-mono text-[12px]", selected ? "text-signal" : "text-ink-3")}>
-                  {entry.glyph}
-                </span>
-                {KIND_LABEL[entry.kind]}
+              <span className={cx("inline-flex p-1", selected ? "bg-card px-frame-thin" : "")}>
+                <PixelGlyph rows={GLYPHS[entry.kind]} scale={3} label={null} />
               </span>
-              <span className={cx("font-mono text-[11px]", selected ? "text-paper/75" : "text-ink-3")}>{entry.hint}</span>
+              <span className="font-tag text-[10px] uppercase sm:text-[12px]">{KIND_LABEL[entry.kind]}</span>
+              <span className={cx("hidden font-mono text-[11px] leading-tight md:block", selected ? "text-signal-ink" : "text-ink-3")}>{entry.hint}</span>
+              {selected ? <span aria-hidden="true" className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 bg-ink" /> : null}
             </button>
           );
         })}
       </div>
 
-      <div className="px-4 pb-5 pt-6 sm:px-6">
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-3 text-[24px] font-bold leading-tight tracking-[-0.02em] text-ink sm:text-[32px]">
+      <div className="flex flex-col items-center px-4 pb-8 pt-10 sm:px-8">
+        <p className="flex max-w-[960px] flex-wrap items-center justify-center gap-x-5 gap-y-6 text-center font-display text-[26px] font-bold leading-tight text-ink sm:text-[40px]">
           <span>Tell me when</span>
           {draft.kind === "bridge" ? (
             <span className={SLOT}>a bridge journey</span>
@@ -195,19 +197,20 @@ export function RuleBuilder({ coins, ropeCoins, readings, telegramLinked, priceW
           )}
         </p>
 
-        <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="mt-10 w-full max-w-[720px]">
           <TrailGauge status={status} rule={preview} />
-          <div className="flex flex-col gap-2">
-            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">Deliver to</p>
-            <div className="flex flex-wrap gap-2">
-              <Check checked={draft.app} onChange={(app) => patch({ app })} label="This feed" />
-              <Check checked={draft.telegram && telegramLinked} onChange={(telegram) => patch({ telegram })} label="Telegram" disabled={!telegramLinked} hint={telegramLinked ? undefined : "link first"} />
-              <Check checked={draft.once} onChange={(once) => patch({ once })} label="Only once" />
-            </div>
+        </div>
+
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <p className="font-tag text-[11px] uppercase text-ink-3">Deliver to</p>
+          <div className="flex flex-wrap justify-center gap-x-5 gap-y-4">
+            <Check checked={draft.app} onChange={(app) => patch({ app })} label="This feed" />
+            <Check checked={draft.telegram && telegramLinked} onChange={(telegram) => patch({ telegram })} label="Telegram" disabled={!telegramLinked} hint={telegramLinked ? undefined : "link first"} />
+            <Check checked={draft.once} onChange={(once) => patch({ once })} label="Only once" />
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="mt-9 flex flex-col items-center gap-3">
           <Button variant="primary" size="lg" onClick={create} disabled={!ready}>
             Arm the alert ▸
           </Button>
@@ -215,33 +218,33 @@ export function RuleBuilder({ coins, ropeCoins, readings, telegramLinked, priceW
         </div>
 
         <form
-          className="mt-6 flex flex-col gap-1.5 border-t-1.5 border-dashed border-rule/40 pt-4"
+          className="mt-9 flex w-full max-w-[720px] flex-col items-center gap-3 border-t-4 border-dashed border-rule/30 pt-7"
           onSubmit={(event) => {
             event.preventDefault();
             readSentence();
           }}
         >
-          <label htmlFor="alert-sentence" className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
-            Or say it
+          <label htmlFor="alert-sentence" className="font-tag text-[11px] uppercase text-ink-3">
+            Or say it, and the slots fill in
           </label>
-          <div className="flex gap-2">
+          <div className="flex w-full flex-col gap-5 sm:flex-row sm:items-center">
             <input
               id="alert-sentence"
               value={typed}
               onChange={(event) => setTyped(event.target.value)}
               placeholder="alert me if ETH funding goes above 0.01%"
-              className="h-10 min-w-0 flex-1 border-2 border-rule bg-paper px-3 font-mono text-[14px] text-ink outline-none placeholder:text-ink-3 focus:shadow-hard"
+              className={cx("h-11 min-w-0 flex-1 bg-paper px-3 font-mono text-[14px] text-ink outline-none px-frame-thin placeholder:text-ink-3", FOCUS_RING)}
             />
             <Button type="submit" variant="ink" size="md" disabled={typed.trim() === ""}>
               Fill it in
             </Button>
           </div>
           {heard ? (
-            <p className="font-mono text-[12px] text-ink-2" aria-live="polite">
+            <p className="text-center font-mono text-[12px] text-ink-2" aria-live="polite">
               {heard}
             </p>
           ) : (
-            <p className="font-mono text-[11px] text-ink-3">Funding without “APR” is read as HyperCore&apos;s hourly rate (0.01% an hour ≈ 87.6% a year).</p>
+            <p className="text-center font-mono text-[11px] text-ink-3">Funding without “APR” is read as HyperCore&apos;s hourly rate (0.01% an hour ≈ 87.6% a year).</p>
           )}
         </form>
       </div>
@@ -257,9 +260,9 @@ function Check({ checked, onChange, label, disabled = false, hint }: { readonly 
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={cx("flex h-9 items-center gap-2 border-2 px-2.5 font-mono text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-55", checked ? "border-rule bg-ink text-paper" : "border-rule/50 bg-card text-ink-2 hover:border-rule", FOCUS_RING)}
+      className={cx("flex h-9 items-center gap-2 px-3 font-tag text-[11px] uppercase px-frame-thin px-press disabled:cursor-not-allowed disabled:opacity-55", checked ? "bg-ink text-paper" : "bg-card text-ink-2", FOCUS_RING)}
     >
-      <span aria-hidden="true" className={cx("flex h-3.5 w-3.5 items-center justify-center border-1.5 text-[10px] leading-none", checked ? "border-paper" : "border-rule/60")}>
+      <span aria-hidden="true" className={cx("flex h-3.5 w-3.5 items-center justify-center text-[10px] leading-none", checked ? "bg-signal text-signal-ink" : "bg-paper-2")}>
         {checked ? "✓" : ""}
       </span>
       {label}

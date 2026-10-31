@@ -3,16 +3,19 @@ import { useMemo, useState } from "react";
 import { WalletButton } from "../../../app/shell/WalletButton";
 import type { SubmitResult, TradePlan } from "../../../features/trading/executor";
 import { guardLines } from "../../../features/trading/guard";
+import { Ely } from "../../../pixel/Ely";
+import { PixelRope } from "../../../pixel/PixelRope";
+import { PixelStamp } from "../../../pixel/PixelStamp";
 import { Button } from "../../../ui/Button";
 import { cx } from "../../../ui/cx";
 import { Dialog } from "../../../ui/Dialog";
-import type { Proposal } from "../guide/planner";
+import { px, type Proposal } from "../guide/planner";
 import type { GuideSigner } from "../guide/useGuideSigner";
 
 const VERDICT = {
-  allow: { stamp: "✓ CHECKED", text: "text-up", edge: "border-up", head: "Passes your Rule Book." },
-  confirm: { stamp: "! CONFIRM", text: "text-warn-ink", edge: "border-warn", head: "Your Rule Book asks you to confirm this." },
-  deny: { stamp: "✕ BLOCKED", text: "text-down", edge: "border-down", head: "Your Rule Book blocks this." },
+  allow: { stamp: "CHECKED", state: "signed", text: "text-up", tone: "px-tone-up", head: "Passes your Rule Book." },
+  confirm: { stamp: "CONFIRM", state: "queued", text: "text-warn-ink", tone: "px-tone-signal", head: "Your Rule Book asks you to confirm this." },
+  deny: { stamp: "BLOCKED", state: "refused", text: "text-down", tone: "px-tone-down", head: "Your Rule Book blocks this." },
 } as const;
 
 const ACCESS_COPY = {
@@ -72,23 +75,35 @@ export function SignDialog({ open, proposal, signer, onClose, onEnable, onUnlock
   const tone = verdict ? VERDICT[verdict.decision] : null;
 
   return (
-    <Dialog open={open} onClose={close} title={title} description="The Guide proposes; you sign. Check it, then the trade-only key signs it in this browser." size="md">
-      <div className="flex flex-col gap-4">
+    <Dialog open={open} onClose={close} title={title} description="Ely proposes; you sign. Check it, then the trade-only key signs it in this browser." size="md">
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center gap-4 bg-paper-2 px-3 py-3 px-frame-thin">
+          <Ely state={verdict?.decision === "deny" || verdict?.decision === "confirm" ? "worry" : signer.access === "ready" ? "talk" : "idle"} size={88} label={null} className="shrink-0" />
+          <p className="min-w-0 font-mono text-[13px] leading-snug text-ink-2">
+            <span className="block font-tag text-[11px] uppercase text-ink">Ely · read it back</span>
+            {verdict?.decision === "deny" ? "Your own rules stop this one. Nothing signs." : verdict?.decision === "confirm" ? "Your rules want a second look. Check the legs, then confirm." : signer.access === "ready" ? "Exactly this, and nothing else, is what your trade-only key signs." : "I drafted it. A signature needs your key first."}
+          </p>
+        </div>
+        {proposal?.kind === "anchor" ? (
+          <div className="bg-card px-3 pb-2 pt-4 px-frame-thin" aria-label="The rope with the new anchor">
+            <PixelRope variant="full" symbol={proposal.coin} side={proposal.side} entry={proposal.entry} mark={proposal.mark} liquidation={proposal.liquidation} stop={proposal.stop} takeProfit={proposal.takeProfit} formatPrice={px} />
+          </div>
+        ) : null}
         {plan?.legs ? (
-          <ol className="flex flex-col gap-2">
+          <ol className="flex flex-col gap-3">
             {plan.legs.map((leg, index) => (
-              <li key={leg.cloid || index} className="flex gap-2.5 border-2 border-rule bg-paper/60 px-3 py-2 font-mono text-[13px] text-ink">
-                <span className="tnum text-ink-3">{index + 1}</span>
+              <li key={leg.cloid || index} className="flex gap-3 bg-card px-3 py-2 font-mono text-[13px] text-ink px-frame-thin">
+                <span className="tnum font-tag text-[11px] text-ink-3">{String(index + 1).padStart(2, "0")}</span>
                 <span className="min-w-0">{describeLeg(leg, coin)}</span>
               </li>
             ))}
           </ol>
         ) : null}
-        {built?.problem ? <p className="border-l-[3px] border-warn bg-paper/60 px-3 py-2 text-sm text-ink-2">{built.problem}</p> : null}
-        {signer.access !== "ready" ? <p className="border-2 border-rule bg-paper-2 px-3 py-2.5 text-[14px] leading-snug text-ink-2">{ACCESS_COPY[signer.access]}</p> : null}
+        {built?.problem ? <p className="bg-paper-2 px-3 py-2 text-sm text-ink-2 px-frame-thin px-tone-signal">{built.problem}</p> : null}
+        {signer.access !== "ready" ? <p className="bg-paper-2 px-3 py-2.5 text-[14px] leading-snug text-ink-2 px-frame-thin">{ACCESS_COPY[signer.access]}</p> : null}
         {tone && verdict ? (
-          <div role="status" className={cx("flex items-start gap-2.5 border-l-[3px] bg-paper/60 py-2 pl-2.5 pr-1 text-[13px] leading-snug", tone.edge)}>
-            <span className={cx("mt-px shrink-0 -rotate-2 border-2 border-current px-1.5 py-px font-mono text-[10px] font-bold tracking-[0.12em]", tone.text)}>{tone.stamp}</span>
+          <div role="status" className={cx("flex items-start gap-4 bg-card px-3 py-3 text-[13px] leading-snug px-frame-thin", tone.tone)}>
+            <PixelStamp state={tone.state} text={tone.stamp} size="sm" label={null} className="mt-1 shrink-0" />
             <div className="min-w-0">
               <p className={cx("font-medium", tone.text)}>{tone.head}</p>
               <ul className="mt-0.5 flex flex-col gap-0.5 text-ink-2">
@@ -103,11 +118,11 @@ export function SignDialog({ open, proposal, signer, onClose, onEnable, onUnlock
           </div>
         ) : null}
         {error ? (
-          <p role="alert" className="border-l-[3px] border-down bg-paper/60 px-3 py-2 text-sm text-down">
+          <p role="alert" className="bg-card px-3 py-2 text-sm text-down px-frame-thin px-tone-down">
             {error}
           </p>
         ) : null}
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-4 pt-1">
           <Button variant="ghost" onClick={close} disabled={sending}>
             Not now
           </Button>

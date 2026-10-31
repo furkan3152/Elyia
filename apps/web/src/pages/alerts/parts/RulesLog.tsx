@@ -1,3 +1,5 @@
+import { Cards } from "../../../pixel/layout";
+import { ElyEmpty } from "../../../pixel/ElyEmpty";
 import { cx, FOCUS_RING } from "../../../ui/cx";
 import { KIND_LABEL, ruleCondition, type AlertRule, type RuleStatus } from "../model/rules";
 import { TrailGauge } from "./TrailGauge";
@@ -10,65 +12,68 @@ function ago(ms: number, now: number): string {
   return hours < 48 ? `${hours} h ago` : `${Math.round(hours / 24)} d ago`;
 }
 
-/** Your rules as a ruled log book: the sentence, the live reading on a small trail, where it goes, armed or paused. */
-export function RulesLog({ rules, statuses, now, onToggle, onRemove }: { readonly rules: readonly AlertRule[]; readonly statuses: ReadonlyMap<string, RuleStatus>; readonly now: number; readonly onToggle: (rule: AlertRule) => void; readonly onRemove: (rule: AlertRule) => void }) {
+/** Your rules as equal trail-gauge cards: the sentence, the live reading as a pixel climb to your flag, where it goes, armed or paused. */
+export function RulesLog({ rules, statuses, now, onToggle, onRemove, onBuild }: { readonly rules: readonly AlertRule[]; readonly statuses: ReadonlyMap<string, RuleStatus>; readonly now: number; readonly onToggle: (rule: AlertRule) => void; readonly onRemove: (rule: AlertRule) => void; readonly onBuild?: () => void }) {
+  if (rules.length === 0) {
+    return (
+      <div className="mx-auto max-w-[560px] bg-card px-frame px-drop">
+        <ElyEmpty
+          title="No rules yet"
+          description="Build one above, or ask Ely: “alert me if BTC drops below 90k”. Every rule you arm shows up here as its own trail."
+          action={
+            onBuild ? (
+              <button type="button" onClick={onBuild} className={cx("bg-signal px-3 py-1.5 font-tag text-[11px] uppercase text-signal-ink px-frame-thin px-drop px-press", FOCUS_RING)}>
+                Build the first one ▲
+              </button>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
   return (
-    <section className="border-2 border-rule bg-card shadow-hard" aria-labelledby="rules-title">
-      <header className="flex items-center justify-between gap-3 border-b-1.5 border-rule px-4 py-2">
-        <h2 id="rules-title" className="caption !text-ink">
-          Your rules · {rules.length} · {rules.filter((rule) => rule.armed).length} armed
-        </h2>
-        <span className="font-mono text-[11px] text-ink-2">kept on this device</span>
-      </header>
-      {rules.length === 0 ? (
-        <p className="px-4 py-6 text-[15px] text-ink-2">No rules yet. Build one above, or ask the Guide: “alert me if BTC drops below 90k”.</p>
-      ) : (
-        <ol className="divide-y divide-rule/15">
-          {rules.map((rule, index) => {
-            const status = statuses.get(rule.id);
-            return (
-              <li key={rule.id} className={cx("grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3 lg:grid-cols-[2rem_minmax(0,1.3fr)_minmax(160px,1fr)_auto]", !rule.armed && "opacity-70")}>
-                <span className="tnum font-mono text-[12px] text-ink-3">{String(index + 1).padStart(2, "0")}</span>
-                <div className="min-w-0">
-                  <p className="text-[15px] font-semibold leading-snug text-ink">
-                    {rule.action ? "When " : "Tell me when "}
-                    {ruleCondition(rule)}
-                  </p>
-                  <p className="font-mono text-[11px] text-ink-3">
-                    {KIND_LABEL[rule.kind]}
-                    {rule.action ? ` · standing order: ${rule.action}` : ""} · {rule.channels.telegram ? "feed + Telegram" : "feed"}
-                    {rule.once ? " · once" : ""}
-                    {rule.lastFiredAt ? ` · fired ${ago(rule.lastFiredAt, now)}` : ""}
-                  </p>
-                </div>
-                <div className="col-span-3 col-start-2 min-w-0 lg:col-span-1 lg:col-start-3">
-                  {status ? (
-                    <div className="flex items-center gap-2">
-                      <TrailGauge status={status} rule={rule} compact className="w-[120px] shrink-0" />
-                      <span className={cx("min-w-0 truncate font-mono text-[11px]", status.met ? "font-semibold text-up" : "text-ink-2")}>{status.reading}</span>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="col-start-3 row-start-1 flex items-center gap-2 lg:col-start-4">
-                  <button
-                    type="button"
-                    onClick={() => onToggle(rule)}
-                    aria-pressed={rule.armed}
-                    aria-label={`${rule.armed ? "Pause" : "Arm"}: ${ruleCondition(rule)}`}
-                    className={cx("flex items-center gap-1.5 border-1.5 px-1.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em]", rule.armed ? "border-warn text-warn-ink" : "border-rule/40 text-ink-3", FOCUS_RING)}
-                  >
-                    <span aria-hidden="true">{rule.armed ? "●" : "○"}</span>
-                    {rule.armed ? "Armed" : "Paused"}
-                  </button>
-                  <button type="button" onClick={() => onRemove(rule)} aria-label={`Delete: ${ruleCondition(rule)}`} className={cx("px-1 font-mono text-[13px] text-ink-3 hover:text-down", FOCUS_RING)}>
-                    ✕
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-    </section>
+    <Cards n={rules.length === 1 ? 1 : rules.length === 2 || rules.length === 4 ? 2 : 3} as="ol" className={cx(rules.length === 1 && "mx-auto max-w-[560px]")}>
+      {rules.map((rule, index) => {
+        const status = statuses.get(rule.id);
+        return (
+          <li key={rule.id} className={cx("flex flex-col bg-card px-frame px-drop", !rule.armed && "opacity-75")}>
+            <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-paper-2 px-4 py-2">
+              <span className="font-tag text-[11px] uppercase text-ink-2">
+                <span className="tnum text-ink">{String(index + 1).padStart(2, "0")}</span> · {KIND_LABEL[rule.kind]}
+                {rule.action ? " · standing order" : ""}
+              </span>
+              <button
+                type="button"
+                onClick={() => onToggle(rule)}
+                aria-pressed={rule.armed}
+                aria-label={`${rule.armed ? "Pause" : "Arm"}: ${ruleCondition(rule)}`}
+                className={cx("flex items-center gap-1.5 px-2 py-0.5 font-tag text-[11px] uppercase px-frame-thin px-press", rule.armed ? "bg-signal text-signal-ink" : "bg-card text-ink-3", FOCUS_RING)}
+              >
+                <span aria-hidden="true">{rule.armed ? "●" : "○"}</span>
+                {rule.armed ? "Armed" : "Paused"}
+              </button>
+            </header>
+            <div className="flex flex-1 flex-col gap-4 px-4 pb-4 pt-5">
+              <p className="text-center font-display text-[19px] font-bold leading-snug text-ink">
+                {rule.action ? "When " : "Tell me when "}
+                {ruleCondition(rule)}
+              </p>
+              <div className="mt-auto">{status ? <TrailGauge status={status} rule={rule} /> : <p className="text-center font-mono text-[12px] text-ink-3">waiting for the first reading…</p>}</div>
+            </div>
+            <footer className="flex items-center justify-between gap-3 border-t-4 border-dashed border-rule/30 px-4 py-2 font-mono text-[11px] text-ink-3">
+              <span className="min-w-0 truncate">
+                {rule.action ? `drafts “${rule.action}” · ` : ""}
+                {rule.channels.telegram ? "feed + Telegram" : "feed"}
+                {rule.once ? " · once" : ""}
+                {rule.lastFiredAt ? ` · fired ${ago(rule.lastFiredAt, now)}` : ""}
+              </span>
+              <button type="button" onClick={() => onRemove(rule)} aria-label={`Delete: ${ruleCondition(rule)}`} className={cx("shrink-0 font-tag text-[11px] uppercase hover:text-down", FOCUS_RING)}>
+                delete ✕
+              </button>
+            </footer>
+          </li>
+        );
+      })}
+    </Cards>
   );
 }

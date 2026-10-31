@@ -3,7 +3,7 @@ import { useAccount } from "wagmi";
 
 import { navigate } from "../../app/routes/history";
 import { useSearchParam } from "../../app/routes/useRoute";
-import { Page } from "../../app/shell/Page";
+import { Cards, Page, Section, Split } from "../../pixel/layout";
 import { useUiStore } from "../../app/state/uiStore";
 import { EnableTradingDialog } from "../../features/agentKey/EnableTradingDialog";
 import { useAgentKey } from "../../features/agentKey/useAgentKey";
@@ -13,7 +13,7 @@ import { useTradeStore } from "../../features/trading/tradeStore";
 import { useNow } from "../../hooks/useNow";
 import { hyperCoreEndpoints } from "../../lib/hypercore/endpoints";
 import { intentHref } from "../../oracle/preview";
-import { cx } from "../../ui/cx";
+import { cx, FOCUS_RING } from "../../ui/cx";
 import { toast } from "../../ui/toast";
 import { useAlertStore } from "../alerts/model/alertStore";
 import { newRuleId } from "../alerts/model/rules";
@@ -21,13 +21,15 @@ import { useRuleWatch } from "../alerts/model/useRuleWatch";
 import { shortAddr } from "../portfolio/range/format";
 import { SAMPLE_ADDRESS } from "../portfolio/range/sample";
 import { useRange } from "../portfolio/range/useRange";
-import { buildFacts, morningBulletin } from "./guide/facts";
+import { buildFacts, guideRopes, morningBulletin } from "./guide/facts";
 import { guideId, useGuideStore, type GuideMessage } from "./guide/guideStore";
+import { elyMood } from "./guide/mood";
 import { answer, px, standingReply, STARTERS, type Proposal } from "./guide/planner";
 import { useGuideSigner } from "./guide/useGuideSigner";
 import { Composer } from "./parts/Composer";
 import { Conversation } from "./parts/Conversation";
-import { AuditLog, KillSwitch, LicenceCard, MorningBulletin, StandingOrders } from "./parts/Instruments";
+import { GuideStage } from "./parts/GuideStage";
+import { AuditLog, KillNote, KillSwitch, LicenceCard, MorningBulletin, StandingOrders } from "./parts/Instruments";
 import { SignDialog } from "./parts/SignDialog";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u;
@@ -45,8 +47,10 @@ function typing(target: EventTarget | null): boolean {
  * funding, history) with a deterministic local planner, answers in plain
  * words with the readings it took, and drafts proposals you sign with your
  * trade-only key (anchor, halve), route cards, alerts and standing orders.
- * Beside it: the keeper licence (opt-in, draft until the keeper is online),
- * the standing orders, the audit radio log and the kill switch.
+ * Ely sits across the survey table at the top (its state says the state of
+ * the range and the talk); below: the morning bulletin, the big kill switch,
+ * the keeper licence (opt-in, draft until the keeper is online) with the
+ * standing orders, and the audit radio log. One centre axis throughout.
  */
 export default function AgentPage() {
   const mode = useUiStore((state) => state.mode);
@@ -205,66 +209,126 @@ export default function AgentPage() {
   const holder = range.address ?? connected ?? SAMPLE_ADDRESS;
   const unlocked = agent.session.phase === "ready";
 
-  return (
-    <Page className="pb-16">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-x-10 gap-y-5 sm:mb-8">
-        <div className="min-w-0 max-w-3xl">
-          <p className="label-tab mb-4">Sheet 05 · The Guide · reads the range · drafts · you sign</p>
-          <h1 className="text-[44px] font-bold leading-[1] tracking-[-0.03em] text-ink sm:text-[64px]">Ask the Guide.</h1>
-          <p className="mt-3 max-w-2xl text-[17px] leading-relaxed text-ink-2 text-pretty sm:text-[19px]">
-            It reads your ropes, exposure and funding, says what it would do and drafts the move. <span className="font-semibold text-ink">You sign every one; it can never withdraw.</span>
-          </p>
-        </div>
-        <dl className="grid min-w-[280px] grid-cols-[auto_minmax(0,1fr)] border-2 border-rule bg-card font-mono text-[12px] shadow-hard" aria-label="How the Guide may act">
-          <dt className="border-b-1.5 border-rule/30 bg-paper-2 px-3 py-1.5 font-semibold uppercase tracking-[0.1em] text-ink">Propose</dt>
-          <dd className="border-b-1.5 border-rule/30 px-3 py-1.5 text-ink-2">
-            <span className="text-up">● on</span> · default · you sign
-          </dd>
-          <dt className="border-b-1.5 border-rule/30 bg-paper-2 px-3 py-1.5 font-semibold uppercase tracking-[0.1em] text-ink">Autopilot</dt>
-          <dd className="border-b-1.5 border-rule/30 px-3 py-1.5 text-ink-2">{unlocked ? <span className="text-up">● key unlocked</span> : <span>○ key {agent.session.phase === "locked" ? "locked" : "off"}</span>} · this tab</dd>
-          <dt className="bg-paper-2 px-3 py-1.5 font-semibold uppercase tracking-[0.1em] text-ink">Keeper</dt>
-          <dd className="px-3 py-1.5 text-ink-2">○ opt-in · coming online</dd>
-        </dl>
-      </header>
+  // Ely's mood: the latest win (a signature or an armed rule) puts the crown on for a moment.
+  const lastWin = useMemo(() => {
+    let latest: number | null = null;
+    for (const message of thread) for (const outcome of Object.values(message.outcomes ?? {})) if (outcome.status === "signed" || outcome.status === "armed") latest = Math.max(latest ?? 0, outcome.at);
+    return latest;
+  }, [thread]);
+  const mood = useMemo(
+    () => elyMood({ surveying: range.snapshot === null || (!sample && !range.feeds.ready), speaking: streamId !== null, killSwitch, ropes: guideRopes(range.ropes), lastWin, now, sample }),
+    [range.snapshot, range.feeds.ready, sample, streamId, killSwitch, range.ropes, lastWin, now],
+  );
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.62fr)_minmax(340px,1fr)] xl:gap-8">
-        <div className="flex min-w-0 flex-col gap-6">
-          <MorningBulletin columns={bulletin} now={now} sample={sample} onAsk={(question) => ask(question)} />
-          <section className="flex min-w-0 flex-col border-2 border-rule bg-card shadow-hard-lg" aria-label="Conversation with the Guide">
-            <header className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-rule px-4 py-2">
-              <h2 className="caption !text-ink">Radio · you ↔ the Guide · local planner</h2>
-              <p className="flex items-center gap-3 font-mono text-[11px] text-ink-2">
-                <span className={cx("flex items-center gap-1.5 uppercase tracking-[0.1em]", sample && "text-ink")}>
-                  <span aria-hidden="true" className={cx("h-2 w-2 rotate-45", sample ? "bg-signal outline outline-1 outline-rule" : "bg-up")} />
-                  {SOURCE_WORD[range.source]}
-                  {range.address && !sample ? ` · ${shortAddr(range.address)}` : ""}
-                </span>
-                {thread.length > 0 ? (
-                  <button type="button" onClick={() => useGuideStore.getState().clearThread()} className="underline decoration-dotted underline-offset-2 hover:text-ink">
-                    clear
-                  </button>
-                ) : null}
-              </p>
+  // One-tap questions from the sections below bring the table back into view.
+  const table = useRef<HTMLDivElement>(null);
+  const askFromBelow = useCallback(
+    (question: string) => {
+      ask(question);
+      table.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    },
+    [ask],
+  );
+
+  const modes: readonly { readonly key: string; readonly label: string; readonly value: string; readonly on: boolean }[] = [
+    { key: "propose", label: "Propose", value: "on · you sign", on: true },
+    { key: "autopilot", label: "Autopilot", value: unlocked ? "key unlocked" : `key ${agent.session.phase === "locked" ? "locked" : "off"}`, on: unlocked },
+    { key: "keeper", label: "Keeper", value: "opt-in · coming online", on: false },
+    { key: "kill", label: "Kill switch", value: killSwitch ? "on · nothing signs" : "off · ⇧K", on: killSwitch },
+  ];
+
+  return (
+    <Page className="!pt-0">
+      <Section
+        level={1}
+        tag="Sheet 05 · The Guide · reads the range · drafts · you sign"
+        title="Talk to Ely."
+        lede={
+          <>
+            Ely reads your ropes, exposure and funding, says what it would do and drafts the move. <span className="font-semibold text-ink">You sign every one; Ely can never withdraw.</span>
+          </>
+        }
+        actions={
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4" aria-label="How Ely may act">
+            {modes.map((entry) => (
+              <div key={entry.key} className={cx("flex min-w-[9.5rem] flex-col items-center gap-0.5 px-3 py-2 px-frame-thin", entry.key === "kill" && entry.on ? "bg-down text-card" : "bg-card")}>
+                <dt className={cx("flex items-center gap-1.5 font-tag text-[11px] uppercase", entry.key === "kill" && entry.on ? "text-card" : "text-ink")}>
+                  <span aria-hidden="true" className={cx("inline-block h-2 w-2", entry.on ? (entry.key === "kill" ? "bg-card" : "bg-up") : "bg-ink-3/40")} />
+                  {entry.label}
+                </dt>
+                <dd className={cx("font-mono text-[11px]", entry.key === "kill" && entry.on ? "text-card" : "text-ink-2")}>
+                  {entry.key === "kill" ? (
+                    <a href="#kill" className={cx("underline decoration-dotted underline-offset-2", FOCUS_RING)}>
+                      {entry.value}
+                    </a>
+                  ) : (
+                    entry.value
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        }
+      >
+        <div ref={table} className="scroll-mt-28">
+          <section className="flex min-w-0 flex-col overflow-hidden bg-card px-frame px-drop-lg" aria-label="Conversation with Ely, the Guide">
+            <GuideStage mood={mood} />
+            <header className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-b-4 border-dashed border-rule/30 px-4 py-2 text-center">
+              <span className={cx("flex items-center gap-1.5 font-tag text-[11px] uppercase", sample ? "text-ink" : "text-up")}>
+                <span aria-hidden="true" className={cx("inline-block h-2 w-2", sample ? "bg-signal" : "bg-up")} />
+                {SOURCE_WORD[range.source]}
+                {range.address && !sample ? ` · ${shortAddr(range.address)}` : ""}
+              </span>
+              <span className="hidden font-tag text-[11px] uppercase text-ink-3 sm:inline">local planner · every number from your range</span>
+              {thread.length > 0 ? (
+                <button type="button" onClick={() => useGuideStore.getState().clearThread()} className={cx("font-tag text-[11px] uppercase text-ink-2 underline decoration-dotted underline-offset-2 hover:text-ink", FOCUS_RING)}>
+                  clear the table
+                </button>
+              ) : null}
             </header>
-            <div data-guide-scroll className="max-h-[min(70vh,720px)] min-h-[320px] overflow-y-auto px-4 py-5 sm:px-6">
-              {thread.length === 0 ? (
-                <p className="font-mono text-[13px] text-ink-3" aria-busy={range.snapshot === null}>
-                  {range.snapshot ? "The Guide is reading your range…" : "Surveying the range…"}
-                </p>
-              ) : (
-                <Conversation thread={thread} streamId={streamId} onAct={act} onAsk={(question) => ask(question)} sample={sample} />
-              )}
+            <div data-guide-scroll className="max-h-[min(64vh,640px)] min-h-[300px] overflow-y-auto px-5 py-8 sm:px-8">
+              <div className="mx-auto max-w-[880px]">
+                {thread.length === 0 ? (
+                  <p className="text-center font-tag text-[12px] uppercase text-ink-3" aria-busy={range.snapshot === null}>
+                    {range.snapshot ? "Ely is reading your range…" : "Surveying the range…"}
+                  </p>
+                ) : (
+                  <Conversation thread={thread} streamId={streamId} onAct={act} onAsk={(question) => ask(question)} sample={sample} />
+                )}
+              </div>
             </div>
-            <div className="border-t-2 border-rule bg-paper-2/60 px-4 py-3 sm:px-5">
-              <Composer ref={composer} onAsk={(question) => ask(question)} starters={STARTERS.slice(1)} history={history} busy={false} />
+            <div className="border-t-4 border-rule bg-paper-2 px-4 pb-6 pt-5 sm:px-8">
+              <div className="mx-auto max-w-[880px]">
+                <Composer ref={composer} onAsk={(question) => ask(question)} starters={STARTERS.slice(1)} history={history} busy={false} />
+              </div>
             </div>
           </section>
         </div>
+      </Section>
 
-        <aside className="flex min-w-0 flex-col gap-6" aria-label="The Guide's licence, orders and log">
-          <KillSwitch on={killSwitch} onPress={pressKill} onRelease={releaseKill} />
+      <Section id="bulletin" tag="07:00 · Morning bulletin · Telegram once linked" title="What Ely saw overnight." lede="Overnight, on the summit and today: the same readings, every morning. One tap asks Ely what to do about it.">
+        <MorningBulletin columns={bulletin} now={now} sample={sample} onAsk={askFromBelow} />
+      </Section>
+
+      <Section id="kill" tag="Kill switch · ⇧K anywhere on this sheet" title="One press, everything holds." lede="The switch stops every standing order and every new signature at once. It never traps you: closing and cancelling always work.">
+        <Cards n={3}>
+          <div className="order-2 min-[900px]:order-none">
+            <KillNote side="stops" on={killSwitch} />
+          </div>
+          <div className="order-first min-[900px]:order-none">
+            <KillSwitch on={killSwitch} onPress={pressKill} onRelease={releaseKill} />
+          </div>
+          <div className="order-3 min-[900px]:order-none">
+            <KillNote side="works" on={killSwitch} />
+          </div>
+        </Cards>
+      </Section>
+
+      <Section id="licence" tag="Keeper mode · optional · a permit with punched days" title="Ely's licence." lede="If you ever let Ely act while you sleep, it carries a permit: your Rule Book's limits, the days it is valid, trade only. Until the keeper is online it stays a draft.">
+        <Split>
           <LicenceCard holder={holder} book={book} days={licenceDays} onDays={(days) => useGuideStore.getState().setLicenceDays(days)} now={now} sample={sample} keeperOnline={false} />
           <StandingOrders
+            className="h-full"
             rules={standing}
             statuses={watch.statuses}
             onToggle={(rule) => {
@@ -279,11 +343,16 @@ export default function AgentPage() {
               useAlertStore.getState().removeRule(rule.id);
               useGuideStore.getState().log({ from: "YOU", to: "GUIDE", message: `deleted standing order: ${rule.action}`, tone: "plain" });
             }}
-            onAsk={(question) => ask(question)}
+            onAsk={askFromBelow}
           />
+        </Split>
+      </Section>
+
+      <Section id="audit" tag="Audit · every move · this device" title="The radio log." lede="Every proposal, signature, refusal and kill-switch press, in order. Kept in this browser.">
+        <div className="mx-auto max-w-[880px]">
           <AuditLog entries={audit} />
-        </aside>
-      </div>
+        </div>
+      </Section>
 
       <SignDialog
         open={signing !== null}

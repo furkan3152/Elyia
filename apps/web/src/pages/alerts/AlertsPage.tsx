@@ -1,21 +1,23 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAccount } from "wagmi";
 
 import { routeHref } from "../../app/routes/routeTable";
 import { Link } from "../../app/routes/Link";
-import { Page } from "../../app/shell/Page";
+import { Cards, Page, Section, Split } from "../../pixel/layout";
+import { ElyEmpty } from "../../pixel/ElyEmpty";
+import { PixelGlyph } from "../../pixel/PixelGlyph";
 import { useUiStore } from "../../app/state/uiStore";
 import { useAccountFeeds } from "../../features/trading/useAccountFeeds";
 import { useMarketCatalog } from "../../features/trading/useMarketData";
 import { usePositionRopes } from "../../features/trading/useTopoData";
 import { useNow } from "../../hooks/useNow";
 import { RadioLog, type RadioEntry } from "../../topo/RadioLog";
-import { SignpostCluster } from "../../topo/Signpost";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { toast } from "../../ui/toast";
 import { useAlertStore } from "./model/alertStore";
 import { newRuleId, ruleCondition, type AlertRule } from "./model/rules";
 import { useRuleWatch } from "./model/useRuleWatch";
+import { GLYPHS } from "./model/glyphs";
 import { RuleBuilder } from "./parts/RuleBuilder";
 import { RulesLog } from "./parts/RulesLog";
 import { TelegramCard } from "./parts/TelegramCard";
@@ -106,45 +108,81 @@ export default function AlertsPage() {
 
   const preview = rules[0] ? `${ruleCondition(rules[0])}: it just did.` : "BTC is below $90,000 (now $89,920).";
 
-  return (
-    <Page className="pb-16">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-x-10 gap-y-5 sm:mb-8">
-        <div className="min-w-0 max-w-3xl">
-          <p className="label-tab mb-4">Sheet 08 · Radio · alerts in the app and on Telegram</p>
-          <h1 className="text-[44px] font-bold leading-[1] tracking-[-0.03em] text-ink sm:text-[64px]">Tell me when.</h1>
-          <p className="mt-3 max-w-2xl text-[17px] leading-relaxed text-ink-2 text-pretty sm:text-[19px]">
-            Price, funding, a rope near its crevasse, a fill, a bridge that landed. Say it as a sentence; Elyia watches it live and radios you. <span className="font-semibold text-ink">Alerts never trade.</span>
-          </p>
-        </div>
-        <p className="max-w-[300px] border-l-[3px] border-rule pl-3 font-mono text-[12px] leading-relaxed text-ink-2">
-          Watched while Elyia is open in this browser{mode === "testnet" ? " · testnet HyperCore prices (the practice wall)" : ""}. 24/7 delivery arrives with the Telegram bot.
-        </p>
-      </header>
+  const builder = useRef<HTMLDivElement>(null);
+  const toBuilder = () => builder.current?.scrollIntoView({ block: "start", behavior: "smooth" });
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.62fr)_minmax(340px,1fr)] xl:gap-8">
-        <div className="flex min-w-0 flex-col gap-6">
+  return (
+    <Page className="!pt-0">
+      <Section
+        level={1}
+        tag="Sheet 08 · Radio · alerts in the app and on Telegram"
+        title="Tell me when."
+        lede={
+          <>
+            Price, funding, a rope near its crevasse, a fill, a bridge that landed. Say it as a sentence; Elyia watches it live and radios you. <span className="font-semibold text-ink">Alerts never trade.</span>
+          </>
+        }
+        actions={
+          <p className="bg-card px-3 py-1.5 text-center font-tag text-[11px] uppercase text-ink-2 px-frame-thin">
+            Watched while Elyia is open{mode === "testnet" ? " · testnet prices" : ""} · 24/7 with the Telegram bot
+          </p>
+        }
+      >
+        <div ref={builder} className="scroll-mt-28">
           <RuleBuilder coins={coins} ropeCoins={ropeCoins} readings={watch.readings} telegramLinked={false} priceWord={mode === "testnet" ? "testnet prices · funding hourly" : "HyperCore prices"} onCreate={add} />
-          <RulesLog
-            rules={rules}
-            statuses={watch.statuses}
-            now={now}
-            onToggle={(rule) => useAlertStore.getState().updateRule(rule.id, { armed: !rule.armed })}
-            onRemove={(rule) => useAlertStore.getState().removeRule(rule.id)}
-          />
         </div>
-        <aside className="flex min-w-0 flex-col gap-6" aria-label="Quick lines, feed and Telegram">
-          <SignpostCluster
-            caption="Quick lines · one tap arms"
-            label="Quick alerts"
-            blades={quick.map((blade, index) => ({
-              destination: blade.destination,
-              eta: blade.eta,
-              detail: blade.detail,
-              highlight: index === 0,
-              onClick: () => add({ ...blade.rule, id: newRuleId(Date.now()), createdAt: Date.now() }),
-            }))}
-          />
+      </Section>
+
+      <Section id="rules" tag={`Your rules · ${rules.length} · ${rules.filter((rule) => rule.armed).length} armed · this device`} title="Every rule is a trail." lede="Ely stands where the reading is now; your line is the flag. The rope behind is the way already climbed. When Ely reaches the flag, it fires.">
+        <RulesLog
+          rules={rules}
+          statuses={watch.statuses}
+          now={now}
+          onBuild={toBuilder}
+          onToggle={(rule) => useAlertStore.getState().updateRule(rule.id, { armed: !rule.armed })}
+          onRemove={(rule) => useAlertStore.getState().removeRule(rule.id)}
+        />
+      </Section>
+
+      <Section id="quick" tag="Quick lines · one tap arms" title="From the market, right now." lede="Four lines read off the live market and your ropes. One tap arms each; tune it later in the builder.">
+        <Cards n={4} as="ul">
+          {quick.map((blade, index) => (
+            <li key={blade.destination} className="flex">
+              <button
+                type="button"
+                onClick={() => add({ ...blade.rule, id: newRuleId(Date.now()), createdAt: Date.now() })}
+                className={cx("flex w-full flex-col items-center gap-3 px-4 pb-4 pt-5 text-center px-frame px-drop px-press", index === 0 ? "bg-signal text-signal-ink" : "bg-card text-ink", FOCUS_RING)}
+              >
+                <span className="inline-flex bg-card p-1.5 px-frame-thin">
+                  <PixelGlyph rows={GLYPHS[blade.rule.kind]} scale={3} label={null} />
+                </span>
+                <span className="font-display text-[19px] font-bold leading-tight">{blade.destination}</span>
+                <span className={cx("font-mono text-[12px]", index === 0 ? "text-signal-ink" : "text-ink-2")}>{blade.detail}</span>
+                <span className="mt-auto font-tag text-[11px] uppercase">Arm it ▸</span>
+              </button>
+            </li>
+          ))}
+        </Cards>
+      </Section>
+
+      <Section id="radio" tag="Radio · what fired · where it goes" title="Heard at base camp." lede="Everything that fired lands in this feed first. Link Telegram and it reaches your pocket too; approving still opens Elyia to sign.">
+        <Split>
+          {feed.length === 0 ? (
+            <section className="flex flex-col bg-card px-frame px-drop" aria-labelledby="feed-title">
+              <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-paper-2 px-4 py-2.5">
+                <h3 id="feed-title" className="font-tag text-[12px] uppercase text-ink">
+                  In-app feed · 0 heard
+                </h3>
+                <span className="font-tag text-[11px] uppercase text-up">● live</span>
+              </header>
+              <div className="flex flex-1 items-center justify-center">
+                <ElyEmpty compact title="Quiet on the radio" description="When a rule fires, it lands here first, with the reading that tripped it." />
+              </div>
+              <footer className="border-t-4 border-dashed border-rule/30 px-4 py-2 text-center font-mono text-[11px] text-ink-3">alerts tell · the Guide drafts · you sign</footer>
+            </section>
+          ) : (
           <RadioLog
+            className="px-drop"
             entries={radio}
             title={`In-app feed · ${feed.length} heard`}
             aside={
@@ -157,11 +195,12 @@ export default function AlertsPage() {
               )
             }
             footer="alerts tell · the Guide drafts · you sign"
-            maxHeight="340px"
+            maxHeight="360px"
           />
+          )}
           <TelegramCard preview={preview} />
-        </aside>
-      </div>
+        </Split>
+      </Section>
     </Page>
   );
 }

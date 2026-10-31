@@ -25,25 +25,25 @@ export const Composer = forwardRef<HTMLInputElement, ComposerProps>(function Com
     setRecall(-1);
   };
   return (
-    <div className="flex flex-col gap-2.5">
-      <ul className="flex flex-wrap gap-1.5" aria-label="Questions to start with">
+    <div className="flex flex-col gap-5">
+      <ul className="flex flex-wrap justify-center gap-x-4 gap-y-4" aria-label="Questions to start with">
         {starters.map((starter) => (
           <li key={starter}>
-            <button type="button" onClick={() => onAsk(starter)} disabled={busy} className={cx("border-1.5 border-rule/50 bg-paper px-2.5 py-1 font-mono text-[12px] text-ink-2 transition-colors duration-fast hover:border-rule hover:bg-card hover:text-ink disabled:opacity-50", FOCUS_RING)}>
+            <button type="button" onClick={() => onAsk(starter)} disabled={busy} className={cx("bg-card px-2.5 py-1 font-mono text-[12px] text-ink-2 px-frame-thin px-press hover:text-ink disabled:opacity-50", FOCUS_RING)}>
               “{starter}”
             </button>
           </li>
         ))}
       </ul>
       <form
-        className="flex min-h-[56px] items-stretch border-2 border-rule bg-card shadow-hard focus-within:shadow-hard-lg"
+        className="flex min-h-[60px] items-stretch bg-card px-frame px-drop focus-within:outline-dashed focus-within:outline-4 focus-within:outline-offset-[8px] focus-within:outline-signal"
         onSubmit={(event) => {
           event.preventDefault();
           submit();
         }}
       >
-        <label htmlFor="guide-ask" className="flex shrink-0 items-center border-r-2 border-rule bg-ink px-3 font-sans text-[13px] font-bold uppercase tracking-[0.06em] text-paper sm:px-4">
-          Ask<span className="hidden sm:inline">&nbsp;the Guide</span>
+        <label htmlFor="guide-ask" className="flex shrink-0 items-center border-r-4 border-rule bg-ink px-3 font-tag text-[12px] uppercase text-paper sm:px-4">
+          Ask<span className="hidden sm:inline">&nbsp;Ely</span>
         </label>
         <input
           ref={ref}
@@ -73,7 +73,7 @@ export const Composer = forwardRef<HTMLInputElement, ComposerProps>(function Com
         <span className="hidden items-center gap-1 px-2 font-mono text-[11px] text-ink-3 md:flex">
           <Kbd>A</Kbd> focus · <Kbd>↵</Kbd>
         </span>
-        <button type="submit" disabled={busy || value.trim() === ""} className={cx("shrink-0 border-l-2 border-rule bg-accent px-4 font-sans text-[13px] font-bold uppercase tracking-[0.06em] text-accent-ink transition-opacity disabled:opacity-45", FOCUS_RING)}>
+        <button type="submit" disabled={busy || value.trim() === ""} className={cx("shrink-0 border-l-4 border-rule bg-accent px-4 font-display text-[16px] font-bold text-accent-ink transition-opacity disabled:opacity-45 sm:px-6", FOCUS_RING)}>
           Ask ▸
         </button>
       </form>

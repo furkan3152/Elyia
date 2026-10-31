@@ -4,10 +4,13 @@ import { WalletButton } from "../../../app/shell/WalletButton";
 import { daysLeft } from "../../../features/agentKey/approve";
 import { useAgentStore } from "../../../features/agentKey/agentSession";
 import type { AgentKeyApi } from "../../../features/agentKey/useAgentKey";
+import { ElyEmpty } from "../../../pixel/ElyEmpty";
+import { PixelGlyph } from "../../../pixel/PixelGlyph";
 import { Button } from "../../../ui/Button";
 import { cx } from "../../../ui/cx";
 import { Skeleton } from "../../../ui/Skeleton";
 import { Toggle } from "../../../ui/Toggle";
+import { ITEM } from "./kitItems";
 
 const DAY = 86_400_000;
 
@@ -57,57 +60,57 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <article className="relative border-2 border-rule bg-card shadow-hard-lg" aria-label="Trading key">
-        <span aria-hidden="true" className="absolute -left-[13px] top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-2 border-rule bg-paper" />
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-dashed border-rule py-2 pl-6 pr-4">
-          <h3 className="font-mono text-[13px] font-semibold uppercase tracking-[0.12em] text-ink">elyia-web · trade-only key</h3>
+    <div className="flex flex-col gap-8">
+      <article className="relative bg-card px-frame px-drop-lg" aria-label="Trading key">
+        <span aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 bg-paper px-frame-thin" />
+        <header className="flex flex-col items-center gap-2 border-b-4 border-rule bg-paper-2 py-3 pl-10 pr-4 text-center sm:flex-row sm:justify-between sm:text-left">
+          <h3 className="flex items-center gap-3 font-tag text-[12px] uppercase text-ink">
+            <PixelGlyph rows={ITEM.key} scale={3} label={null} />
+            elyia-web · trade-only key
+          </h3>
           {phase ? (
-            <span className={cx("flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em]", phase.tone)}>
+            <span className={cx("flex items-center gap-1.5 font-tag text-[11px] uppercase", phase.tone)}>
               <span aria-hidden="true">{session.phase === "ready" ? "●" : "○"}</span>
               {phase.word}
             </span>
           ) : (
-            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-2">no wallet connected</span>
+            <span className="font-tag text-[11px] uppercase text-ink-2">no wallet connected</span>
           )}
         </header>
-        <div className="flex flex-col gap-4 py-4 pl-6 pr-4">
+        <div className="flex flex-col gap-6 py-6 pl-10 pr-4 sm:pr-6">
           {!connected ? (
-            <div className="flex flex-col items-start gap-3">
-              <p className="text-[15px] text-ink-2">Connect the wallet you trade with. Your wallet key never leaves it; it signs one approval for this key.</p>
-              <WalletButton />
-            </div>
+            <ElyEmpty compact title="No wallet connected" description="Connect the wallet you trade with. Your wallet key never leaves it; it signs one approval for this key." action={<WalletButton />} />
           ) : meta ? (
             <>
               <dl className="grid grid-cols-2 gap-x-6 gap-y-2.5 font-mono text-[13px] sm:grid-cols-4">
                 <div>
-                  <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-3">Key</dt>
+                  <dt className="font-tag text-[11px] uppercase text-ink-3">Key</dt>
                   <dd className="tnum font-semibold text-ink" title={meta.agentAddress}>
                     {short(meta.agentAddress)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-3">For wallet</dt>
+                  <dt className="font-tag text-[11px] uppercase text-ink-3">For wallet</dt>
                   <dd className="tnum text-ink">{short(meta.master)}</dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-3">On HyperCore</dt>
+                  <dt className="font-tag text-[11px] uppercase text-ink-3">On HyperCore</dt>
                   <dd className={health === "active" ? "text-up" : health === null ? "text-ink-2" : "text-down"}>{health === "active" ? "approved" : health === "expired" ? "expired" : health === "missing" ? "not listed" : "checking…"}</dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-3">Expires</dt>
+                  <dt className="font-tag text-[11px] uppercase text-ink-3">Expires</dt>
                   <dd className={cx("tnum", left < 3 ? "text-down" : "text-ink")}>
                     {date(meta.validUntil)} · {left} d
                   </dd>
                 </div>
               </dl>
               <div>
-                <ol className="flex gap-[3px]" aria-label={`${left} of ${total} days left`}>
+                <ol className="flex gap-[6px]" aria-label={`${left} of ${total} days left`}>
                   {Array.from({ length: cells }, (_, index) => (
-                    <li key={index} aria-hidden="true" className={cx("h-3 flex-1 border-1.5 border-rule", index < usedCells ? "bg-ink" : "bg-paper")} />
+                    <li key={index} aria-hidden="true" className={cx("h-3 flex-1 px-frame-thin", index < usedCells ? "bg-ink" : "bg-paper")} />
                   ))}
                 </ol>
-                <p className="mt-1 flex justify-between font-mono text-[11px] text-ink-3">
+                <p className="mt-2 flex justify-between font-tag text-[11px] uppercase text-ink-3">
                   <span>{date(meta.createdAt)}</span>
                   <span>{total > 30 ? `${total} days · one cell ≈ ${Math.round(total / 30)} d` : `${total} days`}</span>
                 </p>
@@ -117,7 +120,7 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
             <p className="text-[15px] text-ink-2">{session.phase === "unsupported" || session.phase === "error" ? (session.error ?? "This browser cannot store the key safely.") : "No trading key on this device for this account. Enabling makes a fresh key here; your wallet approves it once."}</p>
           )}
           {connected ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
               {session.phase === "ready" ? (
                 <Button variant="ink" size="sm" loading={working === "lock"} onClick={() => void run("lock", () => api.lock())}>
                   Lock
@@ -146,9 +149,9 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
             </div>
           ) : null}
           {confirmRevoke ? (
-            <div className="flex flex-col gap-2 border-l-[3px] border-down bg-paper-2 p-3 text-[14px] text-ink-2">
+            <div className="flex flex-col gap-4 bg-paper-2 p-4 text-[14px] text-ink-2 px-frame-thin px-tone-down">
               <p>Revoking approves a throwaway address under the name elyia-web, which replaces this key on HyperCore at once. Your wallet signs once; then the key is deleted here.</p>
-              <div className="flex gap-2">
+              <div className="flex gap-6">
                 <Button variant="danger" size="sm" loading={working === "revoke"} onClick={() => void run("revoke", async () => (await api.revoke()) && setConfirmRevoke(false))}>
                   Sign revoke
                 </Button>
@@ -160,9 +163,9 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
           ) : null}
           {api.progress.step === "error" && api.progress.error ? <p className="text-[13px] text-down">{api.progress.error}</p> : null}
         </div>
-        <footer className="flex flex-wrap items-center justify-between gap-2 border-t-1.5 border-rule/30 py-2 pl-6 pr-4 font-mono text-[11px] text-ink-3">
+        <footer className="flex flex-col items-center gap-1 border-t-4 border-dashed border-rule/30 py-3 pl-10 pr-4 text-center font-mono text-[11px] text-ink-3 sm:flex-row sm:justify-between">
           <span>AES-GCM in this browser · never sent anywhere</span>
-          <span className="font-semibold uppercase tracking-[0.1em] text-down">Trade only · cannot withdraw</span>
+          <span className="font-tag uppercase text-down">Trade only · cannot withdraw</span>
         </footer>
       </article>
 
@@ -176,7 +179,7 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
 
       {connected ? (
         <div className="flex flex-col gap-2">
-          <p className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
+          <p className="flex items-center justify-between font-tag text-[11px] uppercase text-ink-3">
             <span>Agents on this account</span>
             <span>{api.agents.length} / 3 named</span>
           </p>
@@ -185,13 +188,13 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
           ) : api.agents.length === 0 ? (
             <p className="text-[14px] text-ink-2">No named agents yet.</p>
           ) : (
-            <ul className="divide-y divide-rule/15 border-2 border-rule bg-card">
+            <ul className="divide-y-2 divide-dashed divide-rule/20 bg-card px-frame-thin">
               {api.agents.map((agent) => (
                 <li key={agent.address} className="flex items-center justify-between gap-3 px-3 py-2 font-mono text-[12px]">
                   <span className="min-w-0 truncate text-ink">
                     {agent.name || "(unnamed)"} <span className="text-ink-3">{short(agent.address)}</span>
                   </span>
-                  <span className={cx("shrink-0 uppercase tracking-[0.08em]", agent.expired ? "text-down" : agent.thisDevice ? "text-up" : "text-ink-2")}>
+                  <span className={cx("shrink-0 font-tag text-[11px] uppercase", agent.expired ? "text-down" : agent.thisDevice ? "text-up" : "text-ink-2")}>
                     {agent.expired ? "expired" : agent.thisDevice ? "this device" : agent.isElyia ? "another device" : "other app"}
                     {agent.validUntil ? ` · ${date(agent.validUntil)}` : ""}
                   </span>
