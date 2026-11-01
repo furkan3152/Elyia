@@ -26,16 +26,24 @@ export interface TurnCard {
   readonly at: number;
 }
 
-/** The reader's questions for a turn that ended asking (fetched from /v1/intents/parse). */
+/**
+ * The reader's questions for a turn that ended asking. They arrive in the
+ * chat stream's `clarify` event (`via: "chat"`: the answers go back to
+ * /v1/agent/chat); an older API without that event is asked through
+ * /v1/intents/parse after the turn (`via: "reader"`).
+ */
 export interface ClarifyState {
   readonly status: "loading" | "ready" | "none";
+  readonly via: "chat" | "reader";
+  /** The sentence the questions are about (chat clarify: sent back with the answers). */
+  readonly sentence: string | null;
   readonly at: number;
   readonly questions: readonly LanguageQuestion[];
   /** The reader's signed answer thread. */
   readonly thread: string | null;
   /** question id -> option id (or typed text, prefixed "text:"). */
   readonly picked: Readonly<Record<string, string>>;
-  /** The canonical sentence that was sent once every question was answered. */
+  /** What was sent once every question was answered (the canonical sentence, or the picked labels). */
   readonly sent: string | null;
 }
 
@@ -105,6 +113,10 @@ export function applyEvent(turn: ElyTurn, event: ElyEvent, at: number): ElyTurn 
       if (draft) return { ...turn, drafts: [...turn.drafts, { kind: draft[1]!, at }] };
       return { ...turn, notes: [...turn.notes, { text: event.data.text, at }] };
     }
+    case "clarify": {
+      const questions = event.data.questions.filter((question) => question.options.length > 0 || question.allowsText);
+      return { ...turn, clarify: { status: questions.length > 0 ? "ready" : "none", via: "chat", sentence: event.data.sentence, at, questions, thread: event.data.thread, picked: {}, sent: null } };
+    }
     case "done":
       return {
         ...turn,
@@ -135,9 +147,12 @@ export function primaryCard(turn: ElyTurn): { readonly card: RouteCard; readonly
   return proposal?.card ? { card: proposal.card, proposal, at: turn.doneAt ?? turn.startedAt } : null;
 }
 
-/** A turn that ended in a question (no card, no proposal): worth asking the reader for options. */
+/**
+ * A turn that ended in a question (no card, no proposal) and whose stream
+ * sent no `clarify` event: an older API, so the reader is asked for options.
+ */
 export function endsAsking(turn: ElyTurn): boolean {
-  return turn.doneAt !== null && turn.error === null && turn.cards.length === 0 && turn.proposals.length === 0 && /\?\s*$/u.test(turn.text.trim());
+  return turn.clarify === null && turn.doneAt !== null && turn.error === null && turn.cards.length === 0 && turn.proposals.length === 0 && /\?\s*$/u.test(turn.text.trim());
 }
 
 /** Planning tools: a route card is coming, so the panel can open on "Surveying the route…". */

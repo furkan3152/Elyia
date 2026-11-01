@@ -30,6 +30,7 @@ export const PLATFORM_COLLECTIONS = Object.freeze({
   agentThreads: "agent_threads",
   agentMemory: "agent_memory",
   agentProposals: "agent_proposals",
+  agentProposalLinks: "agent_proposal_links",
   agentAutomations: "agent_automations",
   agentFeed: "agent_feed",
   keepers: "keepers",

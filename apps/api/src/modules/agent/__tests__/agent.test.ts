@@ -10,7 +10,11 @@ import { parseSse, serve, testConfig, type Served } from "../../../__tests__/sup
 import { MemoryStore } from "../../../store/memory.js";
 import { issueToken } from "../../ops/auth/session.js";
 import { chatTurn } from "../chat.js";
-import { commandOf } from "../deterministic.js";
+import { commandOf, movesOf } from "../deterministic.js";
+import { agentActions, runAgentTool } from "../tools.js";
+import { goalsToActions } from "../../../engine/planner/goals.js";
+import { readText } from "../../../language/reader.js";
+import type { GoalItem } from "@elyia/core";
 import { computeInsights, priceText, shocks } from "../insights.js";
 import { keeperGuard, keeperOf, openKeeperKey, prepareKeeper, revokeKeeper, sealedKeyAddress, setKill, signWithKey, tradeOnlyReducing, type KeeperRecord } from "../keeper.js";
 import { defaultMemory, memoryOf } from "../memory.js";
@@ -108,6 +112,49 @@ describe("agent: deterministic grammar", () => {
     assert.equal(commandOf("pozisyonlarımı koru")?.id, "protect");
     assert.equal(commandOf("explain my pnl")?.id, "pnl");
     assert.equal(commandOf("swap 1 HYPE to USDC"), null);
+  });
+});
+
+describe("agent: chained moves", () => {
+  const facts = { now: Date.UTC(2026, 9, 31) };
+  const compile = (text: string) => goalsToActions(movesOf(readText(text, { facts }).goals as GoalItem[]), "testnet");
+
+  it("plans a multi-step sentence: the language reader's chain passes the plan_intent schema", () => {
+    for (const text of ["Bridge 20 HYPE to Elysium and swap half to USDC", "20 HYPE'ı Elysium'a köprüle ve yarısını USDC'ye çevir"]) {
+      const actions = compile(text);
+      assert.equal(actions.length, 2, text);
+      assert.deepEqual(actions[1]?.after, [0]);
+      assert.equal(actions[1]?.amount, "max");
+      assert.equal(actions[1]?.params?.portionBps, 5_000);
+      const parsed = agentActions.safeParse(actions);
+      assert.ok(parsed.success, parsed.success ? text : JSON.stringify(parsed.error.issues));
+    }
+  });
+
+  it("accepts every action the reader compiles for its own examples (no key the schema drops)", () => {
+    for (const text of ["swap 10 HYPE to USDC on kalos", "long 0.5 ETH at 10x", "buy 100 HYPE spot limit 25", "stake 100 HYPE", "twap buy 10 HYPE over 30 minutes"]) {
+      const reading = readText(text, { facts });
+      if (reading.status !== "ready") continue;
+      const parsed = agentActions.safeParse(compile(text));
+      assert.ok(parsed.success, `${text}: ${parsed.success ? "" : JSON.stringify(parsed.error.issues)}`);
+    }
+  });
+
+  it("rejects a chain that points forwards or at itself", async () => {
+    const bad = [{ kind: "swap", network: "elysium-testnet", from: "HYPE", to: "USDC", amount: "max", after: [0] }];
+    assert.equal(agentActions.safeParse(bad).success, false);
+    const tools = { ctx, owner: OWNER, address: OWNER, integratorFee: null, proposals: [], drafts: [], cards: [] };
+    const outcome = await runAgentTool("plan_intent", { actions: bad }, tools);
+    assert.equal(outcome.ok, false);
+    assert.match(outcome.summary, /earlier action/u);
+  });
+
+  it("re-points chain links when a question sits between the moves", () => {
+    const value = (after?: number) => ({ t: "value", goal: { kind: "convert", ...(after === undefined ? {} : { chain: { after } }) } }) as unknown as GoalItem;
+    const moves = movesOf([value(), { t: "query", goal: {} } as unknown as GoalItem, value(0), value(1)]);
+    assert.equal(moves.length, 3);
+    assert.deepEqual((moves[1] as { goal: { chain?: { after: number } } }).goal.chain, { after: 0 });
+    assert.equal((moves[2] as { goal: { chain?: unknown } }).goal.chain, undefined, "a link to a non-move is dropped");
   });
 });
 
@@ -220,6 +267,37 @@ describe("agent: chat", () => {
     assert.ok(first.tools.every((tool) => !/sign|send|withdraw|transfer/u.test(tool.name)), "no tool signs or moves funds");
     assert.ok(!/\d{4}-\d{2}-\d{2}/u.test(first.system[0]?.text ?? ""), "the system prompt is frozen");
     assert.ok(done.threadId.startsWith("thr_"));
+  });
+
+  it("ends a question turn with a structured clarify event, and reads the answers it is sent back", async () => {
+    const offline = createContext(testConfig({ ELYIA_SESSION_SECRET: "s".repeat(40) }), { store: new MemoryStore(), fetch: async () => { throw new Error("offline"); } });
+    const local = await serve(createApp(offline));
+    try {
+      const post = async (body: unknown) => parseSse(await (await fetch(`${local.url}/v1/agent/chat`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).text());
+      const first = await post({ message: "swap 10 HYPE", address: OWNER });
+      const names = first.map((message) => message.event);
+      assert.ok(names.indexOf("clarify") >= 0 && names.indexOf("clarify") < names.indexOf("done"), names.join(","));
+      const clarify = JSON.parse(first.find((message) => message.event === "clarify")?.data ?? "{}") as { sentence: string; thread: string | null; threadId: string | null; questions: Array<{ id: string; options: Array<{ id: string }> }> };
+      assert.equal(clarify.sentence, "swap 10 HYPE");
+      assert.equal(clarify.threadId, null, "anonymous chats are not stored");
+      assert.equal(clarify.thread, null, "no answers yet: nothing to sign");
+      assert.deepEqual(clarify.questions.map((question) => question.id), ["g0.want.asset", "g0.network"]);
+      assert.ok(clarify.questions.every((question) => question.options.length > 0));
+      // The text still carries the prompts for clients that ignore the event.
+      assert.match((JSON.parse(first.at(-1)?.data ?? "{}") as { text: string }).text, /which token\?/u);
+
+      // One answer: the reader keeps it in its thread and asks only what is left.
+      const second = await post({ message: "swap 10 HYPE", address: OWNER, clarify: { answers: [{ question: "g0.want.asset", option: "USDC" }] } });
+      const next = JSON.parse(second.find((message) => message.event === "clarify")?.data ?? "{}") as { thread: string | null; questions: Array<{ id: string }> };
+      assert.deepEqual(next.questions.map((question) => question.id), ["g0.network"]);
+      assert.ok(next.thread, "the reader's signed thread carries the first answer");
+      assert.ok(!second.some((message) => message.event === "tool_call"), "nothing is planned while a question is open");
+
+      const bad = await fetch(`${local.url}/v1/agent/chat`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: "swap 10 HYPE", address: OWNER, clarify: { answers: [{ question: "g0.network", option: "a", text: "b" }] } }) });
+      assert.equal(bad.status, 400);
+    } finally {
+      await local.close();
+    }
   });
 
   it("streams a deterministic answer over SSE without a model", async () => {

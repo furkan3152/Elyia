@@ -8,7 +8,8 @@
 import { goalsToActions } from "../../engine/planner/goals.js";
 import type { GoalItem, IntentActionSpec } from "@elyia/core";
 import type { Insight } from "@elyia/core/api/agent";
-import { readIntent } from "../../language/index.js";
+import type { ReadResult } from "../../language/index.js";
+import { readSentenceFor } from "../intents/language.js";
 import type { AppContext } from "../../context.js";
 import { isElyiaHttpError } from "../../http/errors.js";
 import { insightsFor } from "./proposals.js";
@@ -71,6 +72,8 @@ interface DeterministicInput {
   readonly locale: Locale;
   readonly tools: ToolContext;
   readonly emit: (event: string, data: unknown) => void;
+  /** A reading already made for this message (clarify answers applied). */
+  readonly reading?: ReadResult;
 }
 
 async function call(input: DeterministicInput, name: string, args: unknown): Promise<{ ok: boolean; data: unknown }> {
@@ -118,7 +121,36 @@ async function fromInsights(input: DeterministicInput, kinds: readonly Insight["
   return parts.filter(Boolean).join("\n");
 }
 
-export async function runDeterministicTurn(input: DeterministicInput): Promise<{ readonly text: string }> {
+/**
+ * The plannable goals (value moves and trades) of a reading, with chain
+ * links (`chain.after`, an index into the whole reading) re-pointed at the
+ * filtered list, so "bridge … and swap half" stays one chained plan even
+ * when a question or a rule sits between the moves.
+ */
+export function movesOf(goals: readonly GoalItem[]): GoalItem[] {
+  const kept: number[] = [];
+  goals.forEach((goal, index) => {
+    if (goal.t === "value" || goal.t === "trade") kept.push(index);
+  });
+  return kept.map((index) => {
+    const item = goals[index] as GoalItem;
+    if (item.t !== "value" || item.goal.chain === undefined) return item;
+    const parent = kept.indexOf(item.goal.chain.after);
+    if (parent < 0) {
+      const { chain: _dropped, ...rest } = item.goal;
+      return { ...item, goal: rest } as GoalItem;
+    }
+    return { ...item, goal: { ...item.goal, chain: { ...item.goal.chain, after: parent } } } as GoalItem;
+  });
+}
+
+export interface DeterministicResult {
+  readonly text: string;
+  /** The reader's reading when the turn ends asking (its questions become a `clarify` event). */
+  readonly clarify?: ReadResult;
+}
+
+export async function runDeterministicTurn(input: DeterministicInput): Promise<DeterministicResult> {
   const { locale } = input;
   const command = commandOf(input.message);
   let text: string;
@@ -193,13 +225,13 @@ export async function runDeterministicTurn(input: DeterministicInput): Promise<{
     return { text };
   }
 
-  const reading = await readIntent(input.message, { ctx: input.ctx, locale });
-  if (reading.status === "needs_input") return { text: reading.questions.map((question) => question.prompt).join("\n") };
+  const reading = input.reading ?? (await readSentenceFor(input.ctx, { text: input.message, locale, account: input.tools.address }));
+  if (reading.status === "needs_input") return { text: reading.questions.map((question) => question.prompt).join("\n"), clarify: reading };
   if (reading.status !== "ready") return { text: reading.unsupported ?? T.unreadable[locale] };
   const goals = reading.goals as unknown as Array<{ t: string; goal?: { what?: string; subject?: { symbol?: string; coin?: string } } }>;
   const queries = goals.filter((goal) => goal.t === "query");
   const rules = goals.filter((goal) => goal.t === "rule");
-  const moves = goals.filter((goal) => goal.t === "value" || goal.t === "trade");
+  const moves = movesOf(reading.goals as unknown as GoalItem[]);
   const parts: string[] = [];
   for (const query of queries) {
     const what = query.goal?.what;
@@ -217,7 +249,7 @@ export async function runDeterministicTurn(input: DeterministicInput): Promise<{
     input.tools.drafts.push({ kind: "alert", body: rules });
   }
   if (moves.length > 0) {
-    const actions = goalsToActions(moves as unknown as GoalItem[], input.ctx.config.mode);
+    const actions = goalsToActions(moves, input.ctx.config.mode);
     parts.push((await propose(input, reading.canonical ?? input.message.slice(0, 100), reading.canonical ?? input.message, actions)).trim());
   }
   return { text: parts.filter(Boolean).join("\n") || T.unreadable[locale] };

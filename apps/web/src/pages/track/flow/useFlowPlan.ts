@@ -33,6 +33,8 @@ export interface FlowAsk {
   readonly text?: string;
   /** The signed clarify thread of the reader's last turn, when one is open. */
   readonly thread?: string;
+  /** Ely's proposal these actions came from: signing approves it (one linked intent) instead of storing a new one. */
+  readonly proposal?: { readonly id: string; readonly session: string };
 }
 
 export type FlowPlan =

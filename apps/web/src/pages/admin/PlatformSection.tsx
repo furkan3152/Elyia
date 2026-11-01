@@ -5,7 +5,7 @@ import { cx } from "../../ui/cx";
 import { toast } from "../../ui/toast";
 import { Toggle } from "../../ui/Toggle";
 import { Card, CardHead, Pill, SectionHead, Stat } from "../developers/portal/ui";
-import { useFlags, useHealth, useSetFlag, useSystem } from "./adminApi";
+import { useFlags, useHealth, useSetFlag, useSystem, useTelegramStatus } from "./adminApi";
 import { MiniBaro } from "./AdminCanvases";
 import { shortHex } from "./deployModel";
 
@@ -37,6 +37,7 @@ export function PlatformSection({ deployments }: { readonly deployments: readonl
   const health = { ...healthQuery, data: healthQuery.data?.health };
   const history = healthQuery.data?.samples ?? {};
   const agentMode = system.data?.agent.mode;
+  const telegram = useTelegramStatus(true);
 
   const deps = health.data?.dependencies;
   const base = [
@@ -62,7 +63,12 @@ export function PlatformSection({ deployments }: { readonly deployments: readonl
             <ul className="m-0 flex list-none flex-col p-0">
               {FEATURE_FLAGS.map((flag, index) => {
                 const on = flags.data?.flags[flag] ?? false;
-                const note = flag === "agentLlm" && agentMode === "deterministic" ? "on · no model key: deterministic replies" : FLAG_TEXT[flag].note;
+                const note =
+                  flag === "agentLlm" && agentMode === "deterministic"
+                    ? "on · no model key: deterministic replies"
+                    : flag === "telegram" && telegram.data
+                      ? `${telegram.data.note}${telegram.data.linkedWallets > 0 ? ` · ${telegram.data.linkedWallets} linked` : ""}`
+                      : FLAG_TEXT[flag].note;
                 return (
                   <li key={flag} className={cx("flex items-center justify-between gap-3 py-2.5", index > 0 && "border-t-2 border-dashed border-rule")}>
                     <Toggle

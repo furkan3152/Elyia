@@ -9,10 +9,11 @@ export interface Suggestion {
   readonly short: string;
 }
 
-/** Sentences the API reads today (deterministic planner or Claude): every one plans, protects or reads for real. */
+/** Sentences the API reads today (deterministic planner or the model): every one plans, protects or reads for real. */
 export const SUGGESTIONS: readonly Suggestion[] = [
   { glyph: "swap", title: "Best-price swap", sentence: "Swap 50 HYPE to USDC on Elysium", layer: "Summit · Elysium", short: "Summit" },
-  { glyph: "peak", title: "Climb to the Summit", sentence: "Bridge 20 HYPE to Elysium", layer: "Ridge → Summit", short: "Ridge → Summit" },
+  // Two chained steps: the swap spends half of what the bridge delivers (`after` + "max" + portionBps).
+  { glyph: "peak", title: "Climb to the Summit", sentence: "Bridge 20 HYPE to Elysium and swap half to USDC", layer: "Ridge → Summit", short: "Ridge → Summit" },
   { glyph: "anchor", title: "Anchor my ropes", sentence: "Protect my positions", layer: "Floor · HyperCore", short: "Floor" },
   { glyph: "coin", title: "Wake idle cash", sentence: "Put my idle USDC to work", layer: "All layers", short: "All layers" },
 ];

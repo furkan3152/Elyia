@@ -8,13 +8,13 @@
  * the account's HyperCore positions and spot balances, client context) only
  * sharpen questions; the planner re-reads everything before anything is signed.
  */
-import { LANGUAGE_LIMITS, LANGUAGE_LOCALES, type LanguageContext, type ParseIntentResponse } from "@elyia/core/api/language";
+import { LANGUAGE_LIMITS, LANGUAGE_LOCALES, type LanguageAnswer, type LanguageContext, type ParseIntentResponse } from "@elyia/core/api/language";
 import type { Router } from "express";
 import { z } from "zod";
 import type { AppContext } from "../../context.js";
 import { cachePublicly } from "../../http/request.js";
 import { evmAddress, parseBody, parseQuery } from "../../http/validate.js";
-import { chipsFor, examplesFor, executableOf, readIntent, signerFor, type ReaderFacts } from "../../language/index.js";
+import { chipsFor, examplesFor, executableOf, readIntent, signerFor, type ReaderFacts, type ReadResult } from "../../language/index.js";
 import { marketFacts, referencePrices, resolveElyName } from "../../language/facts.js";
 
 const decimal = z.string().regex(/^(?:0|[1-9]\d{0,29})(?:\.\d{1,30})?$/u, "Expected a decimal string.");
@@ -99,34 +99,53 @@ function namedSymbols(text: string): string[] {
     .filter((symbol) => /^[A-Za-z0-9]{1,16}$/u.test(symbol));
 }
 
+export interface SentenceRequest {
+  readonly text: string;
+  readonly locale?: (typeof LANGUAGE_LOCALES)[number];
+  readonly answers?: readonly LanguageAnswer[];
+  readonly thread?: string;
+  readonly account?: string;
+  readonly context?: LanguageContext;
+}
+
+/**
+ * One reading with every fact the reader may use (markets, reference
+ * prices, the account's HyperCore positions and balances, client context),
+ * each bounded in time. `POST /intents/parse` and Ely's chat clarify share
+ * it, so both ask the same questions with the same options.
+ */
+export async function readSentenceFor(ctx: AppContext, body: SentenceRequest): Promise<ReadResult> {
+  const environment = ctx.config.mode;
+  const [markets, prices, account] = await Promise.all([
+    within(marketFacts(ctx, environment), []),
+    within(referencePrices(ctx, namedSymbols(body.text)), {}),
+    body.account ? within(accountFacts(ctx, body.account), {}) : Promise.resolve({}),
+  ]);
+  const client = contextFacts(body.context);
+  const facts: Partial<ReaderFacts> = {
+    ...(markets.length > 0 ? { markets } : {}),
+    ...(Object.keys(prices).length > 0 ? { prices } : {}),
+    ...client,
+    ...account,
+    now: ctx.clock.now(),
+  };
+  return readIntent(body.text, {
+    environment,
+    facts,
+    answers: body.answers ?? [],
+    ...(body.locale ? { locale: body.locale } : {}),
+    ...(body.thread ? { thread: body.thread } : {}),
+    signer: signerFor(ctx),
+    executable: executableOf(ctx),
+    resolveName: (name) => within(resolveElyName(ctx, environment, name), undefined),
+    now: ctx.clock.now(),
+  });
+}
+
 export function registerLanguage(router: Router, ctx: AppContext): void {
   router.post("/intents/parse", async (req, res) => {
     const body = parseBody(req, parseBodySchema);
-    const environment = ctx.config.mode;
-    const [markets, prices, account] = await Promise.all([
-      within(marketFacts(ctx, environment), []),
-      within(referencePrices(ctx, namedSymbols(body.text)), {}),
-      body.account ? within(accountFacts(ctx, body.account), {}) : Promise.resolve({}),
-    ]);
-    const client = contextFacts(body.context);
-    const facts: Partial<ReaderFacts> = {
-      ...(markets.length > 0 ? { markets } : {}),
-      ...(Object.keys(prices).length > 0 ? { prices } : {}),
-      ...client,
-      ...account,
-      now: ctx.clock.now(),
-    };
-    const reading = await readIntent(body.text, {
-      environment,
-      facts,
-      answers: body.answers ?? [],
-      ...(body.locale ? { locale: body.locale } : {}),
-      ...(body.thread ? { thread: body.thread } : {}),
-      signer: signerFor(ctx),
-      executable: executableOf(ctx),
-      resolveName: (name) => within(resolveElyName(ctx, environment, name), undefined),
-      now: ctx.clock.now(),
-    });
+    const reading = await readSentenceFor(ctx, body);
     const { usedAnswers: _used, names: _names, clarify: _clarify, unsupported: _unsupported, ...response } = reading;
     res.json(response satisfies ParseIntentResponse);
   });

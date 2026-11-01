@@ -9,11 +9,13 @@ import { Link } from "../routes/Link";
 import { routeHref } from "../routes/routeTable";
 import { useRoute } from "../routes/useRoute";
 import { useUiStore } from "../state/uiStore";
+import { AdminLink } from "./AdminLink";
 import { AltimeterHeads } from "./AltimeterHeads";
 import { HeaderGrid, NAV_LINK, WhereToTrigger } from "./HeaderGrid";
 import { MotionSwitch, MotionToggle } from "./MotionToggle";
 import { PRIMARY_NAV } from "./navItems";
 import { sheetLabel } from "./sheets";
+import { headerSplitFor } from "./layoutSplit";
 import { ThemeToggle } from "./ThemeToggle";
 
 const LINKS = [
@@ -27,9 +29,11 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { route } = useRoute();
   const mode = useUiStore((state) => state.mode);
+  const split = headerSplitFor(route.id);
   return (
     <>
       <HeaderGrid
+        split={split}
         home="/"
         homeLabel="Elyia home"
         navLabel="Primary"
@@ -40,19 +44,21 @@ export function SiteHeader() {
         ))}
         actions={
           <>
-            <WhereToTrigger className="hidden xl:inline-flex" />
+            {/* Beside the nav the ⌘K box does not fit (⌘K works everywhere); Motion waits for room (2xl). */}
+            <WhereToTrigger className="hidden md:inline-flex lg:hidden" />
+            <AdminLink className="hidden lg:inline-flex" />
             <ThemeToggle compact />
-            <MotionToggle compact className="hidden xl:inline-flex" />
+            <MotionToggle compact className="hidden 2xl:inline-flex" />
             <ButtonLink to={routeHref("deck")} variant="primary" size="sm" className="h-9" rightIcon={<span aria-hidden="true">→</span>}>
-              <span className="sm:hidden">Deck</span>
-              <span className="hidden sm:inline">Open the deck</span>
+              <span className={split ? "sm:hidden xl:inline" : "sm:hidden"}>Deck</span>
+              <span className={split ? "hidden sm:inline xl:hidden" : "hidden sm:inline"}>Open the deck</span>
             </ButtonLink>
             <IconButton label="Menu" icon={<Menu className="h-5 w-5" aria-hidden="true" />} variant="ink" size="sm" className="h-9 w-9 lg:hidden" onClick={() => setOpen(true)} />
           </>
         }
         strip={
           <>
-            <span className="hidden truncate justify-self-start text-ink-2 sm:block">{sheetLabel(route.id)}</span>
+            <span className="hidden max-w-full truncate justify-self-start text-ink-2 sm:block">{sheetLabel(route.id)}</span>
             <AltimeterHeads className="hidden justify-self-center sm:inline-flex" />
             <AltimeterHeads compact className="justify-self-start sm:hidden" />
             <span className="justify-self-end text-ink-2">{mode === "testnet" ? "Practice wall" : "Mainnet"}</span>

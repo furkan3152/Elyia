@@ -277,3 +277,18 @@ html[data-el-vt="route"]::view-transition-new(root) {
     transform: translateY(8px);
   }
 }
+
+/* Header strip on pages with a rail (HeaderGrid `split`): the sheet label over the rail, the layer heads on the content axis. */
+@media (min-width: 1280px) {
+  .hdr-strip-split > :first-child {
+    grid-column: 1;
+    margin-left: 24px;
+  }
+  .hdr-strip-split > :not(:first-child):not(:last-child) {
+    grid-column: 3;
+  }
+  .hdr-strip-split > :last-child {
+    grid-column: 4;
+    margin-right: 24px;
+  }
+}

@@ -3,6 +3,7 @@
  * and only runs for an admin session (the server re-checks the role on every
  * request); /v1/config/contracts is public.
  */
+import type { AdminTelegramStatusResponse } from "@elyia/core/api/ops";
 import type { ContractsConfigResponse, DeployPlanResponse, DeploymentRecord, FeatureFlag, FeatureFlagsResponse, RecordDeploymentResponse, RouterSettingsResponse, SystemDashboardResponse } from "@elyia/core/api/admin";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -30,6 +31,10 @@ export function useDeployPlan(network: AdminNetwork, enabled: boolean) {
 
 export function useRouterSettings(network: AdminNetwork, enabled: boolean) {
   return useQuery({ queryKey: [...ADMIN, "router", network], queryFn: ({ signal }) => authedFetch<RouterSettingsResponse>("/v1/admin/router", { signal, query: { network }, timeoutMs: 20_000 }), enabled, retry: 0, staleTime: 15_000 });
+}
+
+export function useTelegramStatus(enabled: boolean) {
+  return useQuery({ queryKey: [...ADMIN, "telegram"], queryFn: ({ signal }) => authedFetch<AdminTelegramStatusResponse>("/v1/admin/telegram", { signal }), enabled, retry: 0, staleTime: 30_000 });
 }
 
 export function useFlags(enabled: boolean) {

@@ -111,6 +111,8 @@ export interface RouteArtifactProps {
   readonly card: RouteCard;
   readonly proposal: Proposal | null;
   readonly source: SignSource;
+  /** The connected wallet's session token: a proposal's card is then signed through the proposal (one linked intent). */
+  readonly session?: string | null;
   /** When Ely drafted it (journey log). */
   readonly draftedAt: number;
   readonly onClose?: () => void;
@@ -120,8 +122,8 @@ export interface RouteArtifactProps {
 
 type Tab = "route" | "txs" | "rules";
 
-export function RouteArtifact({ card, proposal, source, draftedAt, onClose, variant = "panel" }: RouteArtifactProps) {
-  const sign = useCardSign(source);
+export function RouteArtifact({ card, proposal, source, session = null, draftedAt, onClose, variant = "panel" }: RouteArtifactProps) {
+  const sign = useCardSign(source, session);
   const view = useMemo(() => cardView(card, { route: sign.route, ...(sign.states ? { states: sign.states } : {}) }), [card, sign.route, sign.states]);
   const [tab, setTab] = useState<Tab>("route");
   return (

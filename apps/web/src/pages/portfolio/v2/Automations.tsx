@@ -5,7 +5,7 @@ import { useAutomations, useKeeperStatus, useSkills, useSwitchAutomation } from 
 import { paletteOf } from "../../../features/ely/draw";
 import { useKeeperFlow } from "../../../features/ely/keeper";
 import { Glyph, Toggle } from "../../../features/ely/ui";
-import type { ElySession } from "../../../features/ely/session";
+import type { WalletSession } from "../../../features/session/useWalletSession";
 import { PixelCanvas } from "../../../pixel/PixelCanvas";
 import { cx, FOCUS_RING } from "../../../ui/cx";
 import { describeError } from "../../../lib/api";
@@ -36,7 +36,7 @@ function Vignette({ kind, on, label }: { readonly kind: VignetteKind; readonly o
 }
 
 export interface AutomationShelfProps {
-  readonly session: ElySession;
+  readonly session: WalletSession;
   readonly own: boolean;
 }
 

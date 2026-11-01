@@ -225,10 +225,20 @@ export async function deployPlan(ctx: AppContext, network: NetworkKey, owner: st
 /* ------------------------------------------------------ router settings */
 
 /** Every zero-argument view of the router ABI, read live from the recorded router. */
+/** Reads that hold constructor or owner-set state: zero / empty under a code override, so not shown before a deployment. */
+const ZERO_ADDRESS = /^0x0{40}$/iu;
+
+export function stateOnly(name: string, value: string | null): boolean {
+  if (value === null) return true;
+  if (/^(owner|pendingOwner|feeRecipient|guardian|keeper)$/iu.test(name)) return true;
+  return ZERO_ADDRESS.test(value) || value === "[]";
+}
+
 export async function routerSettings(ctx: AppContext, network: NetworkKey): Promise<RouterSettingsResponse> {
   const record = (await listDeployments(ctx, network)).find((entry) => entry.contract === "ElyiaRouter") ?? null;
   const artifact = (await contractArtifacts()).get("ElyiaRouter") ?? null;
-  if (!artifact) return { network, address: record?.address ?? null, paused: null, reads: {}, note: "ElyiaRouter artifact not exported yet." };
+  const name = NETWORKS[network].name;
+  if (!artifact) return { network, address: record?.address ?? null, source: "none", recorded: record !== null, paused: null, reads: {}, unset: [], note: "ElyiaRouter artifact not exported yet." };
   const views = (artifact.abi as AbiFunction[]).filter((entry) => entry.type === "function" && (entry.stateMutability === "view" || entry.stateMutability === "pure") && entry.inputs.length === 0);
   const reads: Record<string, string | null> = {};
   const target = (record?.address ?? VIRTUAL_ROUTER) as Address;
@@ -244,12 +254,21 @@ export async function routerSettings(ctx: AppContext, network: NetworkKey): Prom
       reads[view.name] = null;
     }
   }
+  if (record) {
+    return { network, address: record.address, source: "chain", recorded: true, paused: reads.paused === undefined || reads.paused === null ? null : reads.paused === "true", reads, unset: [], note: null };
+  }
+  // No router recorded: keep only the artifact's constants (caps, version); owner and other set-later state is not real yet.
+  const unset = Object.keys(reads).filter((key) => stateOnly(key, reads[key] ?? null)).sort();
+  const constants = Object.fromEntries(Object.entries(reads).filter(([key]) => !unset.includes(key)));
   return {
     network,
-    address: record?.address ?? null,
-    paused: reads.paused === undefined || reads.paused === null ? null : reads.paused === "true",
-    reads,
-    note: record ? null : "Not deployed: these are the artifact's defaults read through a code override (constructor state such as the owner and venues is absent).",
+    address: null,
+    source: "artifact-defaults",
+    recorded: false,
+    paused: null,
+    reads: constants,
+    unset,
+    note: `No ElyiaRouter is recorded on ${name}. Deploy it from Contracts (your wallet signs), then its owner, fee and pause state are read from chain. Shown: the artifact's constants only.`,
   };
 }
 

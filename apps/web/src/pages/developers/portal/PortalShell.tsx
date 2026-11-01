@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { cx, FOCUS_RING } from "../../../ui/cx";
 import type { PortalGlyphName } from "./glyphs";
-import { scrollToSection } from "./scroll";
+import { PORTAL_GO_EVENT, revealSection, scrollToSection } from "./scroll";
+import { neighbours, viewForHash } from "./views";
 import { Glyph, Pill } from "./ui";
 
 export interface PortalNavItem {
@@ -13,6 +14,15 @@ export interface PortalNavItem {
   readonly badge?: React.ReactNode;
   /** Extra words the search matches ("endpoint", "hmac"). */
   readonly keywords?: string;
+  /** With `views`: the view that holds this section. */
+  readonly view?: string;
+}
+
+/** One sub-view of a portal (a page of sections); the hash picks it. */
+export interface PortalView {
+  readonly id: string;
+  readonly label: string;
+  readonly node: React.ReactNode;
 }
 
 export interface PortalNavGroup {
@@ -30,7 +40,40 @@ export interface PortalShellProps {
   /** Right side of the portal bar: status, session. */
   readonly barRight?: React.ReactNode;
   readonly searchPlaceholder?: string;
-  readonly children: React.ReactNode;
+  /** Sub-views chosen by the URL hash (deep links to any section keep working). Without them, `children` is one long page. */
+  readonly views?: readonly PortalView[];
+  readonly children?: React.ReactNode;
+}
+
+/** The view and section the URL hash names, following hash changes, Back and `scrollToSection`. */
+function useHashView(items: readonly PortalNavItem[], views: readonly PortalView[] | undefined) {
+  const ids = useMemo(() => (views ?? []).map((view) => view.id), [views]);
+  const viewItems = useMemo(() => items.filter((item): item is PortalNavItem & { view: string } => typeof item.view === "string").map((item) => ({ id: item.id, view: item.view })), [items]);
+  const read = useCallback(() => viewForHash(typeof window === "undefined" ? "" : window.location.hash, viewItems, ids), [viewItems, ids]);
+  const [state, setState] = useState(() => ({ ...read(), nonce: 0, initial: true }));
+  useEffect(() => {
+    const sync = () => setState((previous) => ({ ...read(), nonce: previous.nonce + 1, initial: false }));
+    const onGo = (event: Event) => {
+      if (views) sync();
+      else revealSection(String((event as CustomEvent<string>).detail));
+    };
+    window.addEventListener("hashchange", sync);
+    window.addEventListener("popstate", sync);
+    window.addEventListener(PORTAL_GO_EVENT, onGo);
+    return () => {
+      window.removeEventListener("hashchange", sync);
+      window.removeEventListener("popstate", sync);
+      window.removeEventListener(PORTAL_GO_EVENT, onGo);
+    };
+  }, [read, views]);
+  // After the view renders: scroll to the named section, or to the top of a newly opened view.
+  useEffect(() => {
+    if (!views) return undefined;
+    if (state.initial && !state.section) return undefined;
+    const timer = window.setTimeout(() => (state.section ? revealSection(state.section) : revealSection(state.view, { top: true })), state.initial ? 250 : 30);
+    return () => window.clearTimeout(timer);
+  }, [views, state]);
+  return state;
 }
 
 /** Which section is under the top of the viewport (scroll spy). */
@@ -46,7 +89,13 @@ function useCurrentSection(ids: readonly string[]): string | null {
           if (entry.isIntersecting) visible.set(entry.target.id, entry.boundingClientRect.top);
           else visible.delete(entry.target.id);
         }
-        const order = key.split("|");
+        // Page order, not nav order: a section that holds others (Ship it holds the widget) comes first.
+        const order = key
+          .split("|")
+          .map((id) => document.getElementById(id))
+          .filter((element): element is HTMLElement => element !== null)
+          .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
+          .map((element) => element.id);
         const first = order.find((id) => visible.has(id));
         if (first) setCurrent(first);
       },
@@ -86,9 +135,16 @@ function NavLink({ item, current, onGo }: { readonly item: PortalNavItem; readon
  * bar with search, status and session, then the content column on its own
  * centre axis. Phones get the links as a scrolling chip row.
  */
-export function PortalShell({ chip, navLabel, groups, note, barRight, searchPlaceholder = "Search sections", children }: PortalShellProps) {
+export function PortalShell({ chip, navLabel, groups, note, barRight, searchPlaceholder = "Search sections", views, children }: PortalShellProps) {
   const items = useMemo(() => groups.flatMap((group) => group.items), [groups]);
-  const current = useCurrentSection(items.map((item) => item.id));
+  const hashView = useHashView(items, views);
+  const activeView = views ? (views.find((view) => view.id === hashView.view) ?? views[0] ?? null) : null;
+  const spied = useCurrentSection(items.filter((item) => !activeView || item.view === activeView.id).map((item) => item.id));
+  // In a sub-view the hash's section wins until the spy sees another one of the same view.
+  const current = activeView && spied && items.find((item) => item.id === spied)?.view !== activeView.id ? null : spied;
+  const order = views?.map((view) => view.id) ?? [];
+  const around = activeView ? neighbours(activeView.id, order) : { previous: null, next: null };
+  const labelOf = (id: string | null) => views?.find((view) => view.id === id)?.label ?? "";
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const matches = useMemo(() => {
@@ -122,7 +178,7 @@ export function PortalShell({ chip, navLabel, groups, note, barRight, searchPlac
             <div key={group.title} className="flex flex-col gap-0.5">
               <h2 className="mb-1.5 px-2.5 font-tag text-[10px] uppercase tracking-[0.1em] text-ink-3">{group.title}</h2>
               {group.items.map((item) => (
-                <NavLink key={item.id} item={item} current={current === item.id} onGo={go} />
+                <NavLink key={item.id} item={item} current={current === item.id || (activeView !== null && current === null && item.id === activeView.id)} onGo={go} />
               ))}
             </div>
           ))}
@@ -187,7 +243,35 @@ export function PortalShell({ chip, navLabel, groups, note, barRight, searchPlac
             </a>
           ))}
         </nav>
-        <div className="mx-auto w-full max-w-[1088px] px-4 pb-20 sm:px-6">{children}</div>
+        <div className="mx-auto w-full max-w-[1088px] px-4 pb-20 sm:px-6">
+          {activeView ? (
+            <>
+              <div key={activeView.id} id={`view-${activeView.id}`} className="portal-view">
+                {activeView.node}
+              </div>
+              <nav aria-label={`${navLabel}: previous and next`} className="mt-14 grid grid-cols-2 gap-6 border-t-2 border-dashed border-rule pt-6">
+                <div>
+                  {around.previous ? (
+                    <a href={`#${around.previous}`} onClick={(event) => { event.preventDefault(); go(around.previous as string); }} className={cx("inline-flex flex-col gap-0.5 text-left", FOCUS_RING)}>
+                      <span className="font-tag text-[10px] uppercase text-ink-3">← Previous</span>
+                      <span className="font-display text-[18px] font-bold text-ink">{labelOf(around.previous)}</span>
+                    </a>
+                  ) : null}
+                </div>
+                <div className="text-right">
+                  {around.next ? (
+                    <a href={`#${around.next}`} onClick={(event) => { event.preventDefault(); go(around.next as string); }} className={cx("inline-flex flex-col items-end gap-0.5", FOCUS_RING)}>
+                      <span className="font-tag text-[10px] uppercase text-ink-3">Next →</span>
+                      <span className="font-display text-[18px] font-bold text-ink">{labelOf(around.next)}</span>
+                    </a>
+                  ) : null}
+                </div>
+              </nav>
+            </>
+          ) : (
+            children
+          )}
+        </div>
       </div>
     </div>
   );

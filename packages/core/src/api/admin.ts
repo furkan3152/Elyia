@@ -90,9 +90,20 @@ export interface DeployPlanResponse {
 /** GET /v1/admin/router?network=. Every zero-argument view of the router ABI, read live. */
 export interface RouterSettingsResponse {
   readonly network: NetworkKey;
+  /** The recorded ElyiaRouter on this network, null when none is recorded. */
   readonly address: string | null;
+  /**
+   * "chain": live reads from the recorded router. "artifact-defaults": no
+   * router recorded; reads come from the artifact's code through an override,
+   * and constructor state (owner, recipients, venues) is absent, so it is in
+   * `unset` instead of `reads`. "none": no artifact either.
+   */
+  readonly source: "chain" | "artifact-defaults" | "none";
+  readonly recorded: boolean;
   readonly paused: boolean | null;
   readonly reads: Readonly<Record<string, string | null>>;
+  /** Reads that only a deployed router has (meaningless before a deployment). */
+  readonly unset: readonly string[];
   readonly note: string | null;
 }
 

@@ -8,7 +8,7 @@ import { useRouteParam } from "../../app/routes/useRoute";
 import { WalletButton } from "../../app/shell/WalletButton";
 import { useAutomations, useInsights } from "../../features/ely/agentApi";
 import { useMediaQuery } from "../../features/ely/hooks";
-import { useElySession } from "../../features/ely/session";
+import { useWalletSession } from "../../features/session/useWalletSession";
 import { Glyph } from "../../features/ely/ui";
 import { describeError } from "../../lib/api";
 import { ElyLoader } from "../../pixel/ElyLoader";
@@ -42,7 +42,7 @@ export default function PortfolioPage() {
   const own = followed !== null && connected !== undefined && followed === connected.toLowerCase();
   const range = useRange(followed);
   const sample = range.source === "sample";
-  const session = useElySession();
+  const session = useWalletSession();
   const insights = useInsights(sample ? null : followed);
   const automations = useAutomations(own ? session.token : null);
   const phone = !useMediaQuery("(min-width: 768px)", true);

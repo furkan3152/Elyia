@@ -11,6 +11,7 @@
  */
 import type { IntentActionSpec } from "../intent.js";
 import type { NetworkKey } from "../networks.js";
+import type { LanguageAnswer, LanguageQuestion } from "./language.js";
 
 export const AGENT_API_VERSION = "elyia.api.agent/v1" as const;
 
@@ -88,6 +89,19 @@ export interface ChatRequest {
   readonly locale?: "en" | "tr";
   /** The wallet the conversation is about (default: the session address). */
   readonly address?: string;
+  /**
+   * Answers to a `clarify` event's questions. Send them with the same
+   * `message` the questions were asked about; the reader re-reads it with
+   * the answers (and its signed `thread`) and Ely plans the result, or asks
+   * the next questions in another `clarify` event.
+   */
+  readonly clarify?: ChatClarifyAnswers;
+}
+
+export interface ChatClarifyAnswers {
+  /** `ChatClarifyEvent.thread`, verbatim. */
+  readonly thread?: string;
+  readonly answers: readonly LanguageAnswer[];
 }
 
 export const CHAT_STREAM_EVENTS = Object.freeze({
@@ -98,6 +112,7 @@ export const CHAT_STREAM_EVENTS = Object.freeze({
   proposal: "proposal",
   routeCard: "route_card",
   note: "note",
+  clarify: "clarify",
   done: "done",
   error: "error",
 } as const);
@@ -121,6 +136,22 @@ export interface ChatToolResultEvent {
   readonly ok: boolean;
   readonly summary: string;
 }
+/**
+ * The turn ends asking: the language reader's open questions for the
+ * sentence, with their options (shown as choice chips). Sent before `done`.
+ * The turn's text still carries the prompts, for clients that ignore it.
+ */
+export interface ChatClarifyEvent {
+  /** The chat thread the turn is stored in (null for anonymous chats). */
+  readonly threadId: string | null;
+  /** The sentence the questions are about: send it back as `message` with the answers. */
+  readonly sentence: string;
+  /** The reader's signed answer thread (null when no signer is configured). */
+  readonly thread: string | null;
+  readonly questions: readonly LanguageQuestion[];
+  readonly locale: "en" | "tr";
+}
+
 export interface ChatDoneEvent {
   readonly threadId: string;
   readonly text: string;

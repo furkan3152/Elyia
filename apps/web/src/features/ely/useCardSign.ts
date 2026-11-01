@@ -4,7 +4,8 @@
  * actions (or, for an anonymous chat, the sentence itself) are planned as a
  * fresh dry run (`useFlowPlan`, re-quoted every 30 s), and each step is
  * prepared, signed in the user's wallet and submitted only when they press
- * the button (`useFlowRun`). Nothing signs on a timer.
+ * the button (`useFlowRun`). Nothing signs on a timer. A card from a
+ * proposal stores its intent by approving the proposal (proposalLink.ts).
  */
 import { useMemo } from "react";
 import { useAccount } from "wagmi";
@@ -16,9 +17,10 @@ import { askOf, type SignSource } from "./signSource";
 
 export type { SignSource } from "./signSource";
 
-export function useCardSign(source: SignSource | null) {
+/** `session`: the connected wallet's session token; with it a proposal's card is signed through the proposal (one linked intent). */
+export function useCardSign(source: SignSource | null, session: string | null = null) {
   const { address } = useAccount();
-  const ask = useMemo(() => (source ? askOf(source) : null), [source]);
+  const ask = useMemo(() => (source ? askOf(source, session) : null), [source, session]);
   const plan = useFlowPlan(ask, address ?? null);
   const run = useFlowRun(ask, plan.data ?? null);
   const route = plan.data && (plan.data.kind === "planner" || plan.data.kind === "offline") ? plan.data.route : null;

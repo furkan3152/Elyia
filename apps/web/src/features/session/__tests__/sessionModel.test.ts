@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { buildSiweMessage, checkSiweMessage, hasRole, isExpired, minutesLeft, parseStoredSession, primaryRole, serializeSession, shortAddress, siweChainId, timeLeftLabel } from "../sessionModel";
+import { buildSiweMessage, checkSiweMessage, hasRole, isExpired, minutesLeft, parseStoredSession, primaryRole, serializeSession, shortAddress, siweChainId, timeLeftLabel, tokenForAddress } from "../sessionModel";
 
 const ADDRESS = "0x7a00000000000000000000000000000000c41e";
 const ADDR = "0x7A0000000000000000000000000000000000c41E";
@@ -32,6 +32,18 @@ describe("stored sessions", () => {
     assert.equal(primaryRole({ roles: ["user", "developer"] }), "developer");
     assert.equal(primaryRole(null), null);
     assert.equal(shortAddress(ADDR), "0x7A00…c41E");
+  });
+});
+
+describe("one session for every page", () => {
+  it("hands the token to the wallet it belongs to, in any case, until it expires", () => {
+    const stored = { token: "es1.payload.mac", session: { ...view, roles: [...view.roles] } };
+    assert.equal(tokenForAddress(stored, ADDR, NOW), "es1.payload.mac");
+    assert.equal(tokenForAddress(stored, ADDR.toLowerCase(), NOW), "es1.payload.mac");
+    assert.equal(tokenForAddress(stored, "0x1111111111111111111111111111111111111111", NOW), null, "another wallet gets no token");
+    assert.equal(tokenForAddress(stored, null, NOW), null);
+    assert.equal(tokenForAddress(stored, ADDR, Date.parse("2026-11-01T13:00:00Z")), null);
+    assert.equal(tokenForAddress(null, ADDR, NOW), null);
   });
 });
 

@@ -4,6 +4,9 @@ import { describe, it } from "node:test";
 import { DEFAULT_KEY_QUOTAS, MAX_INTEGRATOR_FEE_BPS } from "@elyia/core/api/developers";
 
 import { devAccess } from "../access";
+import { readFileSync } from "node:fs";
+
+import { quickstartSnippet } from "../devModel";
 import { bpsToPercent, clampBps, dailySeries, deliveryLine, feeDisclosure, feeOn, maskedKey, mcpSnippet, relativeTime, scopeChips, scrambleKey, shortEvent, sortKeys, steppedBarHeight, usageMeters, webhookUrlProblem } from "../devModel";
 import { consoleJson, formatUnits, integratorFeeUsd, planAccount, userCard } from "../playgroundModel";
 import { countRoutes, REST } from "../reference";
@@ -131,5 +134,48 @@ describe("playground and snippets", () => {
     assert.equal(devAccess(null), "anonymous");
     assert.equal(devAccess({ roles: ["user"] }), "user");
     assert.equal(devAccess({ roles: ["user", "developer"] }), "developer");
+  });
+});
+
+describe("quickstart", () => {
+  it("uses @elyia/sdk, and only methods the client has", () => {
+    const snippet = quickstartSnippet("http://localhost:3001");
+    assert.match(snippet, /import \{ ElyiaClient \} from "@elyia\/sdk";/u);
+    assert.match(snippet, /baseUrl: "http:\/\/localhost:3001"/u);
+    assert.ok(!/fetch\(/u.test(snippet), "no hand-rolled fetch");
+    const source = readFileSync(new URL("../../../../../../packages/sdk/src/index.ts", import.meta.url), "utf8");
+    const used = [...snippet.matchAll(/elyia\.([a-zA-Z]+)\(/gu)].map((match) => match[1]!);
+    assert.deepEqual([...new Set(used)], ["plan", "prepare", "submit", "journeyStream"]);
+    for (const method of used) assert.match(source, new RegExp(`^  (?:async \\*)?${method}\\(`, "mu"), method);
+    assert.match(snippet, /wallet\.sendTransaction/u, "the user's wallet signs");
+  });
+});
+
+describe("portal sub-views", async () => {
+  const { hashTarget, neighbours, viewForHash } = await import("../portal/views");
+  const views = ["overview", "playground", "sdk", "keys", "webhooks", "rest"];
+  const items = [
+    { id: "overview", view: "overview" },
+    { id: "ways", view: "overview" },
+    { id: "mcp", view: "sdk" },
+    { id: "usage", view: "keys" },
+    { id: "widget", view: "webhooks" },
+    { id: "fee", view: "webhooks" },
+    { id: "changelog", view: "rest" },
+  ];
+  it("opens the view holding a deep-linked section, and the first view otherwise", () => {
+    assert.deepEqual(viewForHash("#fee", items, views), { view: "webhooks", section: "fee" });
+    assert.deepEqual(viewForHash("#mcp", items, views), { view: "sdk", section: "mcp" });
+    assert.deepEqual(viewForHash("#keys", items, views), { view: "keys", section: null });
+    assert.deepEqual(viewForHash("", items, views), { view: "overview", section: null });
+    assert.deepEqual(viewForHash("#nope", items, views), { view: "overview", section: null });
+    assert.deepEqual(viewForHash("#<script>", items, views), { view: "overview", section: null });
+    assert.equal(hashTarget("#Changelog"), null);
+    assert.equal(hashTarget("#changelog"), "changelog");
+  });
+  it("links each view to its neighbours", () => {
+    assert.deepEqual(neighbours("overview", views), { previous: null, next: "playground" });
+    assert.deepEqual(neighbours("keys", views), { previous: "sdk", next: "webhooks" });
+    assert.deepEqual(neighbours("rest", views), { previous: "webhooks", next: null });
   });
 });

@@ -11,7 +11,8 @@ export interface SheetInfo {
 
 const SHEETS: Partial<Record<RouteId, SheetInfo>> = {
   landing: { number: "01", name: "The range" },
-  deck: { number: "01", name: "Deck" },
+  deck: { number: "01", name: "Ask Ely" },
+  basecamp: { number: "01", name: "Base camp" },
   trade: { number: "02", name: "Trade" },
   portfolio: { number: "03", name: "Your range" },
   bridge: { number: "04", name: "Ascent and descent" },
@@ -24,6 +25,7 @@ const SHEETS: Partial<Record<RouteId, SheetInfo>> = {
   settings: { number: "09", name: "Settings" },
   elysium: { number: "10", name: "Barograph" },
   developers: { number: "11", name: "Developers" },
+  admin: { number: "12", name: "Owner console" },
   system: { number: "K", name: "Map key" },
   kit: { number: "K", name: "Map key" },
 };

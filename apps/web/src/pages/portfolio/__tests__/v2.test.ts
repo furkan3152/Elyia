@@ -69,3 +69,50 @@ test("altimeter digits: only changed digits roll", () => {
   assert.deepEqual(next.changed, [false, false, false, false, true, true]);
   assert.deepEqual(altimeterDigits(100_000, 99_999).changed, [true, true, true, false, true, true, true]);
 });
+
+test("explain-PnL waterfall (sample): five bars, Unrealized and Net included, reconciling to $1,284", async () => {
+  const { SAMPLE_PNL } = await import("../v2/sample");
+  const { barProgress, drawWaterfall, WATERFALL_END_S } = await import("../v2/draw");
+  const steps = pnlSteps(SAMPLE_PNL);
+  const fall = waterfall(null, steps, "Net");
+  assert.deepEqual(
+    fall.bars.map((bar) => [bar.label, bar.kind, bar.from, bar.to]),
+    [
+      ["Realized", "up", 0, 1318],
+      ["Funding", "down", 1318, 1267],
+      ["Fees", "down", 1267, 1246],
+      ["Unrealized", "up", 1246, 1284],
+      ["Net", "total", 0, 1284],
+    ],
+  );
+  assert.equal(fall.total, 1318 - 51 - 21 + 38);
+  assert.equal(fall.min, 0, "the axis starts at $0 (the caption says so)");
+  assert.ok(fall.max >= 1318);
+  // Every bar has finished rising by the end time; none before its slot.
+  for (let index = 0; index < fall.bars.length; index += 1) assert.equal(barProgress(index, WATERFALL_END_S), 1, `bar ${index}`);
+  assert.equal(barProgress(4, 0.5), 0);
+  // Drawn at the end state on a fake surface: five bar rects, one per slot.
+  const rects: Array<{ x: number; w: number; h: number; c: string }> = [];
+  const surface = { fillStyle: "", clearRect() {}, fillRect(x: number, _y: number, w: number, h: number) { rects.push({ x, w, h, c: String(this.fillStyle) }); } };
+  const pal = { rule: "rule", ink3: "ink3", up: "up", down: "down", accent: "accent" };
+  drawWaterfall(surface as never, fall, 132, 66, WATERFALL_END_S, pal as never);
+  const bars = rects.filter((rect) => ["up", "down", "accent"].includes(rect.c) && rect.w > 4);
+  assert.deepEqual(bars.map((bar) => bar.c), ["up", "down", "down", "up", "accent"]);
+  assert.ok(bars.every((bar) => bar.h >= 2), "even a small step is visible");
+  const slot = Math.floor(132 / 5);
+  assert.deepEqual(bars.map((bar) => Math.floor(bar.x / slot)), [0, 1, 2, 3, 4]);
+  // Net runs from $0 like Realized: about as tall (1,284 vs 1,318), far taller than the steps between.
+  assert.ok(bars[4]!.h > 40 && Math.abs(bars[4]!.h - bars[0]!.h) <= 3, JSON.stringify(bars));
+});
+
+test("explain-PnL waterfall (live figures): the net is the server's closed net plus unrealized, axis below the loss", () => {
+  // Figures as /v1/agent/insights returned them for 0xdc00…af95 on 2026-11-01 (testnet).
+  const figures = { realizedPnlUsd: -23137.36, feesUsd: 730.81, fundingUsd: -100683.76, netUsd: -124551.94, unrealizedPnlUsd: 2051.5, days: 30 };
+  const fall = waterfall(null, pnlSteps(figures), "Net");
+  assert.equal(fall.bars.length, 5);
+  // Each figure is rounded to cents on the server, so the sums agree to a cent or two.
+  assert.ok(Math.abs(fall.total - (figures.netUsd + figures.unrealizedPnlUsd)) <= 0.02);
+  assert.ok(fall.min < fall.total && fall.min < -124551.94, "the axis never cuts a bar");
+  assert.ok(fall.max >= 0, "zero is on the axis");
+  assert.deepEqual(fall.bars.map((bar) => bar.kind), ["down", "down", "down", "up", "total"]);
+});

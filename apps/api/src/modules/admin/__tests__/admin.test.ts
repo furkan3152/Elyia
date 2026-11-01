@@ -9,7 +9,8 @@ import { serve, testConfig, type Served } from "../../../__tests__/support.js";
 import { elyiaRouterDeployment, setElyiaRouterDeployment } from "../../../engine/adapters/elyiaRouter.js";
 import { MemoryStore } from "../../../store/memory.js";
 import { issueToken } from "../../ops/auth/session.js";
-import { creationMatches, maskMetadata, routerAbiCompatible, runtimeMatches } from "../deployments.js";
+import { creationMatches, maskMetadata, routerAbiCompatible, runtimeMatches, stateOnly } from "../deployments.js";
+import { telegramNote } from "../../ops/telegram.js";
 
 const ADMIN = "0x5e9ee1089755c3435139848e47e6635505d5a13a";
 const ROUTER = "0x00000000000000000000000000000000000a11ce";
@@ -110,5 +111,48 @@ describe("admin: deployment registry", () => {
     const publicFlags = (await (await fetch(`${server.url}/v1/config/flags`)).json()) as { flags: { agentLlm: boolean; mcp: boolean } };
     assert.deepEqual([publicFlags.flags.agentLlm, publicFlags.flags.mcp], [false, true]);
     await call("PUT", "/v1/admin/flags", { agentLlm: true });
+  });
+});
+
+describe("admin: router without a recorded deployment", () => {
+  it("says no router is recorded and never shows constructor state such as owner()", async () => {
+    const { status, body } = await call("GET", "/v1/admin/router?network=hyperevm-testnet");
+    assert.equal(status, 200);
+    assert.equal(body.recorded, false);
+    assert.equal(body.source, "artifact-defaults");
+    assert.equal(body.address, null);
+    assert.equal(body.paused, null);
+    assert.ok(!("owner" in (body.reads as object)), "owner() is not a value before a deployment");
+    assert.ok((body.unset as string[]).includes("owner"));
+    assert.match(String(body.note), /No ElyiaRouter is recorded on HyperEVM Testnet/u);
+  });
+
+  it("classifies set-later state", () => {
+    assert.equal(stateOnly("owner", "0x5e9ee1089755c3435139848e47e6635505d5a13a"), true);
+    assert.equal(stateOnly("feeRecipient", "0x0000000000000000000000000000000000000000"), true);
+    assert.equal(stateOnly("anyAddress", "0x0000000000000000000000000000000000000000"), true);
+    assert.equal(stateOnly("MAX_PROTOCOL_FEE_BPS", "30"), false);
+    assert.equal(stateOnly("VERSION", null), true);
+  });
+});
+
+describe("admin: telegram status for the flag note", () => {
+  it("is admin-only and says honestly that no bot token is configured", async () => {
+    const { status, body } = await call("GET", "/v1/admin/telegram");
+    assert.equal(status, 200);
+    assert.deepEqual([body.configured, body.mode, body.running, body.flag, body.linkedWallets], [false, "off", false, true, 0]);
+    assert.equal(body.note, "not configured · no bot token");
+    assert.ok(!JSON.stringify(body).toLowerCase().includes("token\":"), "no token field");
+    const anonymous = await fetch(`${server.url}/v1/admin/telegram`);
+    assert.ok(anonymous.status === 401 || anonymous.status === 403);
+  });
+
+  it("words every bot state", () => {
+    const base = { configured: true, mode: "polling" as const, running: true, flag: true, lastError: null, botUsername: "elyia_bot" };
+    assert.equal(telegramNote(base), "polling · running as @elyia_bot");
+    assert.equal(telegramNote({ ...base, flag: false }), "configured · switched off by the flag");
+    assert.equal(telegramNote({ ...base, running: false }), "polling · not started");
+    assert.equal(telegramNote({ ...base, lastError: "409 Conflict" }), "polling · stopped: 409 Conflict");
+    assert.equal(telegramNote({ ...base, mode: "off" }), "configured · off in this environment");
   });
 });

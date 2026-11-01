@@ -18,7 +18,7 @@ import { useUiStore } from "../../app/state/uiStore";
 import { describeError } from "../../lib/api";
 import { hyperCoreEndpoints } from "../../lib/hypercore/endpoints";
 import { exchangeError, postExchange } from "../../lib/hypercore/exchangeClient";
-import { sessionFetch } from "./session";
+import { sessionFetch } from "../session/sessionApi";
 
 export type KeeperStep = "idle" | "prepare" | "sign" | "submit" | "activate" | "done" | "error";
 

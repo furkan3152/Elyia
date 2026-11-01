@@ -54,10 +54,26 @@ const action = z
     takeProfit: z.string().max(40).optional(),
     stopLoss: z.string().max(40).optional(),
     leverage: z.object({ value: z.number().min(1).max(50), mode: z.enum(["cross", "isolated"]).optional() }).strict().optional(),
+    tif: z.enum(["Alo", "Ioc", "Gtc"]).optional(),
+    minutes: z.number().int().min(0).max(1_440).optional(),
+    after: z.array(z.number().int().min(0).max(7)).min(1).max(7).optional(),
     params: z.record(z.union([z.string().max(80), z.number(), z.boolean()])).optional(),
   })
   .strict();
 // Recipients are never part of an agent action: funds only move to the owner's own accounts.
+
+/** A plan's actions: `after` may only name earlier actions (a chain runs forwards). */
+export const agentActions = z
+  .array(action)
+  .min(1)
+  .max(8)
+  .superRefine((list, issue) => {
+    list.forEach((entry, index) => {
+      for (const parent of entry.after ?? []) {
+        if (parent >= index) issue.addIssue({ code: z.ZodIssueCode.custom, path: [index, "after"], message: `action ${index} can only follow an earlier action` });
+      }
+    });
+  });
 
 const ACTION_JSON = {
   type: "object",
@@ -77,7 +93,10 @@ const ACTION_JSON = {
     takeProfit: { type: "string" },
     stopLoss: { type: "string" },
     leverage: { type: "object", properties: { value: { type: "number" }, mode: { type: "string", enum: ["cross", "isolated"] } }, required: ["value"], additionalProperties: false },
-    params: { type: "object", description: "protect:true for a standalone TP/SL; reduce:true + portionBps to reduce a position." },
+    tif: { type: "string", enum: ["Alo", "Ioc", "Gtc"] },
+    minutes: { type: "integer", description: "TWAP duration." },
+    after: { type: "array", items: { type: "integer", minimum: 0 }, description: "Indexes of earlier actions this one waits for. With amount \"max\" it spends that action's output (params.portionBps for a share, e.g. 5000 = half)." },
+    params: { type: "object", description: "protect:true for a standalone TP/SL; reduce:true + portionBps to reduce a position; portionBps on a chained \"max\" step." },
   },
   required: ["kind", "network"],
   additionalProperties: false,
@@ -191,7 +210,7 @@ export const AGENT_TOOLS: readonly AgentTool[] = [
     name: "plan_intent",
     description: "Dry-run plan of intent actions (venue auction + Rule Book): returns the route card. Nothing is stored or signed.",
     input_schema: { type: "object", properties: { actions: { type: "array", minItems: 1, maxItems: 8, items: ACTION_JSON } }, required: ["actions"], additionalProperties: false },
-    schema: z.object({ actions: z.array(action).min(1).max(8) }).strict(),
+    schema: z.object({ actions: agentActions }).strict(),
     async run(input: { actions: IntentActionSpec[] }, tc) {
       const card = routeCardOf(await planActions(tc.ctx, tc.address, input.actions), tc.integratorFee);
       tc.cards.push(card);
@@ -202,7 +221,7 @@ export const AGENT_TOOLS: readonly AgentTool[] = [
     name: "propose_intent",
     description: "Create a proposal the user reviews and signs with their own wallet (one tap). Use for every move: swaps, bridges, orders, protection, deposits. Never claims anything is executed.",
     input_schema: { type: "object", properties: { title: { type: "string" }, explanation: { type: "string", description: "Why, with the numbers from tool results." }, actions: { type: "array", minItems: 1, maxItems: 8, items: ACTION_JSON } }, required: ["title", "explanation", "actions"], additionalProperties: false },
-    schema: z.object({ title: z.string().min(3).max(120), explanation: z.string().min(3).max(1_200), actions: z.array(action).min(1).max(8) }).strict(),
+    schema: z.object({ title: z.string().min(3).max(120), explanation: z.string().min(3).max(1_200), actions: agentActions }).strict(),
     async run(input: { title: string; explanation: string; actions: IntentActionSpec[] }, tc) {
       if (tc.address !== tc.owner) return { ok: false, code: "NOT_OWNER", message: "Proposals are only made for the signed-in wallet." };
       const proposal = await createProposal(tc.ctx, tc.owner, { origin: "chat", title: input.title, explanation: input.explanation, actions: input.actions, integratorFee: tc.integratorFee });

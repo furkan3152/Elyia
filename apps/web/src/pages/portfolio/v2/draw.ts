@@ -136,6 +136,20 @@ export function drawVignette(ctx: Surface, kind: VignetteKind, T: number, on: bo
 }
 
 /** The waterfall (W x H): bars rise in four steps one after another from `T0`; dotted connectors once a bar lands. */
+/** When the waterfall's last bar has finished rising (local seconds). */
+export const WATERFALL_END_S = 0.3 + 0.25 * 8 + 0.5;
+
+/** How far bar `index` has risen at local time `T` (0..1 in 4 steps: bars grow in 4 steps, one after another). */
+export function barProgress(index: number, T: number): number {
+  const p = Math.max(0, Math.min(1, (T - 0.3 - index * 0.25) / 0.5));
+  return Math.floor(p * 4) / 4;
+}
+
+/**
+ * The waterfall at local time `T` (seconds since it came into view; the
+ * caller passes WATERFALL_END_S or more for the end state). Every bar,
+ * Net included, is drawn once T has passed its slot.
+ */
 export function drawWaterfall(ctx: Surface, fall: Waterfall, W: number, H: number, T: number, pal: Pal): void {
   ctx.clearRect(0, 0, W, H);
   const top = 4;
@@ -152,8 +166,7 @@ export function drawWaterfall(ctx: Surface, fall: Waterfall, W: number, H: numbe
   const slot = Math.floor(W / n);
   const bw = Math.max(4, Math.round(slot * 0.62));
   fall.bars.forEach((bar, index) => {
-    const p = Math.max(0, Math.min(1, (T - 0.3 - index * 0.25) / 0.5));
-    const stepped = Math.floor(p * 4) / 4;
+    const stepped = barProgress(index, T);
     const x = index * slot + Math.round((slot - bw) / 2);
     const from = bar.kind === "total" || bar.kind === "start" ? Math.max(fall.min, Math.min(0, fall.max)) : bar.from;
     const yTop = Math.min(y(from), y(bar.to));

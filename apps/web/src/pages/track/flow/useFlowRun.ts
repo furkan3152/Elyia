@@ -24,6 +24,7 @@ import { useConfig } from "wagmi";
 import { getAccount, getPublicClient, sendTransaction, signTypedData, switchChain, waitForTransactionReceipt } from "wagmi/actions";
 
 import { useUiStore } from "../../../app/state/uiStore";
+import { linkProposal } from "../../../features/ely/proposalLink";
 import { ApiError, apiGet, apiPost, apiUrl } from "../../../lib/api";
 import { openEventStream } from "../../../lib/sse";
 import { hyperCoreEndpoints } from "../../../lib/hypercore/endpoints";
@@ -223,11 +224,21 @@ export function useFlowRun(ask: FlowAsk | null, plan: FlowPlan | null): FlowRun 
       let id = intentId;
       let current: string | null = journey?.current ?? null;
       if (!id) {
-        const created = await apiPost<CreateIntentResponse>("/v1/intents", planBody(ask, from, mode, false), { timeoutMs: 20_000 });
-        id = created.intent.id;
-        current = created.journey.current;
+        // A proposal's card: approving the proposal stores the one intent and links it back.
+        const link = ask.proposal ? await linkProposal(ask.proposal) : null;
+        if (link?.kind === "linked") {
+          id = link.intentId;
+          const linked = await apiGet<Journey>(`/v1/intents/${id}/journey`, { timeoutMs: 10_000 });
+          current = linked.current;
+          setJourney(linked);
+        } else {
+          if (link?.kind === "fallback") setError(link.reason);
+          const created = await apiPost<CreateIntentResponse>("/v1/intents", planBody(ask, from, mode, false), { timeoutMs: 20_000 });
+          id = created.intent.id;
+          current = created.journey.current;
+          setJourney(created.journey);
+        }
         setIntentId(id);
-        setJourney(created.journey);
         remember({ id, source: "planner", intentId: id, routeId: planned.route.id, sentence: ask.sentence, createdAt: Date.now(), layers: [...new Set(planned.route.steps.flatMap((step) => [step.layer, step.toLayer].filter((layer): layer is NonNullable<typeof layer> => Boolean(layer))))], legs: [] });
       }
       const stepId = current ?? planned.route.steps.find((step) => runs[step.stepId]?.state !== "settled")?.stepId;

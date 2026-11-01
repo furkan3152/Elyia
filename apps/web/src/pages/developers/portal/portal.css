@@ -139,3 +139,10 @@ html[data-motion="off"] .portal-lift {
     transition: none !important;
   }
 }
+
+/* A sub-view starts with its own section: no dashed rule above the first one. */
+.portal-view > section:first-child {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 3rem;
+}

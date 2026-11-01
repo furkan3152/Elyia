@@ -183,3 +183,13 @@ export function checkSiweMessage(message: string, expected: { readonly address: 
   if (expiry && !(Date.parse(expiry) > expected.now)) return { ok: false, reason: "The sign-in text has already expired. Try again." };
   return { ok: true };
 }
+
+/**
+ * The stored token when it belongs to `address` (any case) and has not
+ * expired: one session per tab, shared by every page (Ask Ely, Portfolio,
+ * developers, admin). A different connected wallet gets no token.
+ */
+export function tokenForAddress(stored: StoredSession | null | undefined, address: string | null | undefined, now: number): string | null {
+  if (!stored || !address || !sameAddress(stored.session.address, address)) return null;
+  return isExpired(stored.session, now) ? null : stored.token;
+}

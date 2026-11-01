@@ -434,7 +434,8 @@ ElyOrders; artifacts exported by `packages/contracts` into
 | `GET /v1/admin/deploy-plan?network=` | admin | `DeployPlanResponse`: creation transactions in manifest order with constructor args filled (`$OWNER` = the admin's wallet, `$ElyiaRouter` = the recorded router) for the web admin panel to send from the wallet |
 | `POST /v1/admin/deployments` (auth) | admin | `RecordDeploymentResponse`. Body `{ network, contract, txHash, address? }`. Recorded only when the receipt succeeded, the created address matches, the deployer is an admin, the creation input starts with the artifact's creation code and the on-chain runtime code equals the artifact's (immutables and metadata masked); else 422 `DEPLOYMENT_REJECTED` with `details.checks`. 503 `CONTRACTS_NOT_EXPORTED` without artifacts. |
 | `GET /v1/admin/deployments?network=` | admin | `{ deployments }` |
-| `GET /v1/admin/router?network=` | admin | `RouterSettingsResponse`: every zero-argument view of the router ABI read live (owner, pendingOwner, protocolFeeBps, feeRecipient, paused, caps); before deployment, the artifact's defaults through a code override |
+| `GET /v1/admin/router?network=` | admin | `RouterSettingsResponse`: every zero-argument view of the router ABI read live (owner, pendingOwner, protocolFeeBps, feeRecipient, paused, caps), `source: "chain"`, `recorded: true`. With no router recorded on the network: `recorded: false`, `source: "artifact-defaults"`, only the artifact's constants in `reads`, set-later state (owner, recipients, zero addresses) listed in `unset`, and a `note` saying no router is recorded |
+| `GET /v1/admin/telegram` | admin | `AdminTelegramStatusResponse`: `configured`, `mode`, `running`, `flag`, `webhookUrlSet`, `linkedWallets`, `lastError`, `note` ("not configured · no bot token" …). Never the token or chat ids |
 | `GET/PUT /v1/admin/flags` | admin | `FeatureFlagsResponse` (`elyiaRouterVenue`, `agentLlm`, `keeper`, `telegram`, `webhooks`, `mcp`, `alerts`) |
 | `GET /v1/admin/system` | admin | `SystemDashboardResponse`: health, today's key usage, queues and workers (alerts, tracker, automations, keepers, webhooks), agent mode |
 
@@ -470,13 +471,13 @@ that signs, sends or withdraws.
 
 | route | auth | response |
 |---|---|---|
-| `POST /v1/agent/chat` (heavy, SSE) | optional session | events `thread`, `token`, `tool_call`, `tool_result`, `proposal`, `route_card`, `note`, `done`, `error`. Body `{ message, address?, threadId?, locale? }` (`address` required without a session; anonymous chats are read-only and not stored). |
+| `POST /v1/agent/chat` (heavy, SSE) | optional session | events `thread`, `token`, `tool_call`, `tool_result`, `proposal`, `route_card`, `note`, `clarify`, `done`, `error`. Body `{ message, address?, threadId?, locale?, clarify? }` (`address` required without a session; anonymous chats are read-only and not stored). A turn that ends asking sends `clarify` (`ChatClarifyEvent`: `threadId`, `sentence`, the reader's signed `thread`, `questions` with `options`) before `done`; answer by sending the same `sentence` as `message` with `clarify: { thread, answers: [{ question, option \| text }] }`. Chained actions use `after: [index]` with `amount: "max"` (and `params.portionBps` for a share). |
 | `GET /v1/agent/threads`, `GET/DELETE /v1/agent/threads/:id` | session | threads per owner (60 messages kept) |
 | `GET/PUT /v1/agent/memory` | session | `AgentMemory` (goals, risk profile, target mix, gas floor, dust threshold, locale) |
 | `GET /v1/agent/insights/:address` (heavy) | public | `InsightsResponse`: rebalance, auto-protect, liquidation-guard, funding-harvest (paper on testnet), idle-cash, what-if shocks, gas-top-up, dust-sweep, explain-pnl; each with its numbers and draft actions |
 | `POST /v1/agent/insights/:address/:insightId/propose` | session (= address) | `Proposal` |
 | `GET/POST /v1/agent/proposals`, `GET /v1/agent/proposals/:id` | session | `Proposal` (dry-run route card, 15 min expiry) |
-| `POST /v1/agent/proposals/:id/decision` | session | `ProposalDecisionResponse`. `{ decision: approve|reject, via?: wallet|keeper }`; wallet approval stores the intent and returns the first step to prepare and sign |
+| `POST /v1/agent/proposals/:id/decision` | session | `ProposalDecisionResponse`. `{ decision: approve|reject, via?: wallet|keeper }`; wallet approval stores ONE intent linked to the proposal (approving again returns the same intent and next step) and returns the first step to prepare and sign; the intent's final status marks the proposal `executed` (completed) or `failed` (failed, expired, stopped, cancelled) |
 | `GET /v1/agent/automations`, `POST`, `PATCH/DELETE /:id` | session | automations (`auto-protect`, `liquidation-guard`, `idle-sweep`, `gas-top-up`, `dust-sweep`, `rebalance`, `funding-harvest-paper`): each run turns new findings into proposals (deduped per cooldown) |
 | `GET /v1/agent/skills` | public | automation catalog and insight kinds |
 | `GET /v1/agent/feed` | session | `FeedResponse` |

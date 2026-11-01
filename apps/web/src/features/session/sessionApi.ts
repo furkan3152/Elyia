@@ -33,6 +33,19 @@ export async function authedFetch<T>(path: string, options: ApiRequestOptions = 
   }
 }
 
+/**
+ * Calls the API with an explicit session token (one the caller read for its
+ * wallet). A 401 for the stored token ends the local session.
+ */
+export async function sessionFetch<T>(path: string, token: string, options: ApiRequestOptions = {}): Promise<T> {
+  try {
+    return await apiFetch<T>(path, { ...options, headers: { ...options.headers, [SESSION_HEADER]: token } });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401 && sessionToken() === token) useSessionStore.getState().markExpired();
+    throw error;
+  }
+}
+
 export async function fetchSessionView(): Promise<SessionView> {
   const view = readSessionView(await authedFetch<unknown>("/v1/auth/session"));
   if (!view) throw new ApiError({ code: "INVALID_RESPONSE", message: "The API sent a session Elyia could not read." });

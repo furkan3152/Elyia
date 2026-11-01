@@ -206,3 +206,25 @@ export interface TelegramStatusResponse {
   readonly botUsername: string | null;
   readonly linked: boolean;
 }
+
+/**
+ * GET /v1/admin/telegram (admin): the bot as the owner console's flag note
+ * shows it. Never carries the token or any chat id.
+ */
+export interface AdminTelegramStatusResponse {
+  /** A bot token is configured (TELEGRAM_BOT_TOKEN). */
+  readonly configured: boolean;
+  readonly mode: "webhook" | "polling" | "off";
+  readonly botUsername: string | null;
+  /** The bot runs in this process (polling started or the webhook mounted). */
+  readonly running: boolean;
+  /** The `telegram` feature flag. */
+  readonly flag: boolean;
+  /** TELEGRAM_WEBHOOK_URL is set (webhook mode registers it on start). */
+  readonly webhookUrlSet: boolean;
+  /** Wallets linked to a chat. */
+  readonly linkedWallets: number;
+  readonly lastError: string | null;
+  /** One honest line for the flag ("not configured · no bot token"). */
+  readonly note: string;
+}

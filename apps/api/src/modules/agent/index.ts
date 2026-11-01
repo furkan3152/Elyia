@@ -2,13 +2,16 @@
  * Ely, the Elyia agent: chat, memory, proposals, portfolio insights,
  * automations and opt-in Keeper mode.
  *
- *   POST   /agent/chat                               SSE: thread, token, tool_call, tool_result, proposal, route_card, note, done, error
+ *   POST   /agent/chat                               SSE: thread, token, tool_call, tool_result, proposal, route_card, note, clarify, done, error
+ *                                                    (body.clarify: answers to the last clarify event's questions)
  *   GET    /agent/threads   GET/DELETE /agent/threads/:id         (session)
  *   GET    /agent/memory    PUT /agent/memory                     (session)
  *   GET    /agent/insights/:address                               (public, read-only)   InsightsResponse
  *   POST   /agent/insights/:address/:insightId/propose            (session = address)   Proposal
  *   GET    /agent/proposals  POST /agent/proposals  GET /agent/proposals/:id            (session)
  *   POST   /agent/proposals/:id/decision    { decision, via? }    (session)   ProposalDecisionResponse
+ *          (approve stores one intent linked to the proposal; approving again returns it; the
+ *           intent's final status marks the proposal executed / failed)
  *   GET    /agent/automations  POST  PATCH /:id  DELETE /:id      (session)
  *   GET    /agent/skills                                          automation catalog
  *   GET    /agent/feed                                            (session)
@@ -20,6 +23,7 @@
  * inside its caps.
  */
 import { INSIGHT_KINDS, AUTOMATION_KINDS, type ChatRequest } from "@elyia/core/api/agent";
+import { LANGUAGE_LIMITS } from "@elyia/core/api/language";
 import { NETWORK_KEYS, type IntentActionSpec, type NetworkKey } from "@elyia/core";
 import type { Request } from "express";
 import { z } from "zod";
@@ -36,10 +40,24 @@ import { AUTOMATION_CATALOG, createAutomation, deleteAutomation, listAutomations
 import { chatTurn } from "./chat.js";
 import { activateKeeper, keeperStatus, keeperUnavailable, prepareKeeper, revokeKeeper, setKill, type KeeperRecord } from "./keeper.js";
 import { deleteThread, feedOf, listThreads, memoryOf, threadOf, updateMemory } from "./memory.js";
-import { createProposal, decide, insightsFor, listProposals, proposalOf } from "./proposals.js";
+import { createProposal, decide, insightsFor, listProposals, proposalOf, wireProposalOutcomes } from "./proposals.js";
+
+const outcomeWires = new WeakMap<AppContext, () => void>();
 
 const networkKey = z.enum(NETWORK_KEYS as unknown as [NetworkKey, ...NetworkKey[]]);
-const ChatBody = z.object({ message: z.string().trim().min(1).max(2_000), threadId: z.string().regex(/^thr_[0-9a-f]{20}$/u).optional(), locale: z.enum(["en", "tr"]).optional(), address: evmAddress.optional() }).strict();
+const ClarifyAnswer = z
+  .object({ question: z.string().min(1).max(80), option: z.string().min(1).max(80).optional(), text: z.string().min(1).max(LANGUAGE_LIMITS.maxAnswerTextLength).optional() })
+  .strict()
+  .refine((answer) => (answer.option === undefined) !== (answer.text === undefined), "Give either option or text.");
+const ChatBody = z
+  .object({
+    message: z.string().trim().min(1).max(2_000),
+    threadId: z.string().regex(/^thr_[0-9a-f]{20}$/u).optional(),
+    locale: z.enum(["en", "tr"]).optional(),
+    address: evmAddress.optional(),
+    clarify: z.object({ thread: z.string().min(1).max(8_192).optional(), answers: z.array(ClarifyAnswer).min(1).max(LANGUAGE_LIMITS.maxAnswers) }).strict().optional(),
+  })
+  .strict();
 const ThreadParams = z.object({ id: z.string().regex(/^thr_[0-9a-f]{20}$/u) });
 const AddressParams = z.object({ address: evmAddress });
 const InsightParams = z.object({ address: evmAddress, insightId: z.string().min(5).max(80) });
@@ -114,7 +132,7 @@ export const agentModule: ApiModule = {
       const stream = openSse(req, res, { slots: ctx.limits.streams, now: () => ctx.clock.now() });
       if (stream.closed) return;
       try {
-        await chatTurn({ ctx, owner: signedIn?.address ?? null, address, message: body.message, threadId: body.threadId ?? null, locale: body.locale ?? null, integratorFee, emit: (event, data) => stream.send(event, data) });
+        await chatTurn({ ctx, owner: signedIn?.address ?? null, address, message: body.message, threadId: body.threadId ?? null, locale: body.locale ?? null, integratorFee, clarify: body.clarify ?? null, emit: (event, data) => stream.send(event, data) });
       } catch (error) {
         ctx.log.warn("agent chat turn failed", { error: error instanceof Error ? error.message.slice(0, 160) : String(error) });
         stream.send("error", { code: error instanceof ElyiaHttpError ? error.code : "AGENT_FAILED", message: error instanceof ElyiaHttpError && error.status < 500 ? error.message : "Ely could not finish this turn." });
@@ -246,6 +264,7 @@ export const agentModule: ApiModule = {
   },
   start(ctx) {
     startScheduler(ctx);
+    if (!outcomeWires.has(ctx)) outcomeWires.set(ctx, wireProposalOutcomes(ctx));
     registerStats(ctx, "keeper", async () => {
       const rows = await docs<KeeperRecord>(ctx, PLATFORM_COLLECTIONS.keepers).list({ limit: 1_000 });
       return { running: ctx.config.keeperSecret !== null, lastRunAt: null, lastError: null, pending: rows.filter((row) => row.value.state === "active").length, note: "active keepers" };
@@ -253,5 +272,7 @@ export const agentModule: ApiModule = {
   },
   stop(ctx) {
     stopScheduler(ctx);
+    outcomeWires.get(ctx)?.();
+    outcomeWires.delete(ctx);
   },
 };

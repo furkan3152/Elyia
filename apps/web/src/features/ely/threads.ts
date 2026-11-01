@@ -98,6 +98,8 @@ function parseTurn(raw: unknown): Turn | null {
     isRec(raw.clarify) && Array.isArray(raw.clarify.questions) && (raw.clarify.status === "ready" || raw.clarify.status === "none")
       ? {
           status: raw.clarify.status as "ready" | "none",
+          via: raw.clarify.via === "chat" ? ("chat" as const) : ("reader" as const),
+          sentence: str(raw.clarify.sentence) ? raw.clarify.sentence.slice(0, 2_000) : null,
           at: num(raw.clarify.at) ? raw.clarify.at : raw.startedAt,
           questions: raw.clarify.questions.filter((q): q is Rec => isRec(q) && str(q.id) && str(q.prompt) && Array.isArray(q.options)) as never[],
           thread: str(raw.clarify.thread) ? raw.clarify.thread : null,

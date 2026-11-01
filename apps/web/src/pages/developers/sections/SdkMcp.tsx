@@ -15,19 +15,19 @@ function CopyButton({ text, what }: { readonly text: string; readonly what: stri
   );
 }
 
-/** Quickstart over plain fetch (no SDK package ships yet: the snippet uses the real routes) | the MCP config and its tools. */
+/** Quickstart over @elyia/sdk (the typed client in packages/sdk) | the MCP config and its tools. */
 export function SdkMcp() {
   const quick = quickstartSnippet(API_BASE);
   const mcp = mcpSnippet(API_BASE);
   return (
     <section id="sdk" aria-labelledby="sdk-title" className="mt-14 scroll-mt-28 border-t-2 border-dashed border-rule pt-14">
-      <SectionHead id="sdk-title" tag="Quickstart and MCP" title="Three calls to a route. One URL to an agent." lede="TypeScript over fetch: the same routes a typed SDK will wrap. Keys go in a header; your user's wallet does the signing." />
+      <SectionHead id="sdk-title" tag="Quickstart and MCP" title="Three calls to a route. One URL to an agent." lede="The typed @elyia/sdk client: plan, prepare, your user's wallet signs, submit, follow the journey. Keys stay on your server." />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="flex flex-col">
-          <CodeHead left="TypeScript · fetch" right={<span className="normal-case">@elyia/sdk · not published yet</span>} />
+          <CodeHead left="TypeScript · @elyia/sdk" right={<span className="normal-case">packages/sdk · not on npm yet</span>} />
           <Code text={quick} className="h-[340px] flex-1" label="Quickstart code" />
           <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="text-[11.5px] text-ink-3">Node 18+, Deno, Bun or the browser (server-side keys only).</span>
+            <span className="text-[11.5px] text-ink-3">Node 20+, Workers or the browser (keys server-side only). Testnet: chain 99801.</span>
             <CopyButton text={quick} what="Quickstart" />
           </div>
         </div>

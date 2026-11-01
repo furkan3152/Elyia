@@ -170,23 +170,28 @@ export function webhookUrlProblem(url: string): string | null {
 
 /* ---------------------------------------------------------------- snippets */
 
+/** The quickstart over @elyia/sdk (packages/sdk): plan, prepare, the user's wallet signs, submit, follow. */
 export function quickstartSnippet(apiBase: string): string {
   return [
-    `const ELYIA = "${apiBase}/v1";`,
-    `const headers = { "Authorization": \`Bearer \${process.env.ELYIA_KEY}\`, "Content-Type": "application/json" };`,
+    `import { ElyiaClient } from "@elyia/sdk";`,
     "",
-    "// 1. Read the sentence: goals, questions, the plan input",
-    `const reading = await fetch(\`\${ELYIA}/intents/parse\`, {`,
-    `  method: "POST", headers, body: JSON.stringify({ text: "swap 50 HYPE to USDC on Elysium" }),`,
-    "}).then((r) => r.json());",
+    `const elyia = new ElyiaClient({ baseUrl: "${apiBase}", apiKey: process.env.ELYIA_KEY });`,
     "",
-    "// 2. Plan it: a priced route; prepare returns unsigned txs",
-    `const intent = await fetch(\`\${ELYIA}/intents\`, {`,
-    `  method: "POST", headers, body: JSON.stringify({ text: reading.canonical, accounts, signer: "user" }),`,
-    "}).then((r) => r.json());",
+    "// 1. Plan: a priced route through the venue auction and the Rule Book",
+    "const plan = await elyia.plan({",
+    "  accounts: [`eip155:99801:${address}`],",
+    `  actions: [{ kind: "swap", network: "elysium-testnet", from: "HYPE", to: "USDC", amount: "1" }],`,
+    "});",
+    "",
+    "// 2. Prepare a step: unsigned requests, nothing sent",
+    "const step = plan.intent.steps[0];",
+    "const { payload } = await elyia.prepare(plan.intent.id, step.id);",
     "",
     "// 3. Your user's wallet signs; Elyia never does",
-    "await wallet.sendTransaction(preparedTx);",
+    "const hash = await wallet.sendTransaction(payload.requests[0]);",
+    "await elyia.submit(plan.intent.id, step.id, [hash]);",
+    "",
+    "for await (const event of elyia.journeyStream(plan.intent.id)) console.log(event.type);",
   ].join("\n");
 }
 

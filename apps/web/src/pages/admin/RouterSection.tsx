@@ -64,7 +64,9 @@ export function RouterSection({ network, routerAddress }: { readonly network: Ad
   const current = reads?.protocolFeeBps ? Number(reads.protocolFeeBps) : 0;
   const [draft, setDraft] = useState<number | null>(null);
   const fee = draft ?? current;
-  const owner = reads?.owner ?? null;
+  // Owner (and other set-later state) only exists on a recorded router; before that the API leaves it out (`unset`).
+  const recorded = settings.data ? settings.data.recorded !== false && settings.data.source !== "artifact-defaults" : Boolean(routerAddress);
+  const owner = recorded ? (reads?.owner ?? null) : null;
   const recipientRead = reads?.feeRecipient && !/^0x0{40}$/iu.test(reads.feeRecipient) ? reads.feeRecipient : null;
   const recipient = recipientRead ?? wallet ?? null;
   const paused = routerAddress ? (settings.data?.paused ?? readBool(reads?.paused)) : null;
@@ -79,7 +81,7 @@ export function RouterSection({ network, routerAddress }: { readonly network: Ad
 
   return (
     <section id="router" aria-labelledby="router-title" className="mt-14 scroll-mt-28 border-t-2 border-dashed border-rule pt-14">
-      <SectionHead id="router-title" tag={`ElyiaRouter · ${option.chainId}`} title="Fee and pause." lede={routerAddress ? `Live reads from ${shortHex(routerAddress)}. Every change is a transaction your wallet signs.` : "Not deployed on this network yet: values below are the artifact's defaults (read from its code), and nothing can be signed."} />
+      <SectionHead id="router-title" tag={`ElyiaRouter · ${option.chainId}`} title="Fee and pause." lede={routerAddress && recorded ? `Live reads from ${shortHex(routerAddress)}. Every change is a transaction your wallet signs.` : (settings.data?.note ?? "No ElyiaRouter is recorded on this network: deploy it from Contracts first. Values below are the artifact's constants, and nothing can be signed.")} />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card className="flex flex-col gap-3.5">
           <CardHead glyph="percent" title="Protocol fee" right={<Pill tone="mute">owner tx</Pill>} />
@@ -108,7 +110,7 @@ export function RouterSection({ network, routerAddress }: { readonly network: Ad
             rows={[
               ["Recipient", <span key="r" className="font-mono">{recipient ? shortHex(recipient) : "—"}{recipientRead ? "" : " (your wallet)"}</span>],
               ["Applies to", "new routes only · shown on every card"],
-              ["Owner", <span key="o" className="font-mono">{owner && routerAddress ? shortHex(owner) : "—"}</span>],
+              ["Owner", owner && routerAddress ? <span key="o" className="font-mono">{shortHex(owner)}</span> : <span key="o" className="text-ink-3">no router recorded</span>],
             ]}
           />
           {prepared ? (

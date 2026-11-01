@@ -6,7 +6,9 @@
  * planner and says so in a note.
  */
 import { getEvmNetwork } from "@elyia/core";
-import type { ChatDoneEvent, RouteCard } from "@elyia/core/api/agent";
+import type { ChatClarifyAnswers, ChatClarifyEvent, ChatDoneEvent, RouteCard } from "@elyia/core/api/agent";
+import type { ReadResult } from "../../language/index.js";
+import { readSentenceFor } from "../intents/language.js";
 import type { AppContext } from "../../context.js";
 import { elysiumNetworkFor, hypercoreNetworkFor } from "../../config.js";
 import { flagOn } from "../admin/index.js";
@@ -26,6 +28,18 @@ export interface ChatTurnInput {
   readonly integratorFee: RouteCard["integratorFee"];
   readonly emit: (event: string, data: unknown) => void;
   readonly client?: LlmTurnInput["client"];
+  /** Answers to the previous turn's `clarify` questions about `message`. */
+  readonly clarify?: ChatClarifyAnswers | null;
+}
+
+/** Questions a person can answer in the UI (a choice or a typed value). */
+function answerable(reading: ReadResult): ReadResult["questions"] {
+  return reading.status === "needs_input" ? reading.questions.filter((question) => question.options.length > 0 || question.allowsText) : [];
+}
+
+/** A turn that ended on a question, with nothing planned. */
+function endsAsking(text: string, tools: ToolContext): boolean {
+  return tools.proposals.length === 0 && tools.cards.length === 0 && /\?\s*$/u.test(text.trim());
 }
 
 export function detectLocale(text: string): "en" | "tr" {
@@ -52,23 +66,45 @@ export async function chatTurn(input: ChatTurnInput): Promise<ChatDoneEvent> {
 
   let text: string;
   let stopReason = "end_turn";
-  if (useLlm) {
+  // Clarify answers: the reader re-reads the same sentence with them (and its signed thread).
+  let message = input.message;
+  let reading: ReadResult | null = null;
+  if (input.clarify && input.clarify.answers.length > 0) {
+    reading = await readSentenceFor(ctx, { text: input.message, locale, answers: input.clarify.answers, ...(input.clarify.thread ? { thread: input.clarify.thread } : {}), account: tools.address });
+    if (reading.status === "ready" && reading.canonical) message = reading.canonical;
+  }
+  let clarify: ReadResult | null = reading && answerable(reading).length > 0 ? reading : null;
+  if (clarify) {
+    // Still asking: the next questions, no model call and no plan.
+    text = clarify.questions.map((question) => question.prompt).join("\n");
+    for (const piece of chunks(text)) input.emit("token", { text: piece });
+  } else if (reading && reading.status !== "ready") {
+    text = reading.unsupported ?? (locale === "tr" ? "Bu cevaplarla cümleyi tamamlayamadım. Kendi sözlerinle tekrar yaz." : "I could not finish the sentence with those answers. Type it again in your own words.");
+    for (const piece of chunks(text)) input.emit("token", { text: piece });
+  } else if (useLlm) {
     try {
-      const result = await runLlmTurn({ ctx, history: (thread?.messages ?? []).map((message) => ({ role: message.role, text: message.text })), message: input.message, stateLine, tools, emit: input.emit, ...(input.client ? { client: input.client } : {}) });
+      const result = await runLlmTurn({ ctx, history: (thread?.messages ?? []).map((entry) => ({ role: entry.role, text: entry.text })), message, stateLine, tools, emit: input.emit, ...(input.client ? { client: input.client } : {}) });
       text = result.text;
       stopReason = result.stopReason;
     } catch (error) {
       ctx.log.warn("agent model turn failed; deterministic fallback", { error: error instanceof Error ? error.message.slice(0, 160) : String(error) });
       input.emit("note", { text: locale === "tr" ? "Model şu an yanıt vermiyor; deterministik planlayıcı devrede." : "The model is unavailable right now; the deterministic planner answered." });
-      const result = await runDeterministicTurn({ ctx, message: input.message, locale, tools, emit: input.emit });
+      const result = await runDeterministicTurn({ ctx, message, locale, tools, emit: input.emit, ...(reading?.status === "ready" ? { reading } : {}) });
       for (const piece of chunks(result.text)) input.emit("token", { text: piece });
       text = result.text;
+      clarify = result.clarify ?? null;
       stopReason = "fallback";
     }
+    if (!clarify && stopReason !== "fallback" && !reading && endsAsking(text, tools)) {
+      // The model asked a question: offer the reader's options for the same sentence as choices.
+      const asked = await readSentenceFor(ctx, { text: message, locale, account: tools.address }).catch(() => null);
+      if (asked && answerable(asked).length > 0) clarify = asked;
+    }
   } else {
-    const result = await runDeterministicTurn({ ctx, message: input.message, locale, tools, emit: input.emit });
+    const result = await runDeterministicTurn({ ctx, message, locale, tools, emit: input.emit, ...(reading?.status === "ready" ? { reading } : {}) });
     for (const piece of chunks(result.text)) input.emit("token", { text: piece });
     text = result.text;
+    clarify = result.clarify ?? null;
   }
   for (const proposal of tools.proposals) {
     input.emit("proposal", proposal);
@@ -81,10 +117,15 @@ export async function chatTurn(input: ChatTurnInput): Promise<ChatDoneEvent> {
   if (input.owner) {
     const now = new Date(ctx.clock.now()).toISOString();
     const view = await appendToThread(ctx, input.owner, threadId, [
-      { role: "user", text: input.message, at: now },
+      { role: "user", text: message, at: now },
       { role: "assistant", text, at: now, proposals: tools.proposals.map((proposal) => proposal.id) },
     ]);
     savedThread = view.id;
+  }
+  const questions = clarify ? answerable(clarify) : [];
+  if (clarify && questions.length > 0) {
+    const event: ChatClarifyEvent = { threadId: savedThread, sentence: message, thread: clarify.thread, questions, locale };
+    input.emit("clarify", event);
   }
   const done: ChatDoneEvent = { threadId: savedThread ?? "", text, proposals: tools.proposals.map((proposal) => proposal.id), stopReason };
   input.emit("done", done);

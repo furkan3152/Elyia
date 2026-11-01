@@ -5,12 +5,14 @@
  * signs anything: Ely answers with readings, text and route cards; the
  * wallet signs a card only when the person presses its button.
  */
+import type { ChatClarifyAnswers } from "@elyia/core/api/agent";
 import { create } from "zustand";
 
 import { ApiError, describeError } from "../../lib/api";
-import { allAnswered, answersOf } from "./clarify";
+import { allAnswered, answersOf, pickedSummary } from "./clarify";
 import { readSentence } from "./clarifyApi";
 import { streamChat } from "./client";
+import { onProposalUpdate } from "./proposalLink";
 import { THREADS_KEY, parseThreads, serializeThreads, serverThreadOf, titleFor, upsertThread, type ChatThread } from "./threads";
 import { applyEvent, endsAsking, interrupted, newElyTurn, type ElyTurn, type Turn } from "./turn";
 
@@ -64,6 +66,19 @@ useChatStore.subscribe((state, previous) => {
   }, 400);
 });
 
+// A proposal approved from its route card: every turn that carries it shows the new status and intent.
+onProposalUpdate((proposal) => {
+  useChatStore.setState((state) => {
+    let changed = false;
+    const threads = state.threads.map((thread) => {
+      if (!thread.turns.some((turn) => turn.kind === "ely" && turn.proposals.some((entry) => entry.id === proposal.id))) return thread;
+      changed = true;
+      return { ...thread, turns: thread.turns.map((turn) => (turn.kind === "ely" ? { ...turn, proposals: turn.proposals.map((entry) => (entry.id === proposal.id ? proposal : entry)) } : turn)) };
+    });
+    return changed ? { threads } : state;
+  });
+});
+
 function patchThread(threadId: string, fn: (thread: ChatThread) => ChatThread) {
   useChatStore.setState((state) => {
     const thread = state.threads.find((entry) => entry.id === threadId);
@@ -87,8 +102,15 @@ export interface SendContext {
   readonly session: string | null;
 }
 
+export interface SendOptions {
+  /** Answers to a chat `clarify` event: `text` is then the sentence they answer. */
+  readonly clarify?: ChatClarifyAnswers;
+  /** What the user bubble shows instead of `text` (the picked choices). */
+  readonly display?: string;
+}
+
 /** Starts a new thread when none is active. Returns the thread id. */
-export function sendMessage(text: string, context: SendContext): string | null {
+export function sendMessage(text: string, context: SendContext, options: SendOptions = {}): string | null {
   const message = text.trim().slice(0, 2_000);
   if (!message) return null;
   const state = useChatStore.getState();
@@ -98,7 +120,7 @@ export function sendMessage(text: string, context: SendContext): string | null {
   if (!thread) {
     thread = { id: uid("t"), title: titleFor(message), createdAt: now, updatedAt: now, address: context.address.toLowerCase(), turns: [] };
   }
-  const user: Turn = { kind: "user", id: uid("u"), text: message, at: now };
+  const user: Turn = { kind: "user", id: uid("u"), text: options.display?.trim().slice(0, 2_000) || message, at: now };
   const ely = newElyTurn(uid("e"), now);
   const serverThread = context.session ? serverThreadOf(thread) : null;
   const next: ChatThread = { ...thread, updatedAt: now, address: thread.address ?? context.address.toLowerCase(), turns: [...thread.turns, user, ely] };
@@ -110,7 +132,7 @@ export function sendMessage(text: string, context: SendContext): string | null {
   void (async () => {
     try {
       await streamChat({
-        request: { message, address: context.address, ...(serverThread ? { threadId: serverThread } : {}) },
+        request: { message, address: context.address, ...(serverThread ? { threadId: serverThread } : {}), ...(options.clarify ? { clarify: options.clarify } : {}) },
         session: context.session,
         signal: controller.signal,
         onEvent: (event) => patchTurn(threadId, ely.id, (turn) => applyEvent(turn, event, Date.now())),
@@ -133,6 +155,7 @@ export function sendMessage(text: string, context: SendContext): string | null {
       });
     }
     const finished = useChatStore.getState().threads.find((entry) => entry.id === threadId)?.turns.find((turn): turn is ElyTurn => turn.kind === "ely" && turn.id === ely.id);
+    // Older APIs send no `clarify` event: ask the reader for the options instead.
     if (finished && endsAsking(finished)) void askReader(threadId, ely.id, message, context.address);
   })();
   return threadId;
@@ -144,13 +167,14 @@ export function stopThread(threadId: string): void {
 }
 
 async function askReader(threadId: string, turnId: string, sentence: string, account: string) {
-  patchTurn(threadId, turnId, (turn) => ({ ...turn, clarify: { status: "loading", at: Date.now(), questions: [], thread: null, picked: {}, sent: null } }));
+  const empty = { via: "reader" as const, sentence, questions: [], thread: null, picked: {}, sent: null };
+  patchTurn(threadId, turnId, (turn) => ({ ...turn, clarify: { ...empty, status: "loading", at: Date.now() } }));
   try {
     const reading = await readSentence(sentence, { account });
     const questions = reading.status === "needs_input" ? reading.questions.filter((question) => question.options.length > 0 || question.allowsText) : [];
-    patchTurn(threadId, turnId, (turn) => ({ ...turn, clarify: { status: questions.length > 0 ? "ready" : "none", at: Date.now(), questions, thread: reading.thread, picked: {}, sent: null } }));
+    patchTurn(threadId, turnId, (turn) => ({ ...turn, clarify: { ...empty, status: questions.length > 0 ? "ready" : "none", at: Date.now(), questions, thread: reading.thread } }));
   } catch {
-    patchTurn(threadId, turnId, (turn) => ({ ...turn, clarify: { status: "none", at: Date.now(), questions: [], thread: null, picked: {}, sent: null } }));
+    patchTurn(threadId, turnId, (turn) => ({ ...turn, clarify: { ...empty, status: "none", at: Date.now() } }));
   }
 }
 
@@ -174,8 +198,15 @@ export async function answerClarify(threadId: string, turnId: string, questionId
   const turn = thread?.turns.find((entry): entry is ElyTurn => entry.kind === "ely" && entry.id === turnId);
   const clarify = turn?.clarify;
   if (!thread || !clarify || clarify.sent || !allAnswered(clarify.questions, clarify.picked)) return;
-  const sentence = sentenceBefore(thread, turnId);
+  const sentence = clarify.sentence ?? sentenceBefore(thread, turnId);
   if (!sentence) return;
+  if (clarify.via === "chat") {
+    // One request: Ely re-reads the sentence with the answers and plans it (or asks what is left).
+    const display = pickedSummary(clarify.questions, clarify.picked);
+    patchTurn(threadId, turnId, (entry) => (entry.clarify ? { ...entry, clarify: { ...entry.clarify, sent: display } } : entry));
+    sendMessage(sentence, context, { clarify: { ...(clarify.thread ? { thread: clarify.thread } : {}), answers: answersOf(clarify.questions, clarify.picked) }, display });
+    return;
+  }
   try {
     const reading = await readSentence(sentence, { answers: answersOf(clarify.questions, clarify.picked), thread: clarify.thread, account: context.address });
     if (reading.status === "ready" && reading.canonical) {

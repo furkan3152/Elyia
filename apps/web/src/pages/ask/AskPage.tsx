@@ -8,7 +8,7 @@ import { routeHref } from "../../app/routes/routeTable";
 import { useRoute } from "../../app/routes/useRoute";
 import { RouteArtifact, ArtifactWaiting } from "../../features/ely/RouteArtifact";
 import type { Recipe } from "../../features/ely/recipes";
-import { useElySession } from "../../features/ely/session";
+import { useWalletSession } from "../../features/session/useWalletSession";
 import { activeThread, answerClarify, sendMessage, stopThread, useChatStore } from "../../features/ely/store";
 import { planning, primaryCard, type ElyTurn, type Turn } from "../../features/ely/turn";
 import { signSourceOf } from "../../features/ely/signSource";
@@ -60,7 +60,7 @@ export default function AskPage() {
   const intent = params.get("intent");
   const asParam = params.get("as");
   const { address: connected } = useAccount();
-  const session = useElySession();
+  const session = useWalletSession();
   const wide = useMediaQuery("(min-width: 1024px)", true);
   const phone = !useMediaQuery("(min-width: 768px)", true);
   const height = useShellHeight(phone);
@@ -131,7 +131,7 @@ export default function AskPage() {
   if (shown?.kind === "recipe") {
     artifact = <RouteArtifact key={shown.recipe.id} card={shown.recipe.card} proposal={null} source={shown.recipe.source} draftedAt={shown.recipe.savedAt} onClose={closePanel} variant={wide ? "panel" : "sheet"} />;
   } else if (panelTurn && panelPrimary) {
-    artifact = <RouteArtifact key={panelTurn.id} card={panelPrimary.card} proposal={panelPrimary.proposal} source={signSourceOf(panelTurn, panelSentence)} draftedAt={panelPrimary.at} onClose={closePanel} variant={wide ? "panel" : "sheet"} />;
+    artifact = <RouteArtifact key={panelTurn.id} card={panelPrimary.card} proposal={panelPrimary.proposal} source={signSourceOf(panelTurn, panelSentence)} session={token} draftedAt={panelPrimary.at} onClose={closePanel} variant={wide ? "panel" : "sheet"} />;
   } else if (panelTurn && panelTurn.doneAt === null && !panelTurn.error) {
     artifact = <ArtifactWaiting onClose={closePanel} />;
   }

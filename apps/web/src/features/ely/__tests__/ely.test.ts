@@ -5,7 +5,7 @@ import type { Proposal, RouteCard } from "@elyia/core/api/agent";
 import type { LanguageQuestion } from "@elyia/core/api/language";
 
 import { cardId, cardView, compactAmount, etaWord, layerOfNetwork, usd } from "../cardModel";
-import { allAnswered, answersOf, pickedLabel } from "../clarify";
+import { allAnswered, answersOf, pickedLabel, pickedSummary } from "../clarify";
 import { stripCamps, stripProfile, stripZone } from "../draw";
 import { parseElyEvent, type ElyEvent } from "../events";
 import { readingLabel, phaseLabel } from "../labels";
@@ -15,6 +15,8 @@ import { groupThreads, parseThreads, serializeThreads, serverThreadOf, titleFor,
 import { DEFAULT_TIMELINE, revealCps, turnPhase, turnTimeline, visibleChars } from "../timeline";
 import { applyEvent, endsAsking, interrupted, newElyTurn, planning, primaryCard, type ElyTurn } from "../turn";
 import { askOf } from "../signSource";
+import { fallbackReason } from "../proposalFallback";
+import { ApiError } from "../../../lib/apiErrors";
 
 const CARD: RouteCard = {
   title: "Swap 50 HYPE to USDC on Kalos V3",
@@ -147,6 +149,31 @@ test("reducer: interrupted marks a turn that never finished; endsAsking spots a 
   assert.equal(endsAsking(playedTurn()), false);
 });
 
+test("clarify: the chat event carries the reader's questions into the turn (no second request)", () => {
+  const questions = [
+    { id: "g0.want.asset", goal: 0, field: "want.asset", reason: "OUTPUT_ASSET_MISSING", prompt: "Swap HYPE into which token?", options: [{ id: "USDC", label: "USDC" }], allowsText: true, purpose: true },
+    { id: "g0.network", goal: 0, field: "network", reason: "NETWORK_AMBIGUOUS", prompt: "Swap on which network?", options: [{ id: "elysium", label: "Elysium" }, { id: "hyperevm", label: "HyperEVM" }], allowsText: false, purpose: false },
+  ];
+  const parsed = parseElyEvent("clarify", JSON.stringify({ threadId: "thr_1", sentence: "swap 10 HYPE", thread: "sig", questions: [...questions, { id: "bad" }], locale: "en" }));
+  assert.equal(parsed?.type, "clarify");
+  assert.equal(parseElyEvent("clarify", JSON.stringify({ sentence: "x", questions: [] })), null, "no usable question: dropped");
+  let turn = applyEvent(newElyTurn("e", 0), ev("token", { text: "Swap HYPE into which token?\nSwap on which network?" }), 1);
+  turn = applyEvent(turn, parsed!, 2);
+  turn = applyEvent(turn, ev("done", { threadId: "thr_1", text: "", proposals: [], stopReason: "end_turn" }), 3);
+  assert.equal(turn.clarify?.via, "chat");
+  assert.equal(turn.clarify?.status, "ready");
+  assert.equal(turn.clarify?.sentence, "swap 10 HYPE");
+  assert.equal(turn.clarify?.thread, "sig");
+  assert.deepEqual(turn.clarify?.questions.map((question) => question.id), ["g0.want.asset", "g0.network"]);
+  assert.equal(endsAsking(turn), false, "the event already answered: no /v1/intents/parse fallback");
+  assert.equal(pickedSummary(turn.clarify!.questions, { "g0.want.asset": "USDC", "g0.network": "elysium" }), "USDC · Elysium");
+  // Persisted and restored with the turn.
+  const thread: ChatThread = { id: "t1", title: "x", createdAt: 0, updatedAt: 0, address: null, turns: [turn] };
+  const restored = parseThreads(serializeThreads([thread]))[0]!.turns[0] as ElyTurn;
+  assert.equal(restored.clarify?.via, "chat");
+  assert.equal(restored.clarify?.sentence, "swap 10 HYPE");
+});
+
 test("primaryCard prefers the card's proposal", () => {
   let turn = newElyTurn("e", 0);
   turn = applyEvent(turn, ev("proposal", PROPOSAL), 1);
@@ -277,6 +304,29 @@ test("sign source: proposal actions, else the dry run's actions, else the senten
   const ask = askOf({ kind: "text", text: "swap 1 HYPE to USDC" });
   assert.equal(ask.text, "swap 1 HYPE to USDC");
   assert.equal(askOf({ kind: "actions", actions: PROPOSAL.actions, sentence: "s" }).actions.length, 1);
+});
+
+test("proposal link: a proposal's card is signed through the proposal, only with a session", () => {
+  let signed = newElyTurn("e", 0);
+  signed = applyEvent(signed, ev("proposal", PROPOSAL), 1);
+  signed = applyEvent(signed, ev("route_card", { proposalId: PROPOSAL.id, card: CARD }), 2);
+  const source = signSourceOf(signed, "x");
+  assert.deepEqual(source, { kind: "actions", actions: PROPOSAL.actions, sentence: PROPOSAL.title, proposalId: PROPOSAL.id });
+  assert.deepEqual(askOf(source, "es1.token").proposal, { id: PROPOSAL.id, session: "es1.token" });
+  assert.equal(askOf(source, null).proposal, undefined, "signed out: a plain intent");
+  assert.equal(askOf(source, "es1.token").key, askOf(source, null).key, "the plan (and its quote) does not change");
+  // A closed proposal is not linked again.
+  let closed = newElyTurn("e", 0);
+  closed = applyEvent(closed, ev("proposal", { ...PROPOSAL, status: "expired" }), 1);
+  closed = applyEvent(closed, ev("route_card", { proposalId: PROPOSAL.id, card: CARD }), 2);
+  assert.equal((signSourceOf(closed, "x") as { proposalId?: string }).proposalId, undefined);
+  // Which approve errors fall back to a plain intent, and which are real failures.
+  assert.match(fallbackReason(new ApiError({ code: "PROPOSAL_CLOSED", message: "This proposal is expired.", status: 409 })) ?? "", /expired\. Signing a fresh plan/u);
+  assert.ok(fallbackReason(new ApiError({ code: "NOT_FOUND", message: "x", status: 404 })));
+  assert.ok(fallbackReason(new ApiError({ code: "UNAUTHORIZED", message: "x", status: 401 })));
+  assert.equal(fallbackReason(new ApiError({ code: "NETWORK_ERROR", message: "x", status: null })), null);
+  assert.equal(fallbackReason(new ApiError({ code: "INTERNAL", message: "x", status: 500 })), null);
+  assert.equal(fallbackReason(new Error("x")), null);
 });
 
 /* --------------------------------------------------------------- clarify */

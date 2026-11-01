@@ -5,7 +5,8 @@
  * proposals are checked for the fields the UI reads; everything they show is
  * rendered as text, never as markup.
  */
-import { CHAT_STREAM_EVENTS, type ChatDoneEvent, type ChatThreadEvent, type ChatToolCallEvent, type ChatToolResultEvent, type Proposal, type RouteCard } from "@elyia/core/api/agent";
+import { CHAT_STREAM_EVENTS, type ChatClarifyEvent, type ChatDoneEvent, type ChatThreadEvent, type ChatToolCallEvent, type ChatToolResultEvent, type Proposal, type RouteCard } from "@elyia/core/api/agent";
+import type { LanguageQuestion } from "@elyia/core/api/language";
 
 export interface RouteCardEvent {
   readonly proposalId: string | null;
@@ -31,6 +32,7 @@ export type ElyEvent =
   | { readonly type: "proposal"; readonly data: Proposal }
   | { readonly type: "route_card"; readonly data: RouteCardEvent }
   | { readonly type: "note"; readonly data: NoteEvent }
+  | { readonly type: "clarify"; readonly data: ChatClarifyEvent }
   | { readonly type: "done"; readonly data: ChatDoneEvent }
   | { readonly type: "error"; readonly data: StreamErrorEvent };
 
@@ -59,6 +61,12 @@ export function isProposal(value: unknown): value is Proposal {
   return isStr(value.id) && isStr(value.title) && isStr(value.explanation) && isArr(value.actions) && value.actions.every(isRec) && (value.card === null || isRouteCard(value.card)) && isStr(value.status) && isStr(value.expiresAt);
 }
 
+/** A reader question with the fields the choice chips read (options as id + label). */
+export function isQuestion(value: unknown): value is LanguageQuestion {
+  if (!isRec(value) || !isStr(value.id) || !isStr(value.prompt) || !isArr(value.options)) return false;
+  return value.options.every((option) => isRec(option) && isStr(option.id) && isStr(option.label));
+}
+
 /** Parses one SSE message (event name + JSON text) into a typed event, or null. */
 export function parseElyEvent(name: string, raw: string): ElyEvent | null {
   let data: unknown;
@@ -84,6 +92,12 @@ export function parseElyEvent(name: string, raw: string): ElyEvent | null {
       return strOrNull(data.proposalId ?? null) && isRouteCard(data.card) ? { type: "route_card", data: { proposalId: (data.proposalId as string | null | undefined) ?? null, card: data.card } } : null;
     case CHAT_STREAM_EVENTS.note:
       return isStr(data.text) ? { type: "note", data: { text: data.text, ...(data.draft !== undefined ? { draft: data.draft } : {}) } } : null;
+    case CHAT_STREAM_EVENTS.clarify: {
+      if (!isStr(data.sentence) || !isArr(data.questions)) return null;
+      const questions = data.questions.filter(isQuestion).map((question) => ({ ...question, allowsText: question.allowsText === true, purpose: question.purpose === true })).slice(0, 6);
+      if (questions.length === 0) return null;
+      return { type: "clarify", data: { threadId: isStr(data.threadId) ? data.threadId : null, sentence: data.sentence.slice(0, 2_000), thread: isStr(data.thread) ? data.thread : null, questions, locale: data.locale === "tr" ? "tr" : "en" } };
+    }
     case CHAT_STREAM_EVENTS.done:
       return isStr(data.text) ? { type: "done", data: { threadId: isStr(data.threadId) ? data.threadId : "", text: data.text, proposals: isArr(data.proposals) ? data.proposals.filter(isStr) : [], stopReason: isStr(data.stopReason) ? data.stopReason : "end_turn" } } : null;
     case CHAT_STREAM_EVENTS.error:

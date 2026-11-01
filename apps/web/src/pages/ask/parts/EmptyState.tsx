@@ -2,6 +2,7 @@ import { useCallback } from "react";
 
 import { useFloorStatus, useRidgeHead, useSummitHead, type LayerHead } from "../../../app/shell/useLayerHeads";
 import { drawBigEly, drawMiniRange, paletteOf } from "../../../features/ely/draw";
+import { useMediaQuery } from "../../../features/ely/hooks";
 import { SUGGESTIONS } from "./suggestions";
 import { Glyph } from "../../../features/ely/ui";
 import { formatBlockNumber } from "../../../lib/format";
@@ -54,14 +55,17 @@ export function MiniRange({ compact = false }: { readonly compact?: boolean }) {
 }
 
 export function EmptyState({ onPick, phone }: { readonly onPick: (sentence: string) => void; readonly phone: boolean }) {
+  // Short desktop windows (a 1280 x 800 laptop): a smaller Ely and title keep the mini range above the composer.
+  const tall = useMediaQuery("(min-height: 860px)", true);
+  const compact = !phone && !tall;
   return (
     <div className="flex w-full flex-col items-center text-center">
-      <BigEly size={phone ? 2 : 3} />
-      <h1 className={cx("disp mt-2 leading-none", phone ? "text-[44px]" : "text-[64px]")}>Where to?</h1>
+      <BigEly size={phone || compact ? 2 : 3} />
+      <h1 className={cx("disp mt-2 leading-none", phone ? "text-[44px]" : compact ? "text-[48px]" : "text-[64px]")}>Where to?</h1>
       <p className={cx("mt-3 max-w-[560px] text-ink-2", phone ? "text-[13px]" : "text-[15px]")}>
         {phone ? "One sentence. Ely drafts the route; your wallet signs every step." : "Ask in one sentence. Ely surveys the Floor, the Ridge and the Summit, drafts the route, and your wallet signs every step."}
       </p>
-      <ul className={cx("sugg w-full", phone ? "mt-5 !grid-cols-2 !gap-3" : "mt-8")} aria-label="Suggestions">
+      <ul className={cx("sugg w-full", phone ? "mt-5 !grid-cols-2 !gap-3" : compact ? "mt-4" : "mt-6")} aria-label="Suggestions">
         {SUGGESTIONS.map((suggestion) => (
           <li key={suggestion.title} className="flex">
             <button type="button" onClick={() => onPick(suggestion.sentence)} className={cx("sg fr w-full", phone && "!min-h-[112px]", FOCUS_RING)} aria-label={`${suggestion.title}: ${suggestion.sentence}`}>
@@ -73,8 +77,8 @@ export function EmptyState({ onPick, phone }: { readonly onPick: (sentence: stri
           </li>
         ))}
       </ul>
-      <div className={cx("w-full", phone ? "mt-4" : "mt-6")}>
-        <MiniRange compact={phone} />
+      <div className="mt-4 w-full">
+        <MiniRange compact={phone || compact} />
       </div>
     </div>
   );

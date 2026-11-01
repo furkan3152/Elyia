@@ -43,8 +43,15 @@ const actionSchema = z
     reduceOnly: z.boolean().optional(),
     takeProfit: z.string().max(40).optional(),
     stopLoss: z.string().max(40).optional(),
+    after: z.array(z.number().int().min(0).max(7)).min(1).max(7).optional(),
+    params: z.record(z.union([z.string().max(80), z.number(), z.boolean()])).optional(),
   })
   .strict();
+const actionsSchema = z
+  .array(actionSchema)
+  .min(1)
+  .max(8)
+  .refine((list) => list.every((entry, index) => (entry.after ?? []).every((parent) => parent < index)), "`after` may only name earlier actions");
 
 const NETWORK_SCHEMA = { type: "string", enum: [...NETWORK_KEYS] };
 const ADDRESS_SCHEMA = { type: "string", pattern: "^0x[0-9a-fA-F]{40}$", description: "A 0x wallet address." };
@@ -159,6 +166,8 @@ export const ELYIA_TOOLS: readonly ElyiaTool[] = [
               reduceOnly: { type: "boolean" },
               takeProfit: { type: "string" },
               stopLoss: { type: "string" },
+              after: { type: "array", items: { type: "integer", minimum: 0 }, description: "Indexes of earlier actions this one waits for; with amount \"max\" it spends that output." },
+              params: { type: "object", description: "portionBps on a chained \"max\" step (5000 = half); protect/reduce for orders." },
             },
             required: ["kind", "network"],
             additionalProperties: false,
@@ -169,7 +178,7 @@ export const ELYIA_TOOLS: readonly ElyiaTool[] = [
       additionalProperties: false,
     },
     async run(ctx, args) {
-      const input = z.object({ address, actions: z.array(actionSchema).min(1).max(8) }).parse(args);
+      const input = z.object({ address, actions: actionsSchema }).parse(args);
       const plan = await planActions(ctx, input.address, input.actions as unknown as IntentActionSpec[]);
       return { card: routeCardOf(plan), policy: plan.policy.decision, steps: plan.intent.steps.length };
     },

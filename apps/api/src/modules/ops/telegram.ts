@@ -18,6 +18,7 @@
 import { Bot, webhookCallback, type Context, type Transformer } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import express, { type Express } from "express";
+import type { AdminTelegramStatusResponse } from "@elyia/core/api/ops";
 import type { AppContext } from "../../context.js";
 import { ElyiaHttpError } from "../../http/errors.js";
 import { chatTurn } from "../agent/chat.js";
@@ -200,6 +201,28 @@ interface BotRuntime {
 }
 
 const runtimes = new WeakMap<AppContext, BotRuntime>();
+const lastErrors = new WeakMap<AppContext, string>();
+
+/** The flag note's words for the bot's state (pure). */
+export function telegramNote(input: { readonly configured: boolean; readonly mode: "webhook" | "polling" | "off"; readonly running: boolean; readonly flag: boolean; readonly lastError: string | null; readonly botUsername: string | null }): string {
+  if (!input.configured) return "not configured · no bot token";
+  if (!input.flag) return "configured · switched off by the flag";
+  if (input.mode === "off") return "configured · off in this environment";
+  if (input.lastError) return `${input.mode} · stopped: ${input.lastError}`;
+  if (!input.running) return `${input.mode} · not started`;
+  return `${input.mode} · running${input.botUsername ? ` as @${input.botUsername}` : ""}`;
+}
+
+/** The bot as the owner console reads it (no token, no chat ids). */
+export async function telegramAdminStatus(ctx: AppContext, flag: boolean): Promise<AdminTelegramStatusResponse> {
+  const configured = ctx.config.telegram.botToken !== null;
+  const mode = botMode(ctx);
+  const running = runtimes.has(ctx);
+  const lastError = lastErrors.get(ctx) ?? null;
+  const linkedWallets = (await ctx.store.collection("telegram_links").list({ prefix: "addr:", limit: 10_000 }).catch(() => [])).length;
+  const botUsername = ctx.config.telegram.botUsername;
+  return { configured, mode, botUsername, running, flag, webhookUrlSet: Boolean(ctx.config.telegram.webhookUrl), linkedWallets, lastError, note: telegramNote({ configured, mode, running, flag, lastError, botUsername }) };
+}
 
 export function botMode(ctx: AppContext): "webhook" | "polling" | "off" {
   if (!ctx.config.telegram.botToken) return "off";
@@ -247,7 +270,13 @@ export async function startBot(ctx: AppContext): Promise<void> {
   }
   // Long polling (development): one poller, never alongside a webhook.
   await runtime.bot.api.deleteWebhook().catch(() => undefined);
-  void runtime.bot.start({ drop_pending_updates: true, allowed_updates: ["message", "callback_query"] }).catch((error: unknown) => ctx.log.warn("telegram polling stopped", { error: error instanceof Error ? error.message.slice(0, 120) : String(error) }));
+  lastErrors.delete(ctx);
+  void runtime.bot.start({ drop_pending_updates: true, allowed_updates: ["message", "callback_query"] }).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message.slice(0, 120) : String(error);
+    lastErrors.set(ctx, message.replace(/\d{6,}:[A-Za-z0-9_-]{20,}/gu, "[token]"));
+    runtimes.delete(ctx);
+    ctx.log.warn("telegram polling stopped", { error: message });
+  });
 }
 
 export async function stopBot(ctx: AppContext): Promise<void> {

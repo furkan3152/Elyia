@@ -9,7 +9,7 @@ import type { Automation, AutomationKind, AutomationListResponse, InsightsRespon
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiGet } from "../../lib/api";
-import { sessionFetch } from "./session";
+import { sessionFetch } from "../session/sessionApi";
 
 export interface SkillsResponse {
   readonly automations: AutomationListResponse["catalog"];

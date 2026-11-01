@@ -3,6 +3,7 @@
  *
  *   POST   /auth/siwe/nonce  POST /auth/siwe/verify  GET /auth/session  POST /auth/logout  POST /auth/telegram
  *   POST   /telegram/link-code   (session)          GET /telegram/status
+ *   GET    /admin/telegram       (admin)            AdminTelegramStatusResponse (the flag note)
  *   POST   /track  { network, reference, label? }    TrackView
  *   GET    /track/:id                                 TrackView
  *   GET    /track/:id/stream                          SSE: track.snapshot, track.updated
@@ -24,7 +25,8 @@ import { registerAuthRoutes } from "./auth/routes.js";
 import { mustSession, optionalSession, readSession, requireSession } from "./auth/session.js";
 import { linkOfAddress } from "./auth/telegram.js";
 import { docs, PLATFORM_COLLECTIONS } from "./docs.js";
-import { botMode, mountTelegramWebhook, startBot, stopBot } from "./telegram.js";
+import { botMode, mountTelegramWebhook, startBot, stopBot, telegramAdminStatus } from "./telegram.js";
+import { flagOn } from "../admin/index.js";
 import { createTrack, getTrack, startTracker, stopTracker } from "./track.js";
 
 export { requireSession, optionalSession, mustSession } from "./auth/session.js";
@@ -67,6 +69,11 @@ export const opsModule: ApiModule = {
       const mode = botMode(ctx);
       const body: TelegramStatusResponse = { configured: ctx.config.telegram.botToken !== null, mode, botUsername: ctx.config.telegram.botUsername, linked: signedIn ? (await linkOfAddress(ctx, signedIn.address)) !== null : false };
       res.json(body);
+    });
+
+    // The owner console's flag note: is the bot configured, running, linked? (No token, no chat ids.)
+    router.get("/admin/telegram", requireSession(ctx, "admin"), async (_req, res) => {
+      res.json(await telegramAdminStatus(ctx, await flagOn(ctx, "telegram")));
     });
 
     router.post("/track", ctx.limits.heavy, async (req, res) => {

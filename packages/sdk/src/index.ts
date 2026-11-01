@@ -12,7 +12,7 @@ import type { CreateIntentBody, CreateIntentResponse, IntentStreamEvent, Prepare
 import type { ProtocolListResponse, ShieldReport } from "@elyia/core/api/discovery";
 import type { PortfolioMode, PortfolioSnapshot } from "@elyia/core/api/portfolio";
 import type { ParseIntentResponse } from "@elyia/core/api/language";
-import type { InsightsResponse } from "@elyia/core/api/agent";
+import type { ChatRequest, InsightsResponse } from "@elyia/core/api/agent";
 import type { ApiKeyListResponse, UsageResponse, WidgetConfig } from "@elyia/core/api/developers";
 import type { ContractsConfigResponse } from "@elyia/core/api/admin";
 import type { IntentGraph, Journey, NetworkKey } from "@elyia/core";
@@ -207,8 +207,13 @@ export class ElyiaClient {
 
   /* --------------------------------------------------------------- Ely */
 
-  /** Chat with Ely (SSE): thread, token, tool_call, tool_result, proposal, route_card, note, done, error. */
-  async *chat(input: { readonly message: string; readonly address?: string; readonly threadId?: string; readonly locale?: "en" | "tr" }, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
+  /**
+   * Chat with Ely (SSE): thread, token, tool_call, tool_result, proposal,
+   * route_card, note, clarify, done, error. A `clarify` event carries the
+   * reader's questions; answer with the same `message` plus
+   * `clarify: { thread, answers }`.
+   */
+  async *chat(input: ChatRequest, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
     for await (const message of this.stream("POST", "/agent/chat", input, signal)) yield { event: message.event, data: message.data };
   }
 }

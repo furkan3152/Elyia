@@ -8,7 +8,8 @@
  * Also the insight service: snapshot + trigger orders + history + mainnet
  * funding -> deterministic insights (insights.ts).
  */
-import type { IntentActionSpec } from "@elyia/core";
+import type { IntentActionSpec, IntentStatus } from "@elyia/core";
+import type { IntentStreamEvent } from "@elyia/core/api/intents";
 import type { InsightsResponse, Proposal, ProposalDecisionResponse, ProposalOrigin, RouteCard } from "@elyia/core/api/agent";
 import type { AppContext } from "../../context.js";
 import { hypercoreNetworkFor } from "../../config.js";
@@ -18,7 +19,7 @@ import { docs, PLATFORM_COLLECTIONS } from "../ops/docs.js";
 import { computeInsights, type FundingCandidate } from "./insights.js";
 import { executeWithKeeper, tradeOnlyReducing } from "./keeper.js";
 import { addFeed, memoryOf } from "./memory.js";
-import { perpMarkets, planActions, readPortfolioHistory, routeCardOf, snapshot } from "./perception.js";
+import { getIntent, perpMarkets, planActions, readPortfolioHistory, routeCardOf, snapshot } from "./perception.js";
 
 export const PROPOSAL_TTL_MS = 15 * 60_000;
 
@@ -95,8 +96,39 @@ async function save(ctx: AppContext, proposal: Proposal): Promise<void> {
   await proposals(ctx).put(`${proposal.owner}:${proposal.id}`, proposal, { ttlMs: 7 * 24 * 60 * 60_000 });
 }
 
+/** intentId -> the proposal it came from (written when a proposal is approved). */
+interface ProposalLink {
+  readonly owner: string;
+  readonly proposalId: string;
+}
+
+function links(ctx: AppContext) {
+  return docs<ProposalLink>(ctx, PLATFORM_COLLECTIONS.agentProposalLinks);
+}
+
+async function linkIntent(ctx: AppContext, proposal: Proposal, intentId: string): Promise<void> {
+  await links(ctx).put(intentId, { owner: proposal.owner, proposalId: proposal.id }, { ttlMs: 7 * 24 * 60 * 60_000 });
+}
+
+/** The step the wallet signs first, for a stored intent. */
+async function nextOf(ctx: AppContext, intentId: string): Promise<ProposalDecisionResponse["next"]> {
+  const graph = await getIntent(ctx, intentId);
+  const first = graph.steps.find((step) => step.status === "ready") ?? graph.steps.find((step) => step.status !== "settled" && step.status !== "skipped") ?? null;
+  return { intentId, firstStepId: first?.id ?? null, preparePath: first ? `/v1/intents/${intentId}/steps/${first.id}/prepare` : null };
+}
+
+/**
+ * Approve (wallet or keeper) or reject a proposal. Approving through the
+ * wallet stores ONE intent for the proposal's actions and links it back
+ * (`intentId`); approving again returns that same intent instead of storing
+ * a second one, so a route card signed from a proposal never duplicates.
+ * Nothing is signed here: the wallet signs each step it prepares.
+ */
 export async function decide(ctx: AppContext, owner: string, id: string, decision: "approve" | "reject", via: "wallet" | "keeper" = "wallet"): Promise<ProposalDecisionResponse> {
   const proposal = await proposalOf(ctx, owner, id);
+  if (decision === "approve" && via === "wallet" && proposal.status === "approved" && proposal.intentId) {
+    return { proposal, next: await nextOf(ctx, proposal.intentId), keeper: null };
+  }
   if (proposal.status !== "pending") throw new ElyiaHttpError("PROPOSAL_CLOSED", 409, `This proposal is ${proposal.status}.`);
   if (decision === "reject") {
     const rejected: Proposal = { ...proposal, status: "rejected" };
@@ -108,17 +140,52 @@ export async function decide(ctx: AppContext, owner: string, id: string, decisio
     const result = await executeWithKeeper(ctx, owner, proposal);
     const next: Proposal = { ...proposal, status: result.executed ? "executed" : proposal.status, intentId: result.intentId };
     await save(ctx, next);
+    if (result.intentId) await linkIntent(ctx, next, result.intentId);
     return { proposal: next, next: null, keeper: { executed: result.executed, detail: result.detail } };
   }
-  const plan = await planActions(ctx, owner, proposal.actions, { dryRun: false, metadata: { proposalId: proposal.id } });
+  const plan = await planActions(ctx, owner, proposal.actions, { dryRun: false, metadata: { proposalId: proposal.id, surface: "ely-proposal" } });
   const approved: Proposal = { ...proposal, status: "approved", intentId: plan.intent.id };
   await save(ctx, approved);
+  await linkIntent(ctx, approved, plan.intent.id);
+  await addFeed(ctx, owner, { kind: "proposal", text: { en: `Approved: ${proposal.title}`, tr: `Onaylandı: ${proposal.title}` }, proposalId: proposal.id });
   const first = plan.intent.steps.find((step) => step.status === "ready") ?? plan.intent.steps[0] ?? null;
   return {
     proposal: approved,
     next: { intentId: plan.intent.id, firstStepId: first?.id ?? null, preparePath: first ? `/v1/intents/${plan.intent.id}/steps/${first.id}/prepare` : null },
     keeper: null,
   };
+}
+
+/** What a linked intent's final status means for its proposal (null: not final yet). */
+export function proposalOutcome(status: IntentStatus | string): "executed" | "failed" | null {
+  if (status === "completed") return "executed";
+  if (status === "failed" || status === "expired" || status === "stopped" || status === "cancelled") return "failed";
+  return null;
+}
+
+/** Marks a linked proposal executed or failed once its intent settles (idempotent). */
+export async function settleProposalOf(ctx: AppContext, intentId: string, status: IntentStatus | string): Promise<Proposal | null> {
+  const outcome = proposalOutcome(status);
+  if (!outcome) return null;
+  const link = await links(ctx).get(intentId);
+  if (!link) return null;
+  const doc = await proposals(ctx).get(`${link.value.owner}:${link.value.proposalId}`);
+  if (!doc || doc.value.intentId !== intentId || doc.value.status === outcome) return doc?.value ?? null;
+  if (doc.value.status !== "approved" && doc.value.status !== "pending") return doc.value;
+  const next: Proposal = { ...doc.value, status: outcome };
+  await save(ctx, next);
+  await addFeed(ctx, next.owner, { kind: "proposal", text: outcome === "executed" ? { en: `Done: ${next.title}`, tr: `Tamamlandı: ${next.title}` } : { en: `Stopped: ${next.title}`, tr: `Durdu: ${next.title}` }, proposalId: next.id });
+  return next;
+}
+
+/** Bus -> proposals: a linked intent's final status closes its proposal. */
+export function wireProposalOutcomes(ctx: AppContext): () => void {
+  return ctx.bus.on("intents.event", ({ intentId, event }: { readonly intentId: string; readonly event: IntentStreamEvent }) => {
+    if (event.type !== "intent.status_changed") return;
+    const status = String((event.data as { status?: unknown }).status ?? "");
+    if (!proposalOutcome(status)) return;
+    void settleProposalOf(ctx, intentId, status).catch((error: unknown) => ctx.log.warn("proposal outcome failed", { error: error instanceof Error ? error.message : String(error) }));
+  });
 }
 
 /* ------------------------------------------------------------- insights */

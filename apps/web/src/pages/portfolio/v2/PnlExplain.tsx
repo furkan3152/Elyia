@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { navigate } from "../../../app/routes/history";
 import { routeHref } from "../../../app/routes/routeTable";
@@ -8,10 +8,11 @@ import { applyEvent, interrupted, newElyTurn, type ElyTurn } from "../../../feat
 import { Glyph } from "../../../features/ely/ui";
 import { describeError } from "../../../lib/api";
 import { PixelCanvas } from "../../../pixel/PixelCanvas";
+import { sharedTicker } from "../../../pixel/useTicker";
 import { cx, FOCUS_RING } from "../../../ui/cx";
 import { ElyMessage } from "../../ask/parts/Messages";
 import { usdShort, usdSigned } from "../range/format";
-import { drawWaterfall } from "./draw";
+import { drawWaterfall, WATERFALL_END_S } from "./draw";
 import { pnlSteps, rankedCauses, waterfall } from "./model";
 
 export interface PnlExplainProps {
@@ -64,7 +65,29 @@ export function PnlExplain({ figures, address, session, sample, phone }: PnlExpl
     setTurn(current);
   };
 
-  const draw = useCallback((ctx: CanvasRenderingContext2D, info: { readonly w: number; readonly h: number; readonly seconds: number; readonly still: boolean }) => drawWaterfall(ctx, fall, info.w, info.h, info.still ? 99 : info.seconds, paletteOf(ctx.canvas)), [fall]);
+  // The bars rise when the chart comes into view (and again when the figures change). The shared
+  // clock counts from app start, so the rise is timed from a local start; until the chart has been
+  // seen it shows the end state (every bar, Net included), never a half-drawn frame.
+  const holder = useRef<HTMLDivElement>(null);
+  const riseFrom = useRef<number | null>(null);
+  const stepsKey = JSON.stringify(steps);
+  useEffect(() => {
+    const element = holder.current;
+    riseFrom.current = null;
+    if (!element || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting) && riseFrom.current === null) riseFrom.current = sharedTicker().seconds();
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [stepsKey]);
+  const draw = useCallback(
+    (ctx: CanvasRenderingContext2D, info: { readonly w: number; readonly h: number; readonly seconds: number; readonly still: boolean }) => {
+      const local = info.still || riseFrom.current === null ? WATERFALL_END_S : info.seconds - riseFrom.current;
+      drawWaterfall(ctx, fall, info.w, info.h, local, paletteOf(ctx.canvas));
+    },
+    [fall],
+  );
   const label = `Waterfall over ${days} days: ${fall.bars.map((bar) => `${bar.label} ${usdSigned(bar.value)}`).join(", ")}.`;
 
   return (
@@ -106,7 +129,7 @@ export function PnlExplain({ figures, address, session, sample, phone }: PnlExpl
                     ))}
                   </p>
                   <p>
-                    Net over {days} days: <b className={fall.total >= 0 ? "t-up" : "t-down"}>{usdSigned(fall.total)}</b>
+                    Net over {days} days, open positions included: <b className={fall.total >= 0 ? "t-up" : "t-down"}>{usdSigned(fall.total)}</b>
                     {sample ? " (labelled sample)" : " at reference prices"}.
                   </p>
                 </>
@@ -134,7 +157,9 @@ export function PnlExplain({ figures, address, session, sample, phone }: PnlExpl
           </h3>
           <span className={cx("pill", fall.total >= 0 ? "up" : "dn")}>{`${fall.total >= 0 ? "▲" : "▼"} ${usdShort(Math.abs(fall.total))}`}</span>
         </div>
-        <PixelCanvas width={132} height={66} pixelSize={4} aspect={0.5} draw={draw} animate fps={12} endTime={99} redrawKey={JSON.stringify(steps)} label={label} />
+        <div ref={holder}>
+          <PixelCanvas width={132} height={66} pixelSize={4} aspect={0.5} draw={draw} animate fps={12} endTime={WATERFALL_END_S} redrawKey={stepsKey} label={label} />
+        </div>
         <div className="pnl-leg" style={{ gridTemplateColumns: `repeat(${fall.bars.length}, minmax(0, 1fr))` }}>
           {fall.bars.map((bar) => (
             <span key={bar.label}>

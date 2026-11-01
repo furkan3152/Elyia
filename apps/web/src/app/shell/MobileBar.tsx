@@ -7,7 +7,8 @@ import { PixelGlyph } from "../../pixel/PixelGlyph";
 import { Link } from "../routes/Link";
 import { useRoute } from "../routes/useRoute";
 import { MotionSwitch } from "./MotionToggle";
-import { PHONE_MORE_NAV, PHONE_NAV, SETTINGS_ITEM } from "./navItems";
+import { useSessionRole } from "../../features/session/sessionStore";
+import { ADMIN_ITEM, PHONE_MORE_NAV, PHONE_NAV, SETTINGS_ITEM } from "./navItems";
 import { ThemeToggle } from "./ThemeToggle";
 
 const TAB = "flex h-full flex-1 flex-col items-center justify-center gap-1 font-tag text-[11px] uppercase";
@@ -29,7 +30,9 @@ const GLYPH: Readonly<Record<string, readonly string[]>> = {
 export function MobileBar() {
   const [open, setOpen] = useState(false);
   const { location } = useRoute();
-  const more = [...PHONE_MORE_NAV, SETTINGS_ITEM];
+  const admin = useSessionRole("admin");
+  // The owner console is listed only for an admin session (the server re-checks the role).
+  const more = [...PHONE_MORE_NAV, SETTINGS_ITEM, ...(admin ? [ADMIN_ITEM] : [])];
   const moreActive = more.some((item) => location.pathname === item.href || location.pathname.startsWith(`${item.href}/`));
   return (
     <>
