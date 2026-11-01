@@ -6,6 +6,7 @@
  * answers they are reported as "not checked", and an unverified token can
  * never read OPEN on browser checks alone.
  */
+import type { ShieldReport as ApiShieldReport } from "@elyia/core/api/discovery";
 import type { TokenTrust } from "@elyia/core/assets";
 import { decodeFunctionResult, encodeFunctionData, erc20Abi, hexToString, type Hex } from "viem";
 
@@ -199,4 +200,47 @@ export function shieldReport(facts: TokenFacts, trust: TokenTrust): ShieldReport
             ? "unlisted · upgradeable"
             : "unlisted · liquidity not checked";
   return { score, condition, reason, checks, facts };
+}
+
+/* ------------------------------------------------- the Shield API report */
+
+const API_RESULT: Readonly<Record<"pass" | "warn" | "fail" | "skipped", CheckResult>> = { pass: "pass", warn: "warn", fail: "fail", skipped: "unknown" };
+const VERDICT: Readonly<Record<ApiShieldReport["verdict"], { readonly condition: Condition; readonly score: number }>> = {
+  verified: { condition: "open", score: 95 },
+  "no-red-flags": { condition: "open", score: 80 },
+  caution: { condition: "caution", score: 55 },
+  unknown: { condition: "caution", score: 40 },
+  danger: { condition: "closed", score: 15 },
+  flagged: { condition: "closed", score: 5 },
+};
+
+/**
+ * The API's Shield report (registry, bytecode, owner, a simulated buy and
+ * sell) in the panel's shape. The core flagged-token list is applied on top
+ * every time: a known look-alike reads CLOSED whatever else answered.
+ */
+export function shieldFromApi(report: ApiShieldReport, trust: TokenTrust): ShieldReport {
+  const base = VERDICT[report.verdict];
+  const checks: ShieldCheck[] = report.checks.map((check) => ({ id: check.id, label: check.title, result: API_RESULT[check.status], detail: check.detail }));
+  const flagged = trust.status === "lookalike" || (trust.status === "unverified" && trust.flagged !== undefined);
+  if (flagged && !checks.some((check) => check.id === "lookalike" && check.result === "fail")) {
+    checks.unshift({ id: "flagged", label: "Known look-alike", result: "fail", detail: "warning" in trust ? trust.warning : "On Elyia's flagged-token list." });
+  }
+  const facts: TokenFacts = {
+    hasCode: (report.bytecode.bytes ?? 0) > 0,
+    codeBytes: report.bytecode.bytes ?? 0,
+    implementation: report.bytecode.proxy?.implementation ?? null,
+    name: report.token.name,
+    symbol: report.token.symbol,
+    decimals: report.token.decimals,
+    totalSupply: report.token.totalSupply !== null && /^\d+$/u.test(report.token.totalSupply) ? BigInt(report.token.totalSupply) : null,
+    owner: report.owner.address,
+  };
+  return {
+    score: flagged ? 0 : base.score,
+    condition: flagged ? "closed" : base.condition,
+    reason: flagged ? "a known look-alike: Elyia never routes it" : report.summary,
+    checks,
+    facts,
+  };
 }

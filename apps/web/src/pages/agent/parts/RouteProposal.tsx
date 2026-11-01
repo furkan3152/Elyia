@@ -1,9 +1,5 @@
-import type { CreateIntentResponse } from "@elyia/core/api/intents";
-import { useQuery } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
-import { useUiStore } from "../../../app/state/uiStore";
-import { ApiError, apiPost } from "../../../lib/api";
 import { drawGrid } from "../../../pixel/draw";
 import { elySprite, INK, LAYERS, mini } from "../../../pixel/ely";
 import { PixelCanvas } from "../../../pixel/PixelCanvas";
@@ -13,6 +9,10 @@ import { Button } from "../../../ui/Button";
 import { cx } from "../../../ui/cx";
 import { sketchRoute } from "../../deck/routesLog";
 import { LAYER_NAME } from "../../portfolio/range/model";
+import { TrailNotes } from "../../track/flow/FlowCard";
+import { ClarifyPanel, LiveChips, ReadingNotes } from "../../track/flow/SentenceRoute";
+import { hasRoute } from "../../track/flow/useFlowPlan";
+import { openQuestions, useSentencePlan } from "../../track/flow/useSentencePlan";
 
 type Layer = "floor" | "ridge" | "summit";
 
@@ -55,38 +55,48 @@ function paintSteps(ctx: CanvasRenderingContext2D, layers: readonly Layer[]) {
  * to the full route card where each step is quoted and signed.
  */
 export function RouteProposal({ sentence, onOpen }: { readonly sentence: string; readonly onOpen: () => void }) {
-  const mode = useUiStore((state) => state.mode);
   const sketch = sketchRoute(sentence);
-  const layers = sketch.layers as readonly Layer[];
-  const plan = useQuery({
-    queryKey: ["intent-dry-run", mode, sentence, null],
-    queryFn: ({ signal }) => apiPost<CreateIntentResponse>("/v1/intents", { text: sentence, accounts: [], mode, dryRun: true }, { query: { dryRun: true }, signal, timeoutMs: 15_000 }),
-    retry: 0,
-    staleTime: 30_000,
-  });
-  const problem = plan.error instanceof ApiError ? plan.error : null;
-  const status = plan.data
-    ? `planner · ${plan.data.journey.stops.length} waypoint${plan.data.journey.stops.length === 1 ? "" : "s"} · quoted`
-    : plan.isPending
-      ? "planner · surveying…"
-      : problem?.code === "TEXT_NOT_SUPPORTED_YET"
-        ? "planner · reads this sentence soon · words parsed"
-        : "planner offline · words parsed";
+  const read = useSentencePlan(sentence, { delayMs: 0 });
+  const plan = read.plan.data;
+  const route = hasRoute(plan) ? plan.route : null;
+  const questions = openQuestions(read);
+  const layersKey = route ? [...new Set(route.steps.flatMap((step) => [step.layer, ...(step.toLayer ? [step.toLayer] : [])]))].join("|") : sketch.layers.join("|");
+  const layers = useMemo(() => layersKey.split("|").filter(Boolean) as Layer[], [layersKey]);
+  const status = route
+    ? `planner · ${route.steps.length} waypoint${route.steps.length === 1 ? "" : "s"} · quoted · Rule Book ${route.decision}`
+    : questions.length > 0
+      ? "planner · one question first"
+      : plan?.kind === "refused"
+        ? `planner · ${plan.message}`
+        : read.readerOffline
+          ? "planner offline · words parsed"
+          : "planner · surveying…";
   const draw = useCallback((ctx: CanvasRenderingContext2D) => paintSteps(ctx, layers), [layers]);
   return (
     <article className="el-rise relative bg-card px-frame px-drop" aria-label="Route card proposal">
       <header className="flex items-center justify-between gap-3 border-b-2 border-rule bg-paper-2 px-3 py-1.5">
-        <span className="font-tag text-[11px] uppercase text-ink">Route card · draft</span>
+        <span className="font-tag text-[11px] uppercase text-ink">Route card · {route ? `${route.id} · dry run` : "draft"}</span>
         <span className="flex items-center gap-1.5 font-tag text-[11px] uppercase text-ink-2">
-          <Blaze grade={sketch.grade} size={12} /> T{sketch.grade}
+          <Blaze grade={route?.grade ?? sketch.grade} size={12} /> T{route?.grade ?? sketch.grade}
         </span>
       </header>
       <div className="grid gap-4 px-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-6">
         <div className="min-w-0">
           <p className="break-words font-display text-[18px] font-bold leading-snug text-ink">“{sentence}”</p>
+          <LiveChips chips={read.chips} className="mt-3 !justify-start" />
           <p className="mt-2 font-mono text-[11px] text-ink-3" aria-live="polite">
             {status}
           </p>
+          <ReadingNotes reading={read.reading} className="mt-2 !text-left" />
+          {route ? (
+            <ol className="mt-3 flex flex-col gap-1 font-mono text-[12px] text-ink-2" aria-label="Waypoints">
+              {route.steps.map((step) => (
+                <li key={step.stepId}>
+                  <span className={cx("font-tag text-[10px] uppercase", TONE[step.layer])}>{step.id} {LAYER_NAME[step.layer]}</span> · {step.action} · {step.venue} · {step.inOut}
+                </li>
+              ))}
+            </ol>
+          ) : null}
         </div>
         <figure className="m-0 flex flex-col items-center gap-1.5">
           <PixelCanvas width={W} height={H} scale={2} draw={draw} redrawKey={layers.join("|")} label={`The route climbs ${layers.map((layer) => LAYER_NAME[layer]).join(", then ")}`} />
@@ -99,8 +109,14 @@ export function RouteProposal({ sentence, onOpen }: { readonly sentence: string;
           </figcaption>
         </figure>
       </div>
+      {questions.length > 0 ? (
+        <div className="border-t-2 border-dashed border-rule px-3 py-4">
+          <ClarifyPanel reading={read.reading} questions={questions} onAnswer={read.answer} busy={read.readingPending} />
+        </div>
+      ) : null}
+      {route && route.warnings.length > 0 ? <TrailNotes warnings={route.warnings} className="!mt-0 border-t-2 border-dashed border-rule px-3 py-3" /> : null}
       <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t-2 border-dashed border-rule px-3 py-3">
-        <Button variant="primary" size="sm" grade={sketch.grade} onClick={onOpen}>
+        <Button variant="primary" size="sm" grade={route?.grade ?? sketch.grade} onClick={onOpen}>
           Open the route card ▸
         </Button>
         <span className="font-mono text-[11px] text-ink-3">each step quoted · Rule Book checked · you sign</span>

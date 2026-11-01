@@ -12,6 +12,8 @@ import { Kbd } from "../../ui/Kbd";
 import { elyLayer, paintStub, STUB_H, STUB_LAYERS, type HopState } from "./altitudeStub";
 import { PLACEHOLDER_EXAMPLES, sentenceGrade, sentenceLayers, type SentenceChip } from "./model";
 import { useSentenceChips } from "./useSentenceChips";
+import { hasRoute } from "../track/flow/useFlowPlan";
+import { openQuestions, useSentencePlan } from "../track/flow/useSentencePlan";
 
 const TYPE_MS = 42;
 const HOLD_MS = 2_400;
@@ -100,7 +102,11 @@ export function HeroRouteCard({ formId }: { readonly formId?: string }) {
   const { shown, example } = useTypedExample(typing);
   const sentence = text.trim().length > 0 ? text : example;
   const reading = useSentenceChips(sentence);
-  const layers = sentenceLayers(sentence);
+  // Typed words get a real dry run (nothing stored, nothing signed); the example keeps its first reading.
+  const planned = useSentencePlan(text, { delayMs: 650 });
+  const route = text.trim() && hasRoute(planned.plan.data) ? planned.plan.data.route : null;
+  const question = text.trim() ? openQuestions(planned)[0] : undefined;
+  const layers: ReadonlySet<Layer> = route ? new Set(route.steps.flatMap((step) => [step.layer, ...(step.toLayer ? [step.toLayer] : [])])) : sentenceLayers(sentence);
   const grade = sentenceGrade(sentence);
   const stand = elyLayer(layers);
 
@@ -164,6 +170,18 @@ export function HeroRouteCard({ formId }: { readonly formId?: string }) {
         ))}
       </ul>
 
+      {text.trim() ? (
+        <p className="border-t-2 border-dashed border-rule px-4 py-2.5 text-center font-mono text-[12px] leading-snug text-ink-2" aria-live="polite">
+          <span className="font-tag text-[10px] uppercase text-ink-3">planner dry run · </span>
+          {route
+            ? route.steps.map((step) => `${step.id} ${step.action} · ${step.venue}`).join("  ▸  ") + (route.arrives ? ` · arrives ${route.arrives}` : "")
+            : question
+              ? `one question first: ${question.prompt}`
+              : planned.plan.data?.kind === "refused"
+                ? planned.plan.data.message
+                : "surveying…"}
+        </p>
+      ) : null}
       {/* perforation between the card and its stub */}
       <div aria-hidden="true" className="h-1 px-rule" />
 

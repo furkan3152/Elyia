@@ -8,7 +8,7 @@ import type { VaultRow, VaultsResponse } from "@elyia/core/api/markets";
 import { getEvmNetwork, layersFor } from "@elyia/core/networks";
 import { useQuery } from "@tanstack/react-query";
 import { formatUnits, parseUnits } from "viem";
-import { useReadContract } from "wagmi";
+import { useReadContract, useReadContracts } from "wagmi";
 
 import { useUiStore } from "../../app/state/uiStore";
 import { apiGet } from "../../lib/api";
@@ -21,6 +21,28 @@ import { depositableVaults, rankYields, stakingRate, vaultFromDump, type DumpVau
 /** Kinetiq StakingAccountant on HyperEVM testnet (StakingManager.stakingAccountant()). */
 const KINETIQ_ACCOUNTANT = "0x78b1F56988e1fc1bb6c214e8e71dC0F43Fe3DF87" as const;
 const VAULTS_SHOWN = 8;
+
+/** Summit yield contracts (GET /v1/venues: kalos-stkalos, cheshire, elyra-lending; read back on chain 2026-10-31). */
+const SUMMIT = {
+  stkalos: "0xa7531d7be19f29b991d97eaa17b034715a835e35",
+  cheshire: "0xf6b3bc8b51641037ea8c7621bd8e0ed600752d4b",
+  lendingCore: "0x9e4a4632985cbfc13c7143f121ff0f99a0445bd1",
+  usdcMarket: "0xfe865cb12a83956acc72046f1cac4a4e0309655e2cb799b0214f1901fe895644",
+} as const;
+const VAULT_ABI = [{ type: "function", name: "totalAssets", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }] as const;
+const MARKET_ABI = [
+  {
+    type: "function",
+    name: "market",
+    stateMutability: "view",
+    inputs: [{ type: "bytes32" }],
+    outputs: [{ type: "uint128" }, { type: "uint128" }, { type: "uint128" }, { type: "uint128" }, { type: "uint128" }, { type: "uint128" }],
+  },
+] as const;
+
+function formatCount(value: number): string {
+  return value >= 1e6 ? `${(value / 1e6).toFixed(1)}M` : value >= 1e3 ? `${(value / 1e3).toFixed(1)}k` : value.toFixed(2);
+}
 
 export interface Yields {
   readonly rows: readonly YieldRow[];
@@ -70,6 +92,18 @@ export function useYields(): Yields {
   const totalStaked = useReadContract({ address: manager, abi: KINETIQ_STAKING_ABI, functionName: "totalStaked", chainId: hyperevm.chainId, query: { enabled: Boolean(manager), staleTime: 60_000 } });
   const rate = useReadContract({ address: manager ? KINETIQ_ACCOUNTANT : undefined, abi: KINETIQ_ACCOUNTANT_ABI, functionName: "kHYPEToHYPE", args: [parseUnits("1", 18)], chainId: hyperevm.chainId, query: { enabled: Boolean(manager), staleTime: 60_000 } });
 
+  // The Summit's yields (Elysium testnet), read from chain: ERC-4626 totalAssets and the Morpho-style market.
+  const elysium = getEvmNetwork(layersFor(mode).elysium.key);
+  const onSummit = mode === "testnet";
+  const summitReads = useReadContracts({
+    allowFailure: true,
+    contracts: [
+      { address: SUMMIT.stkalos, abi: VAULT_ABI, functionName: "totalAssets", chainId: elysium.chainId },
+      { address: SUMMIT.cheshire, abi: VAULT_ABI, functionName: "totalAssets", chainId: elysium.chainId },
+      { address: SUMMIT.lendingCore, abi: MARKET_ABI, functionName: "market", args: [SUMMIT.usdcMarket], chainId: elysium.chainId },
+    ],
+    query: { enabled: onSummit, staleTime: 60_000 },
+  });
   const staking = validators.data ? stakingRate(validators.data) : null;
   const referencePx = Number(reference.data?.HYPE) || null;
   const khypeStaked = totalStaked.data !== undefined ? Number(formatUnits(totalStaked.data, 18)) : null;
@@ -98,8 +132,54 @@ export function useYields(): Yields {
       tvlUsd: khypeStaked !== null && referencePx ? khypeStaked * referencePx : null,
       asset: "HYPE",
       entry: "planner",
+      venue: { protocol: "kinetiq", family: "hyperevm", verb: "stake", depositAsset: "HYPE" },
       note: `liquid staking on HyperEVM · min 0.1 HYPE${khypeRate ? ` · 1 kHYPE = ${khypeRate.toFixed(4)} HYPE` : ""}`,
       estimated: true,
+    });
+  }
+  if (onSummit) {
+    const [stk, ches, market] = summitReads.data ?? [];
+    const kalosHeld = stk?.status === "success" ? Number(formatUnits(stk.result as bigint, 18)) : null;
+    const cheshireHeld = ches?.status === "success" ? Number(formatUnits(ches.result as bigint, 6)) : null;
+    const lent = market?.status === "success" ? (market.result as readonly bigint[]) : null;
+    const supplied = lent ? Number(formatUnits(lent[0]!, 6)) : null;
+    const utilization = lent && lent[0]! > 0n ? Number(lent[2]!) / Number(lent[0]!) : null;
+    rows.push({
+      id: "elyra-lending",
+      name: "Elyra lending · USDC",
+      kind: "lending",
+      layer: "summit",
+      aprPct: null,
+      tvlUsd: supplied,
+      asset: "USDC",
+      entry: "planner",
+      note: `third-party Morpho-style market (useelyra.xyz) · lend USDC against WHYPE · LLTV 77%${utilization !== null ? ` · ${(utilization * 100).toFixed(2)}% borrowed` : ""} · APR n/a (its rate model does not answer a view call) · TVL is test USDC`,
+      venue: { protocol: "elyra-lending", family: "elysium", verb: "deposit", depositAsset: "USDC", withdraw: { from: "USDC", unit: "USDC" } },
+    });
+    rows.push({
+      id: "cheshire",
+      name: "Cheshire · cUSDC",
+      kind: "vault",
+      layer: "summit",
+      aprPct: null,
+      tvlUsd: cheshireHeld,
+      asset: "USDC",
+      entry: "planner",
+      note: "ERC-4626 vault, USDC in, cUSDC out · no website or audit, an experiment · APR n/a (no rate published) · TVL is test USDC",
+      venue: { protocol: "cheshire", family: "elysium", verb: "deposit", depositAsset: "USDC", withdraw: { from: "cUSDC", unit: "cUSDC" } },
+    });
+    rows.push({
+      id: "kalos-stkalos",
+      name: "stKALOS · Kalos",
+      kind: "vault",
+      layer: "summit",
+      aprPct: null,
+      tvlUsd: null,
+      tvlNote: kalosHeld !== null ? `${formatCount(kalosHeld)} KALOS · unpriced` : undefined,
+      asset: "KALOS",
+      entry: "planner",
+      note: "ERC-4626 staking of Kalos's own test token · KALOS has no reference price, so the Rule Book refuses rather than guess its value · APR n/a",
+      venue: { protocol: "kalos-stkalos", family: "elysium", verb: "deposit", depositAsset: "KALOS", withdraw: { from: "stKALOS", unit: "stKALOS" } },
     });
   }
   const open = depositableVaults(vaults.data?.rows ?? []);

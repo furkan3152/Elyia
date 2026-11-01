@@ -16,7 +16,7 @@ import type { VaultRow } from "@elyia/core/api/markets";
 
 import type { Layer } from "../../topo/geometry/relief";
 
-export type YieldKind = "staking" | "liquid-staking" | "vault";
+export type YieldKind = "staking" | "liquid-staking" | "vault" | "lending";
 
 export interface YieldRow {
   readonly id: string;
@@ -27,13 +27,28 @@ export interface YieldRow {
   readonly aprPct: number | null;
   /** USD (reference) or test-USDC on testnet; null when unknown. */
   readonly tvlUsd: number | null;
-  readonly asset: "HYPE" | "USDC";
+  readonly asset: "HYPE" | "USDC" | "KALOS";
   /** How Elyia gets you in: planned here, or "on Hyperliquid" until the planner executes it. */
   readonly entry: "planner" | "external";
   readonly note: string;
   readonly href?: string;
   /** The APR is derived, not quoted by the venue itself. */
   readonly estimated?: boolean;
+  /** The engine venue that executes it (GET /v1/venues id): deposit and withdraw become route cards. */
+  readonly venue?: EarnVenue;
+  /** TVL in words when it cannot be priced in USD ("1.2M KALOS · unpriced"). */
+  readonly tvlNote?: string;
+}
+
+/** How the planner enters and leaves a yield (IntentActionSpec fields). */
+export interface EarnVenue {
+  readonly protocol: string;
+  /** "elysium" or "hyperevm": resolved to the mode's network. */
+  readonly family: "elysium" | "hyperevm";
+  readonly verb: "stake" | "deposit";
+  readonly depositAsset: string;
+  /** Withdraw: what is redeemed (`from`) or received (`to`); absent when withdrawing is not executed here. */
+  readonly withdraw?: { readonly from?: string; readonly to?: string; readonly unit: string };
 }
 
 export interface ValidatorSummary {
@@ -140,7 +155,7 @@ export function yieldPeaks(rows: readonly YieldRow[], width: number, height: num
 }
 
 export function formatApr(aprPct: number | null): string {
-  if (aprPct === null) return "—";
+  if (aprPct === null) return "n/a";
   const sign = aprPct < 0 ? "−" : "";
   const value = Math.abs(aprPct);
   return `${sign}${value >= 100 ? value.toFixed(0) : value.toFixed(2)}%`;

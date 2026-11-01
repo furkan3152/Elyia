@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 
 import { useOracleStore } from "../../oracle/oracleStore";
 import { Ely } from "../../pixel/Ely";
@@ -12,6 +12,10 @@ import { WhereToInput } from "../../ui/WhereToInput";
 import { navigate } from "../routes/history";
 import { routeHref } from "../routes/routeTable";
 import { MORE_NAV, PRIMARY_NAV, SETTINGS_ITEM } from "./navItems";
+import { LiveChips } from "../../pages/track/flow/SentenceRoute";
+import { openQuestions, useSentencePlan } from "../../pages/track/flow/useSentencePlan";
+import { hasRoute } from "../../pages/track/flow/useFlowPlan";
+import { LAYER_NAME } from "../../topo/geometry/route";
 
 interface Destination {
   readonly id: string;
@@ -73,6 +77,8 @@ export function WhereTo() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState(0);
   const blades = useMemo(() => destinationsFor(draft), [draft]);
+  const sentence = open && blades[0]?.id === "plan" ? draft : "";
+  const read = useSentencePlan(sentence, { delayMs: 450 });
   const selected = Math.min(active, Math.max(0, blades.length - 1));
 
   const go = (destination: Destination | undefined) => {
@@ -113,6 +119,7 @@ export function WhereTo() {
             aside={<Kbd>Esc</Kbd>}
           />
         </div>
+        {sentence.trim().length >= 3 ? <RoutePreview read={read} /> : null}
         <ul id="el-whereto-list" role="listbox" aria-label="Destinations" className="flex flex-col gap-3 px-1">
           {blades.map((blade, index) => {
             const on = index === selected;
@@ -142,5 +149,34 @@ export function WhereTo() {
         <p className="text-center font-tag text-[11px] uppercase text-ink-2">↑ ↓ choose · ↵ go · the Guide drafts, you sign</p>
       </div>
     </ModalLayer>
+  );
+}
+
+/** What the planner would do with the sentence right now: its chips, then the dry run's waypoints, its question, or why not. */
+function RoutePreview({ read }: { readonly read: ReturnType<typeof useSentencePlan> }) {
+  const plan = read.plan.data;
+  const questions = openQuestions(read);
+  let line: React.ReactNode;
+  if (questions.length > 0) line = <>Ely asks first: <span className="font-semibold text-ink">{questions[0]!.prompt}</span> · answer it on the deck</>;
+  else if (read.reading && read.reading.status === "unreadable") line = "Some words could not be read; nothing is guessed.";
+  else if (hasRoute(plan)) {
+    const steps = plan.route.steps;
+    line = (
+      <>
+        <span className="font-semibold text-ink">{steps.length} step{steps.length === 1 ? "" : "s"}</span> ·{" "}
+        {steps.map((step) => `${LAYER_NAME[step.layer]}${step.toLayer ? `→${LAYER_NAME[step.toLayer]}` : ""} ${step.action} · ${step.venue}`).join("  ▸  ")}
+        {plan.route.arrives ? ` · arrives ${plan.route.arrives}` : ""} · Rule Book {plan.route.decision}
+      </>
+    );
+  } else if (plan?.kind === "refused") line = plan.message;
+  else line = read.readerOffline ? "planner offline" : "surveying the route…";
+  return (
+    <div className="flex flex-col items-center gap-2 px-1 text-center" aria-live="polite">
+      <LiveChips chips={read.chips} />
+      <p className="font-mono text-[12px] leading-snug text-ink-2">
+        <span className="font-tag text-[10px] uppercase text-ink-3">dry run · </span>
+        {line}
+      </p>
+    </div>
   );
 }

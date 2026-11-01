@@ -1,4 +1,5 @@
-import { assessToken, tokensFor } from "@elyia/core/assets";
+import type { ShieldReport as ApiShieldReport } from "@elyia/core/api/discovery";
+import { assessToken, flaggedTokensFor, tokensFor } from "@elyia/core/assets";
 import { NETWORKS, type NetworkEnvironment, type NetworkKey } from "@elyia/core/networks";
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
@@ -10,7 +11,8 @@ import { Button } from "../../ui/Button";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { ShieldSign } from "./ShieldSign";
-import { factsFrom, shieldCalls, shieldReport, type CheckResult, type RawAnswer, type ShieldReport } from "./shield";
+import { apiGet } from "../../lib/api";
+import { factsFrom, shieldCalls, shieldFromApi, shieldReport, type CheckResult, type RawAnswer, type ShieldReport } from "./shield";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u;
 const NETWORKS_BY_MODE: Readonly<Record<NetworkEnvironment, readonly NetworkKey[]>> = {
@@ -70,7 +72,7 @@ async function readAnswers(network: NetworkKey, address: string, signal: AbortSi
   throw lastError;
 }
 
-type State = { readonly kind: "idle" } | { readonly kind: "reading" } | { readonly kind: "done"; readonly report: ShieldReport; readonly address: string; readonly network: NetworkKey; readonly at: number } | { readonly kind: "error"; readonly message: string };
+type State = { readonly kind: "idle" } | { readonly kind: "reading" } | { readonly kind: "done"; readonly report: ShieldReport; readonly address: string; readonly network: NetworkKey; readonly at: number; readonly source: "api" | "browser" } | { readonly kind: "error"; readonly message: string };
 
 /**
  * Shield: paste a token, get its route condition. Runs in the browser
@@ -87,6 +89,8 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
   const [state, setState] = useState<State>({ kind: "idle" });
   const controller = useRef<AbortController | null>(null);
   const examples = useMemo(() => tokensFor(network).filter((token) => token.address !== null).slice(0, 3), [network]);
+  const flagged = useMemo(() => flaggedTokensFor(network), [network]);
+  const lookalike = flagged.find((row) => row.standard === "erc20" && row.tags.includes("lookalike")) ?? null;
 
   // Open on a real reading: the first verified token of the network, checked live.
   const first = examples[0]?.address ?? null;
@@ -108,10 +112,19 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
     const next = new AbortController();
     controller.current = next;
     setState({ kind: "reading" });
+    // The Shield API first (registry, bytecode, owner, a simulated buy and sell); the browser checks when it is not served.
+    try {
+      const api = await apiGet<ApiShieldReport>(`/v1/discovery/shield/${address}`, { query: { network: on }, signal: next.signal, timeoutMs: 20_000 });
+      const trust = assessToken({ network: on, address, symbol: api.token.symbol ?? undefined, name: api.token.name ?? undefined });
+      setState({ kind: "done", report: shieldFromApi(api, trust), address: address.toLowerCase(), network: on, at: Date.now(), source: "api" });
+      return;
+    } catch {
+      if (next.signal.aborted) return;
+    }
     try {
       const facts = factsFrom(await readAnswers(on, address, next.signal));
       const trust = assessToken({ network: on, address, symbol: facts.symbol ?? undefined, name: facts.name ?? undefined });
-      setState({ kind: "done", report: shieldReport(facts, trust), address: address.toLowerCase(), network: on, at: Date.now() });
+      setState({ kind: "done", report: shieldReport(facts, trust), address: address.toLowerCase(), network: on, at: Date.now(), source: "browser" });
     } catch {
       if (next.signal.aborted) return;
       setState({ kind: "error", message: `${NETWORKS[on].name}'s public RPC did not answer. Try again in a moment; nothing was guessed.` });
@@ -146,7 +159,7 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
           </ol>
           <p className="mt-auto flex flex-wrap items-center justify-between gap-2 px-5 py-3 font-mono text-[11px] text-ink-3">
             <span>
-              {state.address.slice(0, 10)}…{state.address.slice(-6)} · read {new Date(state.at).toLocaleTimeString("en-GB")}
+              {state.address.slice(0, 10)}…{state.address.slice(-6)} · {state.source === "api" ? "Elyia Shield API" : "public RPC (Shield API offline)"} · read {new Date(state.at).toLocaleTimeString("en-GB")}
             </span>
             {explorer ? (
               <a href={`${explorer.url}${explorer.addressPath}${state.address}`} target="_blank" rel="noopener noreferrer" className={cx("text-ink underline decoration-2 underline-offset-4", FOCUS_RING)}>
@@ -183,6 +196,7 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
         </p>
       </div>
     ) : null}
+    <p className="max-w-[460px] text-center font-mono text-[11px] leading-snug text-ink-3">{flagged.length} known look-alike or suspicious token{flagged.length === 1 ? "" : "s"} on {NETWORKS[network].name}: always CLOSED, never routed or priced</p>
     <dl className="grid w-full max-w-[480px] grid-cols-2 gap-4 sm:grid-cols-4">
       {(["pass", "warn", "fail", "unknown"] as const).map((result) => (
         <div key={result} className="flex flex-col items-center gap-1 bg-paper-2 px-2 py-3 px-frame-thin">
@@ -199,7 +213,7 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
   const formCard = (
   <section aria-labelledby="shield-title" className="flex min-w-0 flex-col bg-card px-frame px-drop">
     <header className="flex flex-col items-center gap-2 border-b-2 border-rule px-5 py-5 text-center">
-      <p className="caption">read from the public RPC</p>
+      <p className="caption">Shield API · public RPC fallback · look-alike list always</p>
       <h3 id="shield-title" className="font-display text-[24px] font-bold leading-none text-ink">
         Check a token
       </h3>
@@ -267,6 +281,19 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
               {token.symbol}
             </button>
           ))}
+          {lookalike ? (
+            <button
+              type="button"
+              onClick={() => {
+                setValue(lookalike.address);
+                void run(lookalike.address, network);
+              }}
+              className={cx("px-btn px-btn-thin px-btn-down px-2 py-0.5 font-tag text-[11px] uppercase text-paper", FOCUS_RING)}
+              title={`A known look-alike of ${lookalike.imitates}`}
+            >
+              fake {lookalike.symbol ?? lookalike.imitates}
+            </button>
+          ) : null}
           <span>or paste any contract</span>
         </p>
       )}

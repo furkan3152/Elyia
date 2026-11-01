@@ -19,6 +19,7 @@ import { packFigure, usePacks, type Packs } from "../track/flow/usePacks";
 import { BridgeSideView } from "./BridgeSideView";
 import { DescentClock, TicketWatch } from "./Facts";
 import { LaneCards } from "./LaneCards";
+import { SendTicket } from "./SendTicket";
 import { laneAction, laneAsset, laneBalance, laneById, laneSentence, type BridgeAsset, type Lane, type LaneId } from "./lanes";
 
 const LAYER_WORD = { floor: "Floor", ridge: "Ridge", summit: "Summit" } as const;
@@ -172,6 +173,10 @@ export default function BridgePage() {
           fineprint={lane.id === "down-ridge" ? "The claim opens after the confirm period; Elyia keeps the journey on the track page." : lane.id === "up-summit" && asset === "USDC" ? "ERC-20 deposits ride a retryable ticket: Elyia watches it and asks once if it stalls." : undefined}
           empty={<FlowEmpty sentence={laneSentence(lane, asset, "")} help="Enter an amount and the Guide surveys the route: steps, fees, the Rule Book and the quote, before anything signs." />}
         />
+      </Section>
+
+      <Section id="send" tag="Send · 0x or name.ely" title="Send to a friend." lede="Type an address or an Elysium Name. Elyia resolves the name, shows the address it found, and the Rule Book asks you to confirm before anything pays an address that is not yours.">
+        <SendTicket account={address ?? null} />
       </Section>
 
       <Section id="facts" tag="Field notes · the two clocks" title="What the bridge does not tell you." lede="Tickets that stall and a trail down that takes days on mainnet: Elyia watches both for you.">

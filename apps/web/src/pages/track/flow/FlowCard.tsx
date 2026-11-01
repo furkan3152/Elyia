@@ -1,6 +1,6 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { explorerTxUrl, NETWORKS } from "@elyia/core/networks";
-import React from "react";
+import React, { useState } from "react";
 import { useAccount } from "wagmi";
 
 import { routeHref } from "../../../app/routes/routeTable";
@@ -10,7 +10,9 @@ import { PixelStamp } from "../../../pixel/PixelStamp";
 import { Blaze } from "../../../topo/Blaze";
 import { RouteCard, type RouteEvidence } from "../../../topo/RouteCard";
 import { Button, ButtonLink } from "../../../ui/Button";
-import { cx } from "../../../ui/cx";
+import { cx, FOCUS_RING } from "../../../ui/cx";
+import { deviationLabel, isFakePrice, type FlowQuote } from "./routeModel";
+import { tagWarnings, WARNING_LABEL } from "./sentence";
 import type { FlowAsk, FlowPlan } from "./useFlowPlan";
 import type { FlowRun } from "./useFlowRun";
 
@@ -24,6 +26,10 @@ export interface FlowCardProps {
   readonly empty: React.ReactNode;
   /** Extra line under the action (pool prices, descent times). */
   readonly fineprint?: React.ReactNode;
+  /** Shown when the planner asks a question first (422 INTENT_CLARIFY); the sentence route passes its clarify panel. */
+  readonly clarify?: React.ReactNode;
+  /** Pick an example the planner offered with a refusal. */
+  readonly onExample?: (sentence: string) => void;
   readonly className?: string;
 }
 
@@ -49,8 +55,9 @@ function SourceStrip({ plan }: { readonly plan: FlowPlan }) {
  * offline), the card itself, the sign button for the next step, what was
  * proven, and the trail notes (planner warnings) in plain words.
  */
-export function FlowCard({ ask, plan, planning, updatedAt, run, empty, fineprint, className }: FlowCardProps) {
+export function FlowCard({ ask, plan, planning, updatedAt, run, empty, fineprint, clarify, onExample, className }: FlowCardProps) {
   const { isConnected } = useAccount();
+  const [confirmed, setConfirmed] = useState(false);
   if (!ask) return <div className={className}>{empty}</div>;
   if (!plan) {
     return (
@@ -58,6 +65,16 @@ export function FlowCard({ ask, plan, planning, updatedAt, run, empty, fineprint
         <p className="caption">Route card · surveying</p>
         <ElyLoader label="The Guide is surveying the route…" size="lg" />
         <p className="font-mono text-[15px] text-ink">“{ask.sentence}”</p>
+      </div>
+    );
+  }
+  if (plan.kind === "clarify") {
+    return (
+      <div className={cx("mx-auto flex max-w-[720px] flex-col items-center gap-4 bg-card px-6 py-8 text-center px-frame px-drop", className)} role="status">
+        <p className="caption">Route card · one question first</p>
+        <Ely state="talk" size={88} label="Ely asks a question" />
+        <p className="font-mono text-[15px] text-ink">“{ask.sentence}”</p>
+        {clarify ?? <p className="max-w-[560px] text-[15px] leading-snug text-ink text-pretty">{plan.message}</p>}
       </div>
     );
   }
@@ -74,6 +91,21 @@ export function FlowCard({ ask, plan, planning, updatedAt, run, empty, fineprint
         <p className="font-mono text-[15px] text-ink">“{ask.sentence}”</p>
         <p className="max-w-[560px] text-[15px] leading-snug text-ink text-pretty">{plan.message}</p>
         <PixelStamp state="refused" text={plan.code.replace(/_/gu, " ")} size="sm" label={null} />
+        {plan.examples && plan.examples.length > 0 ? (
+          <ul className="flex flex-wrap justify-center gap-3" aria-label="Sentences the planner reads">
+            {plan.examples.map((example) => (
+              <li key={example}>
+                {onExample ? (
+                  <button type="button" onClick={() => onExample(example)} className={cx("px-btn px-btn-thin px-btn-paper px-3 py-1 font-mono text-[12px] text-ink", FOCUS_RING)}>
+                    {example}
+                  </button>
+                ) : (
+                  <span className="font-mono text-[12px] text-ink-2">{example}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     );
   }
@@ -109,6 +141,7 @@ export function FlowCard({ ask, plan, planning, updatedAt, run, empty, fineprint
   const next = steps.find((step) => step.stepId === run.nextStepId);
   const finished = steps.every((step) => step.state === "settled");
   const blocked = route.decision === "deny";
+  const mustConfirm = route.decision === "confirm" && (route.confirmations?.length ?? 0) > 0;
 
   const action = !isConnected ? (
     <ConnectButton.Custom>
@@ -124,7 +157,16 @@ export function FlowCard({ ask, plan, planning, updatedAt, run, empty, fineprint
     </ButtonLink>
   ) : (
     <>
-      <Button variant="primary" size="lg" fullWidth grade={route.grade} loading={run.busy} disabled={blocked || !next || planning} onClick={() => void run.start()}>
+      {mustConfirm && done === 0 ? (
+        <label className="flex items-start gap-3 bg-warn/20 px-3 py-2.5 text-left text-[13px] leading-snug text-ink px-frame-thin">
+          <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className={cx("mt-0.5 h-4 w-4 shrink-0 accent-[rgb(var(--ink))]", FOCUS_RING)} />
+          <span>
+            <span className="block font-tag text-[10px] uppercase text-ink-2">The Rule Book asks you to confirm</span>
+            {route.confirmations!.join(" · ")}
+          </span>
+        </label>
+      ) : null}
+      <Button variant="primary" size="lg" fullWidth grade={route.grade} loading={run.busy} disabled={blocked || !next || planning || (mustConfirm && done === 0 && !confirmed)} onClick={() => void run.start({ confirmed: mustConfirm && confirmed })}>
         {next ? `Sign ${next.id} · ${next.action}` : "Waiting on the chain"}
       </Button>
       {run.journeyId ? (
@@ -173,16 +215,54 @@ export function FlowCard({ ask, plan, planning, updatedAt, run, empty, fineprint
           </span>
         }
       />
-      {route.warnings.length > 0 ? (
-        <ul className="mx-auto mt-8 flex max-w-[860px] flex-col gap-2" aria-label="Trail notes">
-          {route.warnings.map((warning) => (
-            <li key={warning} className="flex gap-3 text-[13px] leading-snug text-ink-2">
-              <span aria-hidden="true" className="mt-[3px] h-3 w-3 shrink-0 bg-warn px-frame-thin" />
-              <span>{warning}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {route.quotes.length > 1 || route.quotes.some((quote) => quote.deviationBps !== undefined) ? <QuoteAuction quotes={route.quotes} /> : null}
+      <TrailNotes warnings={route.warnings} />
     </div>
+  );
+}
+
+/** Every venue that quoted, best first: what it pays, the floor, and how far from the reference it sits. */
+export function QuoteAuction({ quotes, className }: { readonly quotes: readonly FlowQuote[]; readonly className?: string }) {
+  return (
+    <section className={cx("mx-auto mt-8 max-w-[860px] bg-card px-frame px-drop", className)} aria-label="Venue auction">
+      <h3 className="border-b-2 border-rule px-4 py-2.5 text-center font-tag text-[11px] uppercase text-ink-2">Auction · {quotes.length} quote{quotes.length === 1 ? "" : "s"} · best wins · reference = HyperCore mainnet mid</h3>
+      <ol className="flex flex-col">
+        {quotes.map((quote) => (
+          <li key={`${quote.stepId ?? ""}-${quote.protocol}`} className={cx("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b-2 border-dashed border-rule px-4 py-2.5 last:border-b-0 sm:grid-cols-[10rem_minmax(0,1fr)_auto]", quote.winner && "bg-signal/25")}>
+            <span className="truncate font-display text-[15px] font-bold text-ink">
+              {quote.winner ? "▶ " : ""}
+              {quote.label}
+            </span>
+            <span className="tnum order-3 col-span-2 font-mono text-[12px] text-ink-2 sm:order-none sm:col-span-1">
+              {quote.excluded ? `not eligible: ${quote.excluded}` : `${quote.out} · min ${quote.minimum}`}
+            </span>
+            <span className={cx("tnum justify-self-end whitespace-nowrap font-mono text-[12px]", isFakePrice(quote.deviationBps) ? "font-semibold text-down" : "text-ink-2")}>
+              {quote.deviationBps !== undefined ? deviationLabel(quote.deviationBps) : "unpriced"}
+              {isFakePrice(quote.deviationBps) ? <span className="ml-2 bg-down px-1.5 py-px font-tag text-[9px] uppercase text-paper">fake price</span> : null}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/** Planner warnings in plain words, tagged (fake testnet price, unpriced, look-alike…), the serious ones first. */
+export function TrailNotes({ warnings, className }: { readonly warnings: readonly string[]; readonly className?: string }) {
+  const tagged = tagWarnings(warnings);
+  if (tagged.length === 0) return null;
+  const serious = tagged.some((item) => item.serious);
+  return (
+    <section className={cx("mx-auto mt-8 flex max-w-[860px] flex-col items-center gap-4", className)} aria-label="Trail notes">
+      {serious ? <Ely state="worry" size={56} label="Ely: read these notes before signing" /> : null}
+      <ul className="flex w-full flex-col gap-2">
+        {tagged.map((warning) => (
+          <li key={warning.text} className="flex gap-3 text-[13px] leading-snug text-ink-2">
+            <span className={cx("mt-px h-fit shrink-0 px-1.5 py-px font-tag text-[9px] uppercase px-frame-thin", warning.serious ? "bg-warn text-warn-on" : "bg-paper-2 text-ink-2")}>{WARNING_LABEL[warning.tag]}</span>
+            <span>{warning.text}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

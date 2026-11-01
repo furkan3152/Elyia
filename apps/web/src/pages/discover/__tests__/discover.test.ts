@@ -6,9 +6,9 @@ import type { SpotMetaAndAssetCtxs } from "@elyia/core/hypercore/info";
 import { PROTOCOLS } from "@elyia/core/protocols";
 import { encodeAbiParameters } from "viem";
 
-import { boardCategories, boardSigns, EMPTY_FILTER, filterBoard } from "../board";
+import { BOARD_STATUSES, boardCategories, boardKinds, boardSigns, EMPTY_FILTER, filterBoard, signNetworks, statusOf } from "../board";
 import { firstAscents, radarBlips } from "../radar";
-import { factsFrom, shieldCalls, shieldReport } from "../shield";
+import { factsFrom, shieldCalls, shieldFromApi, shieldReport } from "../shield";
 
 const word = (value: bigint) => encodeAbiParameters([{ type: "uint256" }], [value]);
 const text = (value: string) => encodeAbiParameters([{ type: "string" }], [value]);
@@ -100,5 +100,56 @@ describe("trail board", () => {
     const all = filterBoard(signs, EMPTY_FILTER);
     assert.equal(all[0]!.altitude, "summit");
     assert.equal(boardCategories(signs).reduce((sum, entry) => sum + entry.count, 0), signs.length);
+  });
+});
+
+describe("trail board: kinds, statuses, networks", () => {
+  const signs = boardSigns(PROTOCOLS);
+  it("covers every registry row with its census kind and a board status", () => {
+    assert.equal(signs.length, PROTOCOLS.length);
+    assert.equal(boardKinds(signs).reduce((sum, entry) => sum + entry.count, 0), signs.length);
+    assert.ok(signs.some((sign) => sign.kind === "game"));
+    assert.ok(signs.every((sign) => BOARD_STATUSES.includes(sign.status)));
+  });
+  it("filters by kind, status, network and executable", () => {
+    const games = filterBoard(signs, { ...EMPTY_FILTER, kind: "game" });
+    assert.ok(games.length > 0 && games.every((sign) => sign.kind === "game"));
+    const prelaunch = filterBoard(signs, { ...EMPTY_FILTER, status: "prelaunch-mainnet" });
+    assert.ok(prelaunch.every((sign) => sign.status === "prelaunch-mainnet"));
+    const core = filterBoard(signs, { ...EMPTY_FILTER, network: "hypercore", routable: true });
+    assert.ok(core.length > 0 && core.every((sign) => sign.executable && signNetworks(sign).includes("hypercore")));
+  });
+  it("splits announced and pre-launch mainnet rows", () => {
+    assert.equal(statusOf({ status: "announced-mainnet", mainnetPrelaunch: true, tags: [] }), "prelaunch-mainnet");
+    assert.equal(statusOf({ status: "announced-mainnet", tags: [] }), "announced");
+    assert.equal(statusOf({ status: "live-testnet", mainnetPrelaunch: true, tags: [] }), "live-testnet");
+    assert.equal(statusOf({ status: "deprecated", tags: ["prelaunch-mainnet"] }), "deprecated");
+  });
+});
+
+describe("shield: the API report under the look-alike list", () => {
+  const api = {
+    network: "elysium-testnet",
+    token: { address: "0xfAF33d5c9244eBA93E7Ee811583E580b4614867e", symbol: "WHYPE", name: "Wrapped HYPE", decimals: 18, totalSupply: "10" },
+    verdict: "no-red-flags",
+    summary: "every check ran",
+    registry: { verified: false, flagged: null, protocols: [], warning: null },
+    bytecode: { bytes: 2041, proxy: null, privileged: [] },
+    owner: { address: null, renounced: null },
+    simulation: null,
+    checks: [{ id: "bytecode", status: "pass", title: "Bytecode", detail: "2041 bytes" }],
+    checkedAt: "2026-11-01T00:00:00Z",
+    cacheSeconds: 60,
+    disclaimer: "",
+  } as const;
+  it("a known look-alike reads CLOSED whatever the API said", () => {
+    const trust = assessToken({ network: "elysium-testnet", address: api.token.address, symbol: "WHYPE" });
+    const report = shieldFromApi(api as never, trust);
+    assert.equal(report.condition, "closed");
+    assert.equal(report.checks[0]!.result, "fail");
+  });
+  it("otherwise the API verdict stands", () => {
+    const trust = assessToken({ network: "elysium-testnet", address: "0x0000000000000000000000000000000000000001" });
+    assert.equal(shieldFromApi(api as never, trust).condition, "open");
   });
 });

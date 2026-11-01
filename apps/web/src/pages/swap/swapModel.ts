@@ -27,6 +27,7 @@ export interface SwapVenue {
   readonly note: string;
 }
 
+/** Pinned fallback when the venue catalog (GET /v1/venues) cannot be read. */
 export const VENUES: Readonly<Record<SwapLayer, readonly SwapVenue[]>> = {
   summit: [
     { id: "kalos-v3", label: "Kalos V3", note: "canonical WHYPE/USDC · 2% pool" },
@@ -56,10 +57,10 @@ export function swapAction(input: { readonly layer: SwapLayer; readonly from: Sw
   };
 }
 
-export function swapSentence(layer: SwapLayer, from: SwapToken, amount: string, venue: string | null): string {
+export function swapSentence(layer: SwapLayer, from: SwapToken, amount: string, venue: string | null, venueLabel?: string): string {
   const to = from === "HYPE" ? "USDC" : "HYPE";
   const where = layer === "summit" ? "on Elysium" : layer === "ridge" ? "on HyperEVM" : "on HyperCore";
-  const via = venue ? ` via ${VENUES[layer].find((item) => item.id === venue)?.label ?? venue}` : "";
+  const via = venue ? ` via ${venueLabel ?? VENUES[layer].find((item) => item.id === venue)?.label ?? venue}` : "";
   return `swap ${amount || "…"} ${from} to ${to} ${where}${via}`;
 }
 
@@ -98,7 +99,8 @@ export interface AltitudeMark {
   readonly id: string;
   readonly label: string;
   readonly price: number;
-  readonly kind: "reference" | "pool" | "book";
+  /** `none`: a venue that quoted nothing for this pair (drawn as a survey stake, never a price). */
+  readonly kind: "reference" | "pool" | "book" | "none";
   readonly detail: string;
 }
 

@@ -4,7 +4,7 @@
  * route condition from its most real deployment and, when Elyia executes a
  * verb there, one sentence that plans a route through it.
  */
-import type { DeploymentStatus, ProtocolCategory, ProtocolDescriptor, ProtocolVerb } from "@elyia/core/protocols";
+import type { DeploymentStatus, ProtocolCategory, ProtocolDescriptor, ProtocolKind, ProtocolStatus, ProtocolVerb } from "@elyia/core/protocols";
 
 import type { Condition } from "../../topo/geometry/conditions";
 import type { Layer } from "../../topo/geometry/relief";
@@ -21,6 +21,10 @@ export interface BoardSign {
   readonly id: string;
   readonly name: string;
   readonly category: ProtocolCategory;
+  /** The census kind (game, nft, tools, rwa, names, otc, stablecoin… or the category). */
+  readonly kind: ProtocolKind;
+  /** The registry's one-word status, with `prelaunch-mainnet` for rows deployed ahead of the public mainnet. */
+  readonly status: BoardStatus;
   readonly description: string;
   readonly url: string;
   readonly altitude: Layer;
@@ -72,8 +76,23 @@ function layerOf(network: string): Layer {
 }
 
 /** One sentence per verb that the planner understands, filled with small, safe amounts. */
+/** Sentences checked against the live reader and planner (2026-11-01) for the venues that need their name. */
+const SENTENCE_BY_ID: Readonly<Record<string, string | null>> = {
+  "kalos-v3": "swap 0.01 HYPE to USDC on Kalos",
+  "dex-da-costa": "swap 0.01 HYPE to USDC on dex da costa",
+  cheshire: "lend 1 USDC on cheshire",
+  "elyra-lending": "lend 0.1 USDC on elyra",
+  kinetiq: "stake 1 HYPE with kinetiq",
+  // Venue-specific tokens only (no HYPE/USDC pool, or an unpriced token the Rule Book refuses): no safe example.
+  perpme: null,
+  hexswap: null,
+  "kalos-stkalos": null,
+  signal: null,
+};
+
 function sentenceFor(protocol: ProtocolDescriptor): string | null {
   if (!protocol.executable) return null;
+  if (protocol.id in SENTENCE_BY_ID) return SENTENCE_BY_ID[protocol.id] ?? null;
   const verbs = new Set(protocol.capabilities);
   if (verbs.has("bridge")) return "bridge 20 HYPE to Elysium";
   if (verbs.has("long")) return "long ETH 3x with 100 USDC, stop at -4%";
@@ -93,6 +112,8 @@ export function boardSigns(protocols: readonly ProtocolDescriptor[]): BoardSign[
       id: protocol.id,
       name: protocol.name,
       category: protocol.category,
+      kind: protocol.kind,
+      status: statusOf(protocol),
       description: protocol.description,
       url: protocol.url,
       altitude,
@@ -109,11 +130,58 @@ export function boardSigns(protocols: readonly ProtocolDescriptor[]): BoardSign[
 export interface BoardFilter {
   readonly altitude: Layer | "all";
   readonly category: ProtocolCategory | "all";
+  readonly kind: ProtocolKind | "all";
+  readonly status: BoardStatus | "all";
+  readonly network: BoardNetwork | "all";
   readonly routable: boolean;
   readonly query: string;
 }
 
-export const EMPTY_FILTER: BoardFilter = { altitude: "all", category: "all", routable: false, query: "" };
+export const EMPTY_FILTER: BoardFilter = { altitude: "all", category: "all", kind: "all", status: "all", network: "all", routable: false, query: "" };
+
+/** Status words the board filters on (core `ProtocolStatus`, with announced and prelaunch split out). */
+export type BoardStatus = "live-testnet" | "live-mainnet" | "announced" | "prelaunch-mainnet" | "unknown" | "deprecated";
+export const BOARD_STATUSES: readonly BoardStatus[] = ["live-testnet", "live-mainnet", "prelaunch-mainnet", "announced", "unknown", "deprecated"];
+
+export function statusOf(protocol: Pick<ProtocolDescriptor, "status" | "mainnetPrelaunch" | "tags">): BoardStatus {
+  const status: ProtocolStatus = protocol.status;
+  if (status === "deprecated") return "deprecated";
+  if (status === "live-mainnet") return "live-mainnet";
+  if (protocol.mainnetPrelaunch || protocol.tags.includes("prelaunch-mainnet")) return status === "live-testnet" ? "live-testnet" : "prelaunch-mainnet";
+  if (status === "announced-mainnet") return "announced";
+  return status;
+}
+
+/** Networks grouped as the board shows them. */
+export type BoardNetwork = "elysium-testnet" | "elysium-mainnet" | "hyperevm" | "hypercore";
+export const BOARD_NETWORKS: readonly BoardNetwork[] = ["elysium-testnet", "elysium-mainnet", "hyperevm", "hypercore"];
+
+export function boardNetworkOf(network: string): BoardNetwork | null {
+  if (network === "elysium-testnet" || network === "elysium-mainnet") return network;
+  if (network.startsWith("hyperevm")) return "hyperevm";
+  if (network.startsWith("hypercore")) return "hypercore";
+  return null;
+}
+
+/** Rows per kind, most common first (every kind present at least once). */
+export function boardKinds(signs: readonly BoardSign[]): Array<{ readonly kind: ProtocolKind; readonly count: number }> {
+  const counts = new Map<ProtocolKind, number>();
+  for (const sign of signs) counts.set(sign.kind, (counts.get(sign.kind) ?? 0) + 1);
+  return [...counts].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind));
+}
+
+export function countBy<K extends string>(signs: readonly BoardSign[], key: (sign: BoardSign) => readonly K[] | K): Map<K, number> {
+  const counts = new Map<K, number>();
+  for (const sign of signs) {
+    const keys = key(sign);
+    for (const value of new Set(Array.isArray(keys) ? (keys as readonly K[]) : [keys as K])) counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export function signNetworks(sign: BoardSign): BoardNetwork[] {
+  return [...new Set(sign.deployments.map((deployment) => boardNetworkOf(deployment.network)).filter((network): network is BoardNetwork => network !== null))];
+}
 
 const ALTITUDE_RANK: Readonly<Record<Layer, number>> = { summit: 0, ridge: 1, floor: 2 };
 const CONDITION_RANK: Readonly<Record<Condition, number>> = { open: 0, caution: 1, closed: 2 };
@@ -124,8 +192,11 @@ export function filterBoard(signs: readonly BoardSign[], filter: BoardFilter): B
   return signs
     .filter((sign) => filter.altitude === "all" || sign.altitude === filter.altitude)
     .filter((sign) => filter.category === "all" || sign.category === filter.category)
+    .filter((sign) => (filter.kind ?? "all") === "all" || sign.kind === filter.kind)
+    .filter((sign) => (filter.status ?? "all") === "all" || sign.status === filter.status)
+    .filter((sign) => (filter.network ?? "all") === "all" || signNetworks(sign).includes(filter.network as BoardNetwork))
     .filter((sign) => !filter.routable || sign.executable)
-    .filter((sign) => !query || `${sign.name} ${sign.category} ${sign.description} ${sign.verbs.join(" ")}`.toLowerCase().includes(query))
+    .filter((sign) => !query || `${sign.id} ${sign.name} ${sign.kind} ${sign.category} ${sign.description} ${sign.verbs.join(" ")}`.toLowerCase().includes(query))
     .sort(
       (a, b) =>
         ALTITUDE_RANK[a.altitude] - ALTITUDE_RANK[b.altitude] ||

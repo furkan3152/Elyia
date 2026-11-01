@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import { Link } from "../../app/routes/Link";
 import { routeHref } from "../../app/routes/routeTable";
+import { endpointState, useLaunches } from "../../lib/discovery";
 import { infoClient } from "../../lib/hypercore/runtime";
 import { useAutoPause } from "../../motion/useAutoPause";
 import { useReducedMotion } from "../../motion/useReducedMotion";
@@ -72,6 +73,7 @@ export function AscentsRadar({ mode: appMode }: { readonly mode: NetworkEnvironm
   const ascents = useMemo(() => (query.data ? firstAscents(query.data, 10) : []), [query.data]);
 
   const chosen = picked ?? ascents[0]?.name ?? null;
+  const launches = useLaunches("elysium-testnet");
   return (
     <div ref={ref} className="flex flex-col gap-10">
       <div className="flex justify-center">
@@ -144,10 +146,54 @@ export function AscentsRadar({ mode: appMode }: { readonly mode: NetworkEnvironm
             </ol>
           )}
           <p className="mt-auto border-t-2 border-dashed border-rule px-5 py-4 text-center font-mono text-[11px] leading-relaxed text-ink-2 text-pretty">
-            {tradable ? "" : "Mainnet, read only: the practice wall trades testnet, so these rows do not open the terminal. "}Fresh launches read CAUTION until Shield has checked them. New Elysium pools join this radar when the discovery API&apos;s launch indexer comes online.
+            {tradable ? "" : "Mainnet, read only: the practice wall trades testnet, so these rows do not open the terminal. "}Fresh launches read CAUTION until Shield has checked them. New Elysium pools are listed below{launches.data ? ", from the discovery API's launch indexer" : " when the discovery API's launch indexer answers"}.
           </p>
         </section>
       </Split>
+      <SummitLaunches query={launches} />
     </div>
+  );
+}
+
+/** New pools and launchpad events on Elysium, from the discovery API's indexer (absent: said so, nothing drawn). */
+function SummitLaunches({ query }: { readonly query: ReturnType<typeof useLaunches> }) {
+  const state = endpointState(query);
+  const data = query.data;
+  return (
+    <section aria-labelledby="summit-launches" className="flex flex-col bg-card px-frame px-drop">
+      <header className="flex flex-col items-center gap-2 border-b-2 border-rule px-5 py-5 text-center">
+        <p className="caption">{state === "live" && data ? `Elysium testnet · ${data.sources} factories and launchpads watched${data.scannedThrough ? ` · through block ${data.scannedThrough.toLocaleString("en-US")}` : ""}` : "Elysium · launch indexer"}</p>
+        <h3 id="summit-launches" className="font-display text-[24px] font-bold leading-none text-ink">
+          Newest on the Summit
+        </h3>
+      </header>
+      {state === "loading" ? (
+        <div className="flex justify-center p-6">
+          <ElyLoader label="Reading the launch indexer…" />
+        </div>
+      ) : state === "absent" || !data ? (
+        <ElyEmpty compact className="px-5 py-6" title="Launch indexer not served" description="This API does not serve /v1/discovery/launches yet, so no Summit launches are drawn. Nothing here is a sample." />
+      ) : data.launches.length === 0 ? (
+        <ElyEmpty compact className="px-5 py-6" title="No launches in the window" description={data.notes[0] ?? "The indexer is watching; new pools land here as they are seen."} />
+      ) : (
+        <ol className="flex flex-col" aria-label="Newest Elysium launches">
+          {data.launches.slice(0, 8).map((launch) => {
+            const flagged = launch.tokens.some((token) => token.flagged);
+            const names = launch.tokens.map((token) => token.symbol ?? `${token.address.slice(0, 6)}…`).join(" / ");
+            return (
+              <li key={launch.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-b-2 border-dashed border-rule px-5 py-2.5 last:border-b-0">
+                <span className="min-w-0">
+                  <span className="block truncate font-display text-[16px] font-bold text-ink">{names || "unnamed pool"}</span>
+                  <span className="tnum block truncate font-mono text-[11px] text-ink-2">
+                    {launch.protocolName} · {launch.kind} · block {launch.blockNumber.toLocaleString("en-US")}
+                  </span>
+                </span>
+                {flagged ? <span className="bg-down px-2 py-0.5 font-tag text-[10px] uppercase text-paper">look-alike</span> : <ConditionSign condition="caution" size="sm" />}
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
   );
 }

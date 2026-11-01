@@ -1,5 +1,5 @@
 import type { NetworkEnvironment } from "@elyia/core/networks";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAccount } from "wagmi";
 
@@ -18,35 +18,40 @@ import { SegmentedControl } from "../../ui/SegmentedControl";
 import { FlowCard } from "../track/flow/FlowCard";
 import { FlowEmpty } from "../track/flow/FlowPixel";
 import { sheetTag } from "../track/flow/pixelHooks";
-import { useDebounced, useFlowPlan, type FlowAsk, type FlowPlan } from "../track/flow/useFlowPlan";
+import { hasRoute, planFlow, useDebounced, useFlowPlan, type FlowAsk, type FlowPlan } from "../track/flow/useFlowPlan";
 import { useFlowRun } from "../track/flow/useFlowRun";
 import { packFigure, usePacks } from "../track/flow/usePacks";
 import { PriceAltitude } from "./PriceAltitude";
-import { impliedHypePrice, SLIPPAGE_CHOICES, swapAction, swapSentence, VENUES, type AltitudeMark, type SlippageBps, type SwapLayer, type SwapToken } from "./swapModel";
+import { swapVenues, useVenues, type SwapVenueView } from "../../lib/venues";
+import { deviationLabel, isFakePrice } from "../track/flow/routeModel";
+import { impliedHypePrice, SLIPPAGE_CHOICES, swapAction, swapNetwork, swapSentence, VENUES, type AltitudeMark, type SlippageBps, type SwapLayer, type SwapToken } from "./swapModel";
 
 const LAYER_LABEL: Readonly<Record<SwapLayer, string>> = { summit: "Summit · Elysium", ridge: "Ridge · HyperEVM", floor: "Floor · HyperCore" };
 /** HYPE/USDC spot book coin per mode (spotMeta). */
 const HYPE_BOOK: Readonly<Record<NetworkEnvironment, string>> = { testnet: "@1035", mainnet: "@107" };
 
-function swapAsk(layer: SwapLayer, from: SwapToken, amount: string, venue: string | null, slippage: SlippageBps, mode: NetworkEnvironment, probe = false): FlowAsk | null {
+function swapAsk(layer: SwapLayer, from: SwapToken, amount: string, venue: string | null, slippage: SlippageBps, mode: NetworkEnvironment, probe = false, venueLabel?: string): FlowAsk | null {
   if (layer === "floor" || !/^\d*\.?\d+$/u.test(amount) || Number(amount) <= 0) return null;
   return {
     key: `${probe ? "probe:" : ""}${layer}:${from}:${amount}:${venue ?? "best"}:${slippage}`,
-    sentence: swapSentence(layer, from, amount, venue),
+    sentence: swapSentence(layer, from, amount, venue, venueLabel),
     grade: 1,
     actions: [swapAction({ layer, from, amount, venue, mode })],
     constraints: { maxSlippageBps: slippage },
   };
 }
 
-/** Implied HYPE price of every venue that quoted a 1-HYPE probe. */
-function probeMarks(plan: FlowPlan | undefined): AltitudeMark[] {
-  if (!plan || plan.kind !== "planner") return [];
-  return plan.response.quotes.flatMap((quote) => {
-    const out = Number(quote.expected) / 10 ** quote.decimals;
-    const price = impliedHypePrice("HYPE", 1, out);
-    const venue = Object.values(VENUES).flat().find((item) => item.id === quote.protocol);
-    return price ? [{ id: quote.protocol, label: venue?.label ?? quote.protocol, price, kind: "pool" as const, detail: "test-USDC pool" }] : [];
+/** One HYPE probed at each venue by name (dry runs): a pool tower when it quoted, a survey stake when it has no pool. */
+function probeMarks(probes: readonly { readonly venue: SwapVenueView; readonly plan: FlowPlan | undefined }[]): AltitudeMark[] {
+  return probes.flatMap(({ venue, plan }): AltitudeMark[] => {
+    if (!plan) return [];
+    if (plan.kind === "planner") {
+      const quote = plan.response.quotes.find((item) => item.protocol === venue.id) ?? plan.response.quotes[0];
+      const price = quote ? impliedHypePrice("HYPE", 1, Number(quote.expected) / 10 ** quote.decimals) : null;
+      if (quote && price) return [{ id: venue.id, label: venue.label, price, kind: "pool", detail: quote.referenceDeviationBps !== undefined && isFakePrice(quote.referenceDeviationBps) ? "fake test price" : "test-USDC pool" }];
+    }
+    if (plan.kind === "refused" && !plan.offline) return [{ id: venue.id, label: venue.label, price: 1, kind: "none", detail: "no HYPE/USDC pool" }];
+    return [];
   });
 }
 
@@ -92,12 +97,22 @@ export default function SwapPage() {
   const settled = useDebounced(amount);
   const to: SwapToken = from === "HYPE" ? "USDC" : "HYPE";
 
-  const ask = swapAsk(layer, from, settled, venue, slippage, mode);
+  const catalog = useVenues();
+  const live = catalog.data ? swapVenues(catalog.data.venues, mode) : null;
+  const venuesOf = (at: SwapLayer): SwapVenueView[] => (live && live[at].length > 0 ? live[at] : VENUES[at].map((item) => ({ ...item, explicitOnly: false, network: swapNetwork(at, mode) })));
+  const layerVenues = venuesOf(layer);
+  const venueLabel = layerVenues.find((item) => item.id === venue)?.label;
+  const ask = swapAsk(layer, from, settled, venue, slippage, mode, false, venueLabel);
   const plan = useFlowPlan(ask, address ?? null);
   const run = useFlowRun(ask, plan.data ?? null);
-  // Probes for the price altitude: 1 HYPE on each EVM layer (dry runs, cached).
-  const summitProbe = useFlowPlan(swapAsk("summit", "HYPE", "1", null, 50, mode, true), null);
-  const ridgeProbe = useFlowPlan(swapAsk("ridge", "HYPE", "1", null, 50, mode, true), null);
+  // Probes for the price altitude: 1 HYPE at every EVM venue by name (dry runs, cached for a minute).
+  const probeVenues = [...venuesOf("summit").map((item) => ({ item, at: "summit" as const })), ...venuesOf("ridge").map((item) => ({ item, at: "ridge" as const }))];
+  const probes = useQueries({
+    queries: probeVenues.map(({ item, at }) => {
+      const probe = swapAsk(at, "HYPE", "1", item.id, 50, mode, true, item.label)!;
+      return { queryKey: ["swap-probe", mode, item.id], queryFn: ({ signal }: { signal: AbortSignal }) => planFlow(probe, null, mode, signal), staleTime: 60_000, refetchInterval: 60_000, retry: 0 };
+    }),
+  });
   const reference = useQuery({
     queryKey: ["hypercore", "mainnet", "allMids-reference"],
     queryFn: () => infoClient("mainnet").post<Record<string, string>>({ type: "allMids" }),
@@ -113,20 +128,19 @@ export default function SwapPage() {
   const marks: AltitudeMark[] = [
     ...(referencePx ? [{ id: "reference", label: "Reference", price: referencePx, kind: "reference" as const, detail: "HyperCore mainnet" }] : []),
     ...(bookPx && mode === "testnet" ? [{ id: "book", label: "Floor book", price: bookPx, kind: "book" as const, detail: "HyperCore testnet" }] : []),
-    ...probeMarks(summitProbe.data),
-    ...probeMarks(ridgeProbe.data),
+    ...probeMarks(probeVenues.map(({ item }, index) => ({ venue: item, plan: probes[index]?.data }))),
   ];
 
   const camp = layer === "summit" ? packs.summit : layer === "ridge" ? packs.ridge : packs.floor;
   const balance = camp[from];
   const max = balance !== null && balance > 0 ? String(from === "HYPE" && layer !== "floor" ? Math.max(0, Math.floor((balance - 0.01) * 1e6) / 1e6) : Math.floor(balance * 100) / 100) : undefined;
-  const routed = plan.data && plan.data.kind !== "refused" ? plan.data.route : null;
+  const routed = hasRoute(plan.data) ? plan.data.route : null;
   const quotes = routed?.quotes ?? [];
   const reset = () => run.reset();
 
   return (
     <Page className="!pt-0">
-      <Section level={1} tag={sheetTag("04", "Swap at the hut", mode)} title="Swap at the hut." lede="Kalos V3 and Dex Da Costa on the Summit, HyperSwap on the Ridge, the order book on the Floor. The minimum out goes into the transaction: a worse price reverts instead of filling.">
+      <Section level={1} tag={sheetTag("04", "Swap at the hut", mode)} title="Swap at the hut." lede="Every venue the engine executes: Kalos V3, Dex Da Costa, PerpMe and HexSwap on the Summit, HyperSwap on the Ridge, the order book on the Floor. The best quote wins the auction; the minimum out goes into the transaction, so a worse price reverts instead of filling.">
         <PriceAltitude marks={marks} reference={referencePx} loading={reference.isPending} />
         <p className="mx-auto mt-6 max-w-[760px] text-center text-[13px] leading-relaxed text-ink-2 text-pretty">
           <span className="font-semibold text-ink">Reference</span> = the HyperCore mainnet mid, the only price Elyia shows as USD. Test USDC is unbacked, so practice-wall pools price HYPE in fantasy dollars; the route card still quotes the real pool and writes its minimum out into the transaction.
@@ -203,7 +217,7 @@ export default function SwapPage() {
             <h3 id="swap-venues" className="text-center font-display text-[24px] font-bold leading-none text-ink">
               Venues
             </h3>
-            <p className="caption text-center">{layer === "floor" ? "the order book" : quotes.length > 0 ? `${quotes.length} quoted · best wins` : `${VENUES[layer].length + 1} signposts`}</p>
+            <p className="caption text-center">{layer === "floor" ? "the order book" : quotes.length > 0 ? `${quotes.length} quoted · best wins` : `${layerVenues.length + 1} signposts`}{catalog.data ? " · from the venue catalog" : catalog.isError ? " · catalog offline, pinned list" : ""}</p>
             {layer === "floor" ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
                 <Signpost destination="HyperCore book" detail="HYPE/USDC spot · in the terminal" highlight swing={false} />
@@ -227,14 +241,23 @@ export default function SwapPage() {
                       }}
                     />
                   </li>
-                  {VENUES[layer].map((item) => {
+                  {layerVenues.map((item) => {
                     const quote = quotes.find((entry) => entry.protocol === item.id);
+                    const probe = probes[probeVenues.findIndex((entry) => entry.item.id === item.id)]?.data;
+                    const noPool = probe?.kind === "refused" && !probe.offline;
+                    const deviation = quote?.deviationBps !== undefined ? ` · ${deviationLabel(quote.deviationBps)}` : "";
                     return (
                       <li key={item.id}>
                         <Signpost
                           destination={item.label}
-                          eta={quote ? quote.out : undefined}
-                          detail={quote?.excluded ? `not quoted: ${quote.excluded}` : quote?.winner ? `${item.note} · best` : item.note}
+                          eta={quote ? quote.out : noPool ? "no pool" : undefined}
+                          detail={
+                            quote?.excluded
+                              ? `not quoted: ${quote.excluded}`
+                              : quote
+                                ? `${quote.winner ? "best · " : ""}${item.note}${deviation}`
+                                : `${item.explicitOnly ? "named only · " : ""}${noPool ? "no HYPE/USDC pool" : item.note}`
+                          }
                           highlight={venue === item.id}
                           chosen={venue === item.id}
                           swing={false}
@@ -275,7 +298,7 @@ export default function SwapPage() {
             updatedAt={plan.dataUpdatedAt}
             run={run}
             fineprint="Pool prices on the practice wall are not market prices; the card quotes the real pool."
-            empty={<FlowEmpty sentence={swapSentence(layer, from, "", venue)} help="Enter an amount: the planner quotes every venue, binds the best and writes its minimum out into the swap." />}
+            empty={<FlowEmpty sentence={swapSentence(layer, from, "", venue, venueLabel)} help="Enter an amount: the planner quotes every venue, binds the best and writes its minimum out into the swap." />}
           />
         </Section>
       ) : null}

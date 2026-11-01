@@ -40,7 +40,31 @@ export const PROTOCOL_LABEL: Readonly<Record<string, string>> = {
   "kalos-v3": "Kalos V3",
   "dex-da-costa": "Dex Da Costa",
   "hyperswap-v3": "HyperSwap V3",
+  perpme: "PerpMe V3",
+  hexswap: "HexSwap",
+  signal: "Signal launch pools",
+  "kalos-stkalos": "Kalos stKALOS",
+  cheshire: "Cheshire vault",
+  "elyra-lending": "Elyra lending",
+  "wrapped-hype": "WHYPE wrap",
+  "evm-transfer": "Send",
+  "elysium-names": "Elysium Names",
+  "hypercore-perps": "HyperCore perps",
+  "hypercore-twap": "HyperCore TWAP",
 };
+
+/** "+7,829% vs reference", "−99% vs reference", "at the reference" (±0.5%). */
+export function deviationLabel(bps: number): string {
+  const pct = bps / 100;
+  if (Math.abs(pct) < 0.5) return "at the reference";
+  const shown = Math.abs(pct) >= 100 ? Math.round(Math.abs(pct)).toLocaleString("en-US") : Math.abs(pct).toFixed(1);
+  return `${pct > 0 ? "▲ +" : "▼ −"}${shown}% vs reference`;
+}
+
+/** A pool paying 25% more than the reference is not a market price (testnet pools often pay 50x). */
+export function isFakePrice(bps: number | undefined): boolean {
+  return bps !== undefined && Math.abs(bps) >= 2_500;
+}
 
 export function protocolLabel(id: string): string {
   return PROTOCOL_LABEL[id] ?? id;
@@ -119,6 +143,12 @@ export interface FlowQuote {
   readonly minimum: string;
   readonly winner: boolean;
   readonly excluded?: string;
+  /** Step the venue quoted (`s2`). */
+  readonly stepId?: string;
+  /** Output value vs input value at reference prices, basis points (+ = pays more than the market: a fake pool price). */
+  readonly deviationBps?: number;
+  /** USD of the expected output at reference prices, when priced. */
+  readonly referenceUsd?: string;
 }
 
 export type FlowSource = "planner" | "offline";
@@ -143,6 +173,8 @@ export interface FlowRoute {
   readonly totalSeconds: number | null;
   /** The planner refused or asked to confirm. */
   readonly decision: "allow" | "confirm" | "deny";
+  /** What the Rule Book asks the user to confirm before the first prepare. */
+  readonly confirmations?: readonly string[];
 }
 
 /** Four hex characters for the route id ("7F3A"), stable per seed. */
@@ -183,9 +215,14 @@ function rulesFrom(response: CreateIntentResponse): string[] {
   const lines: string[] = [];
   lines.push(policy.decision === "allow" ? "Rule Book: allowed" : policy.decision === "confirm" ? "Rule Book: asks you to confirm" : "Rule Book: refused");
   if (policy.notionalUsd) lines.push(`$${policy.notionalUsd} at reference price`);
-  const floor = response.intent.steps.find((step) => step.outputs.some((output) => output.minimum && output.minimum !== output.expected));
+  // Only swaps carry their floor on chain (ERC-4626 and lending calls do not: the planner verifies them after).
+  const floor = response.intent.steps.find((step) => step.kind === "swap" && step.outputs.some((output) => output.minimum && output.minimum !== output.expected));
   if (floor) lines.push("minimum out written into the tx");
-  if (response.intent.steps.every((step) => step.recipient === undefined || response.intent.accounts.includes(step.recipient))) lines.push("to your own address");
+  else if (response.intent.steps.some((step) => step.kind === "deposit" || step.kind === "withdraw")) lines.push("result checked against the vault preview");
+  const owned = new Set(response.intent.accounts.map((account) => account.split(":").at(-1)?.toLowerCase()));
+  const others = [...new Set(response.intent.steps.flatMap((step) => (step.recipient && !owned.has(step.recipient.split(":").at(-1)?.toLowerCase()) ? [step.recipient.split(":").at(-1)!] : [])))];
+  if (others.length === 0) lines.push("to your own address");
+  for (const other of others) lines.push(`pays ${other.slice(0, 6)}…${other.slice(-4)}, not your address`);
   for (const reason of policy.reasons) lines.push(reason.message);
   return lines;
 }
@@ -203,7 +240,10 @@ export function routeFromPlanner(response: CreateIntentResponse, sentence: strin
     out: `${formatBase(quote.expected, quote.decimals)} ${quote.symbol}`,
     minimum: `${formatBase(quote.minimum, quote.decimals)} ${quote.symbol}`,
     winner: quote.winner,
+    stepId: quote.stepId,
     ...(quote.excluded ? { excluded: quote.note ?? quote.excluded } : {}),
+    ...(quote.referenceDeviationBps !== undefined ? { deviationBps: quote.referenceDeviationBps } : {}),
+    ...(quote.referenceUsd !== undefined ? { referenceUsd: quote.referenceUsd } : {}),
   }));
   return {
     id: shortRouteId(response.intent.id),
@@ -222,6 +262,7 @@ export function routeFromPlanner(response: CreateIntentResponse, sentence: strin
     notionalUsd: response.policy.notionalUsd,
     totalSeconds: response.intent.summary.estimatedSeconds ?? null,
     decision: response.policy.decision,
+    confirmations: response.policy.reasons.filter((reason) => reason.outcome === "confirm").map((reason) => reason.message),
   };
 }
 

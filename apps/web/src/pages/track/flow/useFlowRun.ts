@@ -24,7 +24,8 @@ import { useConfig } from "wagmi";
 import { getAccount, getPublicClient, sendTransaction, signTypedData, switchChain, waitForTransactionReceipt } from "wagmi/actions";
 
 import { useUiStore } from "../../../app/state/uiStore";
-import { ApiError, apiGet, apiPost } from "../../../lib/api";
+import { ApiError, apiGet, apiPost, apiUrl } from "../../../lib/api";
+import { openEventStream } from "../../../lib/sse";
 import { hyperCoreEndpoints } from "../../../lib/hypercore/endpoints";
 import { exchangeError, postExchange } from "../../../lib/hypercore/exchangeClient";
 import type { RouteStepState } from "../../../topo/RouteCard";
@@ -32,7 +33,7 @@ import { addLeg, saveJourney, type JourneyRecord } from "./journeyStore";
 import type { LocalRequest } from "./localPlanner";
 import { childIdOf, deliveredMessages } from "./orbit";
 import { phaseState } from "./routeModel";
-import { planBody, type FlowAsk, type FlowPlan } from "./useFlowPlan";
+import { hasRoute, planBody, type FlowAsk, type FlowPlan } from "./useFlowPlan";
 
 export type StepRunState = "idle" | "preparing" | "signing" | "sent" | "settling" | "settled" | "failed";
 
@@ -53,9 +54,14 @@ export interface FlowRun {
   readonly error: string | null;
   /** The step the next click signs, or null when nothing is left to sign. */
   readonly nextStepId: string | null;
-  readonly start: () => Promise<void>;
+  /** Sign the next step. `confirmed`: the user ticked what the Rule Book asked to confirm. */
+  readonly start: (options?: { readonly confirmed?: boolean }) => Promise<void>;
   readonly reset: () => void;
 }
+
+type IntentStreamParsers = Readonly<Record<"intent.snapshot" | "intent.created" | "intent.status_changed" | "intent.step_updated", unknown>>;
+/** Stream events only wake the journey poll; their bodies are never trusted for state. */
+const anyEvent = (data: unknown): unknown => (typeof data === "object" && data !== null ? data : null);
 
 const STATE_FOR_RUN: Readonly<Record<StepRunState, RouteStepState | null>> = {
   idle: null,
@@ -110,24 +116,40 @@ export function useFlowRun(ask: FlowAsk | null, plan: FlowPlan | null): FlowRun 
   };
 
   // Follow a stored planner intent: the journey is verified by the planner from chain.
+  // The intent's SSE stream wakes the poll the moment a step changes; the poll stays as the fallback.
   useEffect(() => {
     if (!intentId) return undefined;
     let stopped = false;
     let timer: number | undefined;
+    let streaming = false;
     const poll = async () => {
+      if (timer) window.clearTimeout(timer);
       try {
         const next = await apiGet<Journey>(`/v1/intents/${intentId}/journey`, { timeoutMs: 10_000 });
         if (stopped) return;
         setJourney(next);
         const moving = next.stops.some((stop) => stop.phase === "in-flight" || stop.phase === "waiting");
-        timer = window.setTimeout(poll, moving ? 2_500 : 10_000);
+        timer = window.setTimeout(poll, moving ? (streaming ? 8_000 : 2_500) : 15_000);
       } catch {
         if (!stopped) timer = window.setTimeout(poll, 6_000);
       }
     };
+    const wake = () => {
+      if (!stopped) void poll();
+    };
+    const stream = openEventStream<IntentStreamParsers>({
+      url: apiUrl(`/v1/intents/${intentId}/stream`),
+      parsers: { "intent.snapshot": anyEvent, "intent.created": anyEvent, "intent.status_changed": anyEvent, "intent.step_updated": anyEvent },
+      onEvent: wake,
+      onStateChange: (state) => {
+        streaming = state === "open";
+      },
+      maxAttempts: 6,
+    });
     void poll();
     return () => {
       stopped = true;
+      stream.close();
       if (timer) window.clearTimeout(timer);
     };
   }, [intentId]);
@@ -196,7 +218,7 @@ export function useFlowRun(ask: FlowAsk | null, plan: FlowPlan | null): FlowRun 
       return { reference: formatNonceReference(from, nonce) };
     };
 
-  const startPlanner = async (planned: Extract<FlowPlan, { kind: "planner" }>, from: Address) => {
+  const startPlanner = async (planned: Extract<FlowPlan, { kind: "planner" }>, from: Address, confirmed: boolean) => {
       if (!ask) return;
       let id = intentId;
       let current: string | null = journey?.current ?? null;
@@ -211,7 +233,7 @@ export function useFlowRun(ask: FlowAsk | null, plan: FlowPlan | null): FlowRun 
       const stepId = current ?? planned.route.steps.find((step) => runs[step.stepId]?.state !== "settled")?.stepId;
       if (!stepId) return;
       patch(stepId, { state: "preparing" });
-      const prepared = await apiPost<PrepareStepResponse>(`/v1/intents/${id}/steps/${stepId}/prepare`, { signatureChainId: getAccount(config).chainId }, { timeoutMs: 20_000 });
+      const prepared = await apiPost<PrepareStepResponse>(`/v1/intents/${id}/steps/${stepId}/prepare`, { signatureChainId: getAccount(config).chainId, ...(confirmed ? { confirmed: true } : {}) }, { timeoutMs: 20_000 });
       patch(stepId, { state: "signing", message: prepared.payload.requests[0]?.description });
       const references: string[] = [];
       for (const request of prepared.payload.requests) {
@@ -282,8 +304,8 @@ export function useFlowRun(ask: FlowAsk | null, plan: FlowPlan | null): FlowRun 
       patch(id, { state: "settled", reference: lastHash ?? lastReference, time: hhmm(Date.now()) });
     };
 
-  const start = async () => {
-    if (!plan || plan.kind === "refused" || busy) return;
+  const start = async (options: { readonly confirmed?: boolean } = {}) => {
+    if (!hasRoute(plan) || busy) return;
     const account = getAccount(config);
     if (!account.address) {
       setError("Connect a wallet first. Your key never leaves it.");
@@ -292,7 +314,7 @@ export function useFlowRun(ask: FlowAsk | null, plan: FlowPlan | null): FlowRun 
     setBusy(true);
     setError(null);
     try {
-      if (plan.kind === "planner") await startPlanner(plan, account.address);
+      if (plan.kind === "planner") await startPlanner(plan, account.address, options.confirmed === true);
       else await startOffline(plan, account.address);
     } catch (problem) {
       const message = explainRunError(problem);
@@ -308,7 +330,7 @@ export function useFlowRun(ask: FlowAsk | null, plan: FlowPlan | null): FlowRun 
 
   // Route card states: the planner's journey when following one, the local run otherwise.
   const states: Record<string, RouteStepState> = {};
-  if (plan && plan.kind !== "refused") {
+  if (hasRoute(plan)) {
     for (const step of plan.route.steps) {
       const stop = journey?.stops.find((item) => item.stepId === step.stepId);
       const run = runs[step.stepId];
@@ -316,13 +338,13 @@ export function useFlowRun(ask: FlowAsk | null, plan: FlowPlan | null): FlowRun 
       states[step.stepId] = stop && intentId ? (fromRun === "failed" ? "failed" : phaseState(stop.phase)) : (fromRun ?? step.state);
     }
   }
-  const nextStepId = plan && plan.kind !== "refused" ? (plan.route.steps.find((step) => states[step.stepId] === "next" || states[step.stepId] === "waiting" || states[step.stepId] === "failed")?.stepId ?? null) : null;
+  const nextStepId = hasRoute(plan) ? (plan.route.steps.find((step) => states[step.stepId] === "next" || states[step.stepId] === "waiting" || states[step.stepId] === "failed")?.stepId ?? null) : null;
 
   return { runs, states, journeyId: record?.id ?? null, busy, error, nextStepId, start, reset };
 }
 
 /** Networks a route signs on, for the "switch to" hint. */
 export function signingNetworks(plan: FlowPlan | null): NetworkKey[] {
-  if (!plan || plan.kind === "refused") return [];
+  if (!hasRoute(plan)) return [];
   return [...new Set(plan.route.steps.filter((step) => step.signer === "wallet").map((step) => step.network))];
 }

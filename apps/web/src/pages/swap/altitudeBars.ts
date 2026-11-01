@@ -150,6 +150,17 @@ function paintAltitudeStill(ctx: TextSurface, layout: AltitudeLayout, frame: Alt
   // towers: banded by decade, contour pixel at every band edge, an ink outline
   frame.marks.forEach((mark, index) => {
     const bar = bars[index]!;
+    if (mark.kind === "none") {
+      // a survey stake: no pool for this pair, so no height to draw
+      const cx = bar.x + Math.round(bar.w / 2);
+      for (let y = ground - 12; y < ground; y += 1) {
+        ctx.fillStyle = (ground - y) % 4 < 2 ? INK : ROPE_RED;
+        ctx.fillRect(cx - 1, y, 2, 1);
+      }
+      ctx.fillStyle = ROPE_RED;
+      ctx.fillRect(cx - 4, ground - 14, 8, 3);
+      return;
+    }
     for (let y = bar.top; y < ground; y += 1) {
       const decade = Math.min(top - 1, Math.floor(((ground - y) / (ground - ceiling)) * top));
       const color = decadeColor(decade, night);

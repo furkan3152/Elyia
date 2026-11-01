@@ -22,7 +22,7 @@ function priceText(price: number): string {
   return price >= 1000 ? Math.round(price).toLocaleString("en-US") : price >= 10 ? price.toFixed(2) : price.toFixed(3);
 }
 
-const KIND_ORDER: Readonly<Record<AltitudeMark["kind"], number>> = { pool: 0, reference: 1, book: 2 };
+const KIND_ORDER: Readonly<Record<AltitudeMark["kind"], number>> = { pool: 0, none: 0, reference: 1, book: 2 };
 
 /**
  * The price altitude: one HYPE priced by every place that quotes it, as
@@ -36,13 +36,15 @@ export function PriceAltitude({ marks, reference, loading = false, className }: 
   const compact = useCompact();
   const night = useNight();
   // the reference stands on the axis: pools to its left, the book to its right
+  // Phones keep the towers that have a price; venues with no pool are named under the chart instead.
+  const stakes = useMemo(() => marks.filter((mark) => mark.kind === "none"), [marks]);
   const ordered = useMemo(() => {
-    const pools = marks.filter((mark) => mark.kind === "pool");
-    const rest = [...marks.filter((mark) => mark.kind !== "pool")].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
+    const pools = marks.filter((mark) => mark.kind === "pool" || (!compact && mark.kind === "none"));
+    const rest = [...marks.filter((mark) => mark.kind !== "pool" && mark.kind !== "none")].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
     const left = pools.slice(0, Math.ceil(pools.length / 2));
     const right = pools.slice(Math.ceil(pools.length / 2));
     return [...left, ...rest.slice(0, 1), ...right, ...rest.slice(1)];
-  }, [marks]);
+  }, [marks, compact]);
   const key = ordered.map((mark) => `${mark.id}:${mark.price.toPrecision(5)}`).join("|");
   // the end state whenever motion is reduced (the shared loop may repaint a still canvas at t = 0)
   const reduced = useReducedMotion();
@@ -71,7 +73,7 @@ export function PriceAltitude({ marks, reference, loading = false, className }: 
           animate={ordered.some((mark) => mark.kind === "reference")}
           fps={12}
           redrawKey={`${key}|${night}|${compact}`}
-          label={ordered.length ? `Implied price of 1 HYPE by venue, log scale: ${ordered.map((mark) => `${mark.label} ${priceText(mark.price)} USDC`).join("; ")}` : "Price altitude: waiting for quotes"}
+          label={ordered.length ? `Implied price of 1 HYPE by venue, log scale: ${ordered.map((mark) => (mark.kind === "none" ? `${mark.label} no HYPE/USDC pool` : `${mark.label} ${priceText(mark.price)} USDC`)).join("; ")}` : "Price altitude: waiting for quotes"}
         />
         {ordered.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center bg-card/70">
@@ -99,11 +101,17 @@ export function PriceAltitude({ marks, reference, loading = false, className }: 
             ) : (
               <span className="w-full truncate font-tag text-[10px] uppercase sm:text-[11px]">{mark.label}</span>
             )}
-            <span className="tnum font-display text-[15px] font-bold leading-none sm:text-[20px]">{priceText(mark.price)}</span>
+            <span className={cx("tnum font-display font-bold leading-none", mark.kind === "none" ? "text-[12px] text-ink-3 sm:text-[14px]" : "text-[15px] sm:text-[20px]")}>{mark.kind === "none" ? "no pool" : priceText(mark.price)}</span>
             <span className={cx("hidden w-full truncate font-mono text-[11px] sm:block", mark.kind === "reference" ? "opacity-80" : "text-ink-3")}>{mark.detail}</span>
           </li>
         ))}
       </ol>
+      {compact && stakes.length > 0 ? (
+        <p className="border-t-2 border-dashed border-rule px-3 py-2 text-center font-mono text-[11px] text-ink-2">
+          <span className="font-tag text-[10px] uppercase text-down">no HYPE/USDC pool · </span>
+          {stakes.map((mark) => mark.label).join(" · ")}
+        </p>
+      ) : null}
     </PixelFigure>
   );
 }

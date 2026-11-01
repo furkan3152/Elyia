@@ -1,5 +1,8 @@
 import { PROTOCOLS } from "@elyia/core/protocols";
+import type { ProtocolLiveRow } from "@elyia/core/api/discovery";
 import { useMemo } from "react";
+
+import { endpointState, useProtocolsLive } from "../../lib/discovery";
 
 import { useUiStore } from "../../app/state/uiStore";
 import { Page, Section } from "../../pixel/layout";
@@ -21,6 +24,23 @@ export default function DiscoverPage() {
   const signs = useMemo(() => boardSigns(PROTOCOLS), []);
   const open = signs.filter((sign) => sign.condition === "open").length;
   const routable = signs.filter((sign) => sign.executable).length;
+  const liveTest = useProtocolsLive("elysium-testnet");
+  const liveMain = useProtocolsLive("elysium-mainnet");
+  const live = useMemo(() => {
+    const rows = new Map<string, ProtocolLiveRow>();
+    for (const response of [liveMain.data, liveTest.data]) for (const row of response?.protocols ?? []) {
+      const known = rows.get(row.protocolId);
+      if (!known || (row.active && !known.active)) rows.set(row.protocolId, row);
+    }
+    return rows;
+  }, [liveTest.data, liveMain.data]);
+  const liveState = endpointState(liveTest);
+  const liveNote =
+    liveState === "live"
+      ? `live check · ${[liveTest.data, liveMain.data].filter(Boolean).map((response) => `${response!.network}: ${response!.totals.present}/${response!.totals.contracts} contracts present, ${response!.totals.active} active`).join(" · ")}`
+      : liveState === "loading"
+        ? "live check · reading bytecode and recent logs…"
+        : "live check offline · statuses are the registry's (census re-checked 2026-10-31)";
 
   return (
     <Page className="!pt-0">
@@ -30,8 +50,11 @@ export default function DiscoverPage() {
       <Section id="shield" tag="Shield · route condition for any token" title="Is it safe to climb?" lede="Paste a token: Shield reads the contract from the public RPC and Elyia's verified list, and says which checks it could not run. Ely inspects; nothing signs or spends.">
         <ShieldPanel mode={mode} />
       </Section>
-      <Section id="board" tag={`The registry · ${signs.length} protocols · ${open} open · Elyia routes through ${routable}`} title="The trail board" lede="Each protocol is filed under the highest altitude it stands on. A sign reads OPEN only once its contracts or endpoints were seen working; the rest say why not.">
-        <TrailBoard />
+      <Section id="board" tag={`The registry · ${signs.length} protocols · ${open} open · Elyia routes through ${routable}`} title="The trail board" lede="All the protocols of the registry, filed under the highest altitude each stands on. Filter by kind, status, network or what Elyia executes; a sign reads OPEN only once its contracts or endpoints were seen working, and the live check says whether they still answer.">
+        <p className="-mt-4 mb-8 text-center font-mono text-[11px] text-ink-3" aria-live="polite">
+          {liveNote}
+        </p>
+        <TrailBoard live={live} />
       </Section>
     </Page>
   );
