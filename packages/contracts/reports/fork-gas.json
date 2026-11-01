@@ -1,0 +1,97 @@
+{
+  "forkBlock": 20530000,
+  "results": [
+    {
+      "label": "swap native->USDC Kalos V3 (wrap+1 hop)",
+      "gasUsed": 224308
+    },
+    {
+      "label": "swap native->USDC Dex Da Costa V2 (wrap+1 hop)",
+      "gasUsed": 205479
+    },
+    {
+      "label": "swap native->tUSDT HexSwap V2 (wrap+1 hop)",
+      "gasUsed": 269393
+    },
+    {
+      "label": "swap native->PERPME PerpMe V3 (wrap+1 hop)",
+      "gasUsed": 208132
+    },
+    {
+      "label": "swap native->USDC split Kalos 60% + DDC 40%",
+      "gasUsed": 345416
+    },
+    {
+      "label": "swap native->KALOS->USDC Kalos multi-hop (wrap+2 hops)",
+      "gasUsed": 328203
+    },
+    {
+      "label": "swap USDC->KALOS via DDC + unwrap + wrap + Kalos (4 hops)",
+      "gasUsed": 374553
+    },
+    {
+      "label": "swap USDC->native HYPE via DDC V2 + unwrap",
+      "gasUsed": 202484
+    },
+    {
+      "label": "swap native->USDC Kalos with protocol + integrator fee",
+      "gasUsed": 273672
+    },
+    {
+      "label": "multicall native->wrap->Kalos swap->stKALOS deposit",
+      "gasUsed": 280664
+    },
+    {
+      "label": "multicall native->wrap DDC WETH->Cheshire vault deposit",
+      "gasUsed": 227595
+    },
+    {
+      "label": "multicall pull shares->Cheshire redeem->unwrap->sweep HYPE",
+      "gasUsed": 213283
+    },
+    {
+      "label": "swapWithPermit2 USDC->native via DDC",
+      "gasUsed": 227496
+    },
+    {
+      "label": "multicall Permit2 pull USDC->Cheshire USDC vault deposit",
+      "gasUsed": 283189
+    },
+    {
+      "label": "ElyAccountFactory.createAccount (clone + init)",
+      "gasUsed": 117316
+    },
+    {
+      "label": "ElyAccount.setAgentPolicy (3 calls, 4 tokens)",
+      "gasUsed": 341245
+    },
+    {
+      "label": "ElyAccount.agentSwap native->KALOS (Kalos)",
+      "gasUsed": 267047
+    },
+    {
+      "label": "ElyAccount.agentVaultDeposit KALOS->stKALOS",
+      "gasUsed": 134588
+    },
+    {
+      "label": "ElyAccount.agentVaultRedeem stKALOS->KALOS",
+      "gasUsed": 133123
+    },
+    {
+      "label": "ElyAccount.withdrawAll (4 tokens)",
+      "gasUsed": 118412
+    },
+    {
+      "label": "ElyOrders.execute limit WHYPE->KALOS (Kalos)",
+      "gasUsed": 322776
+    },
+    {
+      "label": "ElyOrders.execute stop-loss KALOS->WHYPE with TWAP check",
+      "gasUsed": 319720
+    },
+    {
+      "label": "ElyOrders.execute DCA fill 1 (Kalos)",
+      "gasUsed": 314954
+    }
+  ]
+}

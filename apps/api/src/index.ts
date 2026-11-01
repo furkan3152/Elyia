@@ -4,7 +4,7 @@
  */
 import dotenv from "dotenv";
 import { createApp } from "./app.js";
-import { ConfigError, loadConfig, type Config } from "./config.js";
+import { ConfigError, loadConfig, productionIssues, type Config } from "./config.js";
 import { createContext } from "./context.js";
 import { MODULES } from "./modules/index.js";
 import { installProcessHandlers, startServer } from "./server.js";
@@ -13,7 +13,10 @@ dotenv.config({ quiet: true });
 
 function readConfig(): Config {
   try {
-    return loadConfig(process.env);
+    const config = loadConfig(process.env);
+    const issues = productionIssues(config);
+    if (issues.length > 0) throw new ConfigError(issues);
+    return config;
   } catch (error) {
     if (error instanceof ConfigError) {
       process.stderr.write(`${error.message}\n`);

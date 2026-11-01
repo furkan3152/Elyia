@@ -50,10 +50,20 @@ export interface Config {
   readonly webOrigins: readonly string[];
   readonly databaseUrl: string | null;
   readonly sessionSecret: string | null;
+  /** Owner wallets with the admin role (ELYIA_ADMIN_ADDRESSES, lowercase). */
+  readonly adminAddresses: readonly string[];
+  /** Keeper key encryption secret (ELYIA_KEEPER_SECRET); keeper mode is refused without it. */
+  readonly keeperSecret: string | null;
+  /** Extra SIWE domains (host[:port]) besides the web origins' hosts. */
+  readonly siweDomains: readonly string[];
+  /** Exact origins allowed to call POST /v1/mcp from a browser (empty: any https origin). */
+  readonly mcpAllowedOrigins: readonly string[];
   readonly telegram: {
     readonly botToken: string | null;
     readonly webhookSecret: string | null;
     readonly botUsername: string | null;
+    /** Public https URL of POST /telegram/webhook (production webhook mode). */
+    readonly webhookUrl: string | null;
   };
   readonly agent: {
     readonly anthropicApiKey: string | null;
@@ -172,6 +182,11 @@ const EnvSchema = z.object({
   ELYIA_WEB_ORIGIN: optionalString,
   ELYIA_DATABASE_URL: optionalString,
   ELYIA_SESSION_SECRET: optionalString,
+  ELYIA_ADMIN_ADDRESSES: optionalString,
+  ELYIA_KEEPER_SECRET: optionalString,
+  ELYIA_SIWE_DOMAINS: optionalString,
+  ELYIA_MCP_ALLOWED_ORIGINS: optionalString,
+  TELEGRAM_WEBHOOK_URL: optionalString,
   TELEGRAM_BOT_TOKEN: optionalString,
   TELEGRAM_WEBHOOK_SECRET: optionalString,
   TELEGRAM_BOT_USERNAME: optionalString,
@@ -267,6 +282,28 @@ export function loadConfig(source: Readonly<Record<string, string | undefined>> 
     // Telegram accepts 1-256 of A-Z, a-z, 0-9, _ and -; Elyia requires at least 16 for strength.
     issues.push("TELEGRAM_WEBHOOK_SECRET: must be 16-256 characters of A-Z, a-z, 0-9, _ or -");
   }
+  const adminAddresses: string[] = [];
+  for (const raw of splitList(env.ELYIA_ADMIN_ADDRESSES)) {
+    if (/^0x[0-9a-fA-F]{40}$/u.test(raw)) adminAddresses.push(raw.toLowerCase());
+    else issues.push("ELYIA_ADMIN_ADDRESSES: entries must be 0x-prefixed 20-byte addresses");
+  }
+  if (env.ELYIA_KEEPER_SECRET && env.ELYIA_KEEPER_SECRET.length < 32) {
+    issues.push("ELYIA_KEEPER_SECRET: must be at least 32 characters");
+  }
+  const siweDomains: string[] = [];
+  for (const raw of splitList(env.ELYIA_SIWE_DOMAINS)) {
+    if (/^[a-z0-9.-]+(?::\d{1,5})?$/iu.test(raw)) siweDomains.push(raw.toLowerCase());
+    else issues.push(`ELYIA_SIWE_DOMAINS: "${raw.slice(0, 80)}" is not a host[:port]`);
+  }
+  const mcpAllowedOrigins: string[] = [];
+  for (const raw of splitList(env.ELYIA_MCP_ALLOWED_ORIGINS)) {
+    const origin = parseOrigin(raw, production);
+    if (origin) mcpAllowedOrigins.push(origin);
+    else issues.push(`ELYIA_MCP_ALLOWED_ORIGINS: "${raw.slice(0, 80)}" is not an exact origin`);
+  }
+  if (env.TELEGRAM_WEBHOOK_URL && !/^https:\/\/[^\s]+$/u.test(env.TELEGRAM_WEBHOOK_URL)) {
+    issues.push("TELEGRAM_WEBHOOK_URL: must be an https URL");
+  }
   if (issues.length > 0) throw new ConfigError(issues);
 
   const config: Config = {
@@ -278,10 +315,15 @@ export function loadConfig(source: Readonly<Record<string, string | undefined>> 
     webOrigins: Object.freeze([...webOrigins]),
     databaseUrl: env.ELYIA_DATABASE_URL ?? null,
     sessionSecret: env.ELYIA_SESSION_SECRET ?? null,
+    adminAddresses: Object.freeze([...new Set(adminAddresses)]),
+    keeperSecret: env.ELYIA_KEEPER_SECRET ?? null,
+    siweDomains: Object.freeze(siweDomains),
+    mcpAllowedOrigins: Object.freeze(mcpAllowedOrigins),
     telegram: Object.freeze({
       botToken: env.TELEGRAM_BOT_TOKEN ?? null,
       webhookSecret: env.TELEGRAM_WEBHOOK_SECRET ?? null,
       botUsername: env.TELEGRAM_BOT_USERNAME?.replace(/^@/u, "") ?? null,
+      webhookUrl: env.TELEGRAM_WEBHOOK_URL ?? null,
     }),
     agent: Object.freeze({
       anthropicApiKey: env.ANTHROPIC_API_KEY ?? null,
@@ -311,4 +353,16 @@ export function elysiumNetworkFor(mode: NetworkEnvironment): NetworkKey {
 /** The HyperCore network of the configured mode. */
 export function hypercoreNetworkFor(mode: NetworkEnvironment): NetworkKey {
   return mode === "testnet" ? "hypercore-testnet" : "hypercore-mainnet";
+}
+
+/**
+ * Secrets production must have before it serves anything: sessions are
+ * HMAC-signed with ELYIA_SESSION_SECRET (an ephemeral secret would sign
+ * every user out on each restart and differ between replicas).
+ */
+export function productionIssues(config: Config): string[] {
+  if (config.env !== "production") return [];
+  const issues: string[] = [];
+  if (!config.sessionSecret) issues.push("ELYIA_SESSION_SECRET: required in production (sessions are HMAC-signed with it)");
+  return issues;
 }

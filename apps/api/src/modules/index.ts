@@ -17,8 +17,12 @@ import { intentsModule } from "./intents/index.js";
 import { opsModule } from "./ops/index.js";
 import { agentModule } from "./agent/index.js";
 import { discoveryModule } from "./discovery/index.js";
+import { developersModule } from "./developers/index.js";
+import { adminModule } from "./admin/index.js";
 
 export const MODULES: readonly ApiModule[] = [
+  // First: its API key gate (auth, scopes, quotas, metering) runs before every other module's routes.
+  developersModule,
   systemModule,
   marketsModule,
   portfolioModule,
@@ -26,4 +30,5 @@ export const MODULES: readonly ApiModule[] = [
   opsModule,
   agentModule,
   discoveryModule,
+  adminModule,
 ];

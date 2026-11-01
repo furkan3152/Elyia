@@ -1,0 +1,43 @@
+{
+  "$comment": "Every address below is copied from packages/core/src/protocolData.ts or packages/core/src/networks.ts (key in 'source'). test/fork.venues.test.cjs re-checks code, getters and that each address appears in those files. Nothing here is invented.",
+  "network": "elysium-testnet",
+  "chainId": 99801,
+  "permit2": { "address": "0x000000000022D473030F116dDEE9F6B43aC78BA3", "source": "networks.ts ELYSIUM_TESTNET.contracts.permit2" },
+  "tokens": {
+    "WHYPE": { "address": "0xCD57F65c2B0e5881CFC2E609F7CD53b746E1F234", "source": "networks.ts wrappedNative / protocolData wrapped-hype.whype" },
+    "USDC": { "address": "0x7D29d8047B905000459c0E80c34a26CeedcB47b2", "source": "protocolData kalos-v3 pool token0 / cheshire USDC vault asset" },
+    "KALOS": { "address": "0x8a2201953AF29e8BE7700bcB53dA3ce5caD18726", "source": "protocolData kalos-v3.kalos" },
+    "stKALOS": { "address": "0xa7531D7bE19f29B991d97eaA17b034715a835e35", "source": "protocolData kalos-v3.stakedKALOS" },
+    "DDC_WETH": { "address": "0xfF5681eB95bBaCfbB334F80fCDBc31fB59F22332", "source": "protocolData dex-da-costa.weth" },
+    "HEX_WNATIVE": { "address": "0x8FEdA963AA318dC94403A413AA94271588B92d64", "source": "protocolData hexswap.hexWrappedNative" },
+    "HEX_tUSDT": { "address": "0xF04e426488A8679D6888ec9FB4922a98Dd2c17b0", "source": "protocolData hexswap.hexSwapTestUSDT" },
+    "PERPME_WETH9": { "address": "0x757a34dd7b411546C6dd8f510B52e4381102f9B0", "source": "protocolData perpme.weth9" },
+    "PERPME": { "address": "0xD089Ff84573e35626AAe2Cc92d1acFc4B3E225E1", "source": "protocolData perpme.perpMeV3TokenV2" }
+  },
+  "venues": [
+    { "key": "whype", "kind": "WRAPPER", "address": "0xCD57F65c2B0e5881CFC2E609F7CD53b746E1F234", "source": "protocolData wrapped-hype.whype" },
+    { "key": "ddcWeth", "kind": "WRAPPER", "address": "0xfF5681eB95bBaCfbB334F80fCDBc31fB59F22332", "source": "protocolData dex-da-costa.weth" },
+    { "key": "hexWrappedNative", "kind": "WRAPPER", "address": "0x8FEdA963AA318dC94403A413AA94271588B92d64", "source": "protocolData hexswap.hexWrappedNative" },
+    { "key": "perpmeWeth9", "kind": "WRAPPER", "address": "0x757a34dd7b411546C6dd8f510B52e4381102f9B0", "source": "protocolData perpme.weth9" },
+    { "key": "kalosSwapRouter", "kind": "V3_ROUTER_V1", "address": "0x752f6816Bc514e1Eeff852b2eAdcd96f6c0F9f3f", "source": "protocolData kalos-v3.swapRouterWETH9CanonicalWHYPE" },
+    { "key": "perpmeSwapRouterV1", "kind": "V3_ROUTER_V1", "address": "0xD218817cfCcA3Ae397dE3a6E66889D4Fb4b9e2D1", "source": "protocolData perpme.swapRouterV1" },
+    { "key": "dexDaCostaRouter", "kind": "V2_ROUTER", "address": "0x72D435b8030A5195Bdb7594EDEa1ff315B9994c7", "source": "protocolData dex-da-costa.router" },
+    { "key": "hexSwapRouter", "kind": "V2_ROUTER", "address": "0x9D02c1D684389D021bF2Cf73D1ba7C4652aB1F15", "source": "protocolData hexswap.hexSwapRouter" },
+    { "key": "stKALOS", "kind": "VAULT", "address": "0xa7531D7bE19f29B991d97eaA17b034715a835e35", "source": "protocolData kalos-stkalos.stKALOSERC4626" },
+    { "key": "cheshireWHYPEVault", "kind": "VAULT", "address": "0xfd954b4F89fAd915E8C74B23a46CA1cfC626a7Ef", "source": "protocolData cheshire.cheshireWHYPEMorphoVault" },
+    { "key": "cheshireUSDCVault", "kind": "VAULT", "address": "0xf6B3bc8b51641037ea8c7621bD8E0ed600752d4B", "source": "protocolData cheshire.cheshireUSDCMorphoVault" }
+  ],
+  "excluded": [
+    { "key": "perpmeSwapRouter02V2", "address": "0x0ff05270600E905B80906f365739E9c15354A11A", "reason": "PerpMe v2 factory had no pools for known tokens at the pinned fork block; SwapRouter02 adapter is covered by unit tests only. Add with setVenue(.., V3_ROUTER_02) after a fork check." },
+    { "key": "kalosSwapRouterKalosWHYPE", "address": "0xE9649F69f48e8dd772401cBB8D5e03BC732EF4a2", "reason": "Same pools as the canonical-WHYPE router; its WETH9 is Kalos' own WHYPE. Redundant." },
+    { "key": "cheshireWHYPEMorphoVault2", "address": "0x05381abF5253E8989bB3979a294B07a062f84840", "reason": "Marked deprecated in protocolData." }
+  ],
+  "pools": {
+    "kalosWHYPE_USDC_2pct": { "address": "0x591Aa2eC4275135C640D07F9eAa35CDad52ab05c", "fee": 20000, "source": "protocolData kalos-v3.poolWHYPEUSDC2" },
+    "kalosKALOS_WHYPE_03pct": { "address": "0x224966692C8B849AF834885Fe07848Ffd8C2C375", "fee": 3000, "source": "protocolData kalos-v3.poolKALOSWHYPE03" },
+    "kalosKALOS_USDC_2pct": { "address": "0x7a6197E6c3A5CB9a2334aBD9Eb85FA8579254846", "fee": 20000, "source": "protocolData kalos-v3.poolKALOSUSDC2" }
+  },
+  "quoters": {
+    "kalosQuoterV2": { "address": "0x2b555398ac8BAf5d4B541EF12E565eF312739149", "source": "protocolData kalos-v3.quoterV2" }
+  }
+}

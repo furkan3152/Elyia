@@ -19,6 +19,7 @@ import type { AdapterRoute, ProtocolAdapter } from "./types.js";
 import { createLendingAdapter } from "./adapters/lending.js";
 import { createSignalAdapter } from "./adapters/signalV4.js";
 import { createVaultAdapter } from "./adapters/vault4626.js";
+import { createElyiaRouterAdapter } from "./adapters/elyiaRouter.js";
 import { LENDING_VENUES, V2_VENUES, V3_VENUES, VAULT_VENUES } from "./venues.js";
 
 /** The built-in adapters in preference order. */
@@ -28,6 +29,8 @@ export function createAdapters(deps: EngineDeps): ProtocolAdapter[] {
     createWrapAdapter(deps),
     ...V3_VENUES.map((venue) => createV3SwapAdapter(deps, venue)),
     ...V2_VENUES.map((venue) => createV2SwapAdapter(deps, venue)),
+    // Elyia's own router: split routes across the venues above; explicit-only until it is deployed.
+    createElyiaRouterAdapter(deps),
     createSignalAdapter(deps),
     createKinetiqAdapter(deps),
     ...VAULT_VENUES.map((venue) => createVaultAdapter(deps, venue)),
