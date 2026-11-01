@@ -7,7 +7,7 @@ import { PixelGlyph } from "../../pixel/PixelGlyph";
 import { Link } from "../routes/Link";
 import { useRoute } from "../routes/useRoute";
 import { MotionSwitch } from "./MotionToggle";
-import { MORE_NAV, PRIMARY_NAV, SETTINGS_ITEM } from "./navItems";
+import { PHONE_MORE_NAV, PHONE_NAV, SETTINGS_ITEM } from "./navItems";
 import { ThemeToggle } from "./ThemeToggle";
 
 const TAB = "flex h-full flex-1 flex-col items-center justify-center gap-1 font-tag text-[11px] uppercase";
@@ -29,13 +29,13 @@ const GLYPH: Readonly<Record<string, readonly string[]>> = {
 export function MobileBar() {
   const [open, setOpen] = useState(false);
   const { location } = useRoute();
-  const more = [...MORE_NAV, SETTINGS_ITEM];
+  const more = [...PHONE_MORE_NAV, SETTINGS_ITEM];
   const moreActive = more.some((item) => location.pathname === item.href || location.pathname.startsWith(`${item.href}/`));
   return (
     <>
       <nav aria-label="Deck" className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t-2 border-rule bg-paper md:hidden">
         <ul className="grid h-16 grid-cols-5 items-stretch gap-2 px-3 py-2">
-          {PRIMARY_NAV.map((item) => (
+          {PHONE_NAV.map((item) => (
             <li key={item.id} className="flex min-w-0">
               <Link
                 to={item.href}

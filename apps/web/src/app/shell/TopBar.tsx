@@ -69,7 +69,7 @@ export function TopBar() {
       }
       actions={
         <>
-          <WhereToTrigger className="hidden md:inline-flex" />
+          <WhereToTrigger className="hidden md:inline-flex lg:hidden 2xl:inline-flex" />
           <ThemeToggle compact />
           <MotionToggle compact className="hidden xl:inline-flex" />
           <WalletButton compact />

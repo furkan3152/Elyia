@@ -20,9 +20,11 @@ export type RouteId =
   | "landing"
   | "elysium"
   | "developers"
+  | "admin"
   | "system"
   | "kit"
   | "deck"
+  | "basecamp"
   | "trade"
   | "swap"
   | "earn"
@@ -82,8 +84,17 @@ export const ROUTES: Readonly<Record<RouteId, RouteDefinition>> = Object.freeze(
     pattern: "/developers",
     kind: "site",
     title: "Developers",
-    description: "The Elyia API, MCP server and SDK snippets for Elysium, HyperEVM and HyperCore.",
+    description: "The Elyia developer portal: API keys, usage, a live playground, MCP, webhooks, the widget and your integrator fee.",
     load: () => import("../../pages/developers/DevelopersPage"),
+  },
+  admin: {
+    id: "admin",
+    pattern: "/admin",
+    kind: "app",
+    title: "Owner console",
+    description: "Owner only: deploy and configure Elyia's contracts from your own wallet; flags, health and usage.",
+    robots: PRIVATE_ROBOTS,
+    load: () => import("../../pages/admin/AdminPage"),
   },
   system: {
     id: "system",
@@ -108,8 +119,16 @@ export const ROUTES: Readonly<Record<RouteId, RouteDefinition>> = Object.freeze(
     id: "deck",
     pattern: "/app",
     kind: "app",
-    title: "Deck",
-    description: "Your Elyia deck: net worth across HyperCore, HyperEVM and Elysium, the Lyre of your positions, quick intents and the agent feed.",
+    title: "Ask Ely",
+    description: "Ask Ely in one sentence: it surveys HyperCore, HyperEVM and Elysium, drafts the route card, and your wallet signs every step.",
+    load: () => import("../../pages/ask/AskPage"),
+  },
+  basecamp: {
+    id: "basecamp",
+    pattern: "/app/deck",
+    kind: "app",
+    title: "Base camp",
+    description: "Your Elyia base camp: net worth across HyperCore, HyperEVM and Elysium, your ropes, recent routes and the agent feed.",
     load: () => import("../../pages/deck/DeckPage"),
   },
   trade: {
@@ -228,9 +247,11 @@ const ORDER: readonly RouteId[] = [
   "landing",
   "elysium",
   "developers",
+  "admin",
   "system",
   "kit",
   "deck",
+  "basecamp",
   "trade",
   "swap",
   "earn",
