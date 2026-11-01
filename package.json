@@ -10,6 +10,7 @@
   },
   "workspaces": [
     "packages/core",
+    "packages/contracts",
     "apps/api",
     "apps/web"
   ],
