@@ -82,7 +82,7 @@ function LiveBarograph() {
 export function ArtifactsSection() {
   const [quoteExpiry] = useState(() => Date.now() + 42_000);
   return (
-    <Section id="kit" tag="05 · Interface kit · drawn artifacts" title="The same pixel, on every screen." lede="Ropes, route cards, altimeters and stamps are drawn with the same 4 px line: stepped corners, one block shadow, colour = altitude.">
+    <Section id="kit" tag="05 · Interface kit · drawn artifacts" title="The same pixel, on every screen." lede="Ropes, route cards, altimeters and stamps are drawn with the same 4 px line: stepped corners, tone lines instead of ink, colour = altitude.">
       <ImportLine>{'import { PixelRope, PixelAltimeter, PixelStamp, PixelProfile, PixelBarograph } from "src/pixel"'}</ImportLine>
 
       <Split>

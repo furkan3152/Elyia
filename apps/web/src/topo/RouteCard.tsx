@@ -129,7 +129,7 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
   return (
     <article className={cx("grid bg-card px-frame px-drop lg:grid-cols-[minmax(0,1fr)_240px]", className)} aria-labelledby={labelId}>
       <div className="min-w-0">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-rule px-4 py-3 sm:px-5">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-rule px-4 py-3 sm:px-5">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
             <h3 id={labelId} className="font-display text-[28px] font-bold leading-none text-ink">
               Route {id}
@@ -141,9 +141,9 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
           </div>
           <GradeChip grade={grade} />
         </header>
-        <p className="border-b-2 border-dashed border-rule/40 px-4 py-3 font-mono text-[15px] leading-snug text-ink sm:px-5">“{sentence}”</p>
+        <p className="border-b-2 border-dashed border-rule px-4 py-3 font-mono text-[15px] leading-snug text-ink sm:px-5">“{sentence}”</p>
         {/* the elevation profile of the route */}
-        <div className="relative border-b-4 border-rule">
+        <div className="relative border-b-2 border-rule">
           <PixelCanvas
             width={240}
             height={66}
@@ -192,7 +192,7 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
             <thead>
               <tr className="font-tag text-[11px] uppercase tracking-[0.04em] text-ink-2">
                 {["WP", "Layer", "Action · venue", "In → out", "Hut fee", "Time", "State"].map((heading, index) => (
-                  <th key={heading} scope="col" className={cx("whitespace-nowrap border-b-4 border-rule py-2 font-normal", index === 0 ? "pl-5 pr-2 text-left" : "px-3 text-left", (index === 4 || index === 5) && "text-right")}>
+                  <th key={heading} scope="col" className={cx("whitespace-nowrap border-b-2 border-rule py-2 font-normal", index === 0 ? "pl-5 pr-2 text-left" : "px-3 text-left", (index === 4 || index === 5) && "text-right")}>
                     {heading}
                   </th>
                 ))}
@@ -201,8 +201,8 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
             <tbody>
               {steps.map((step, index) => (
                 <tr key={step.id} className={cx(step.state === "climbing" && "bg-signal [&_*]:!text-signal-ink")}>
-                  <td className="tnum border-b-2 border-dashed border-rule/15 py-2 pl-5 pr-2 font-mono text-ink-2">{index + 1}</td>
-                  <td className="whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 font-mono text-xs font-semibold">
+                  <td className="tnum border-b-2 border-dashed border-rule py-2 pl-5 pr-2 font-mono text-ink-2">{index + 1}</td>
+                  <td className="whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2 font-mono text-xs font-semibold">
                     <span className={LAYER_TEXT[step.layer]}>{step.layer.toUpperCase()}</span>
                     {step.toLayer ? (
                       <>
@@ -211,13 +211,13 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
                       </>
                     ) : null}
                   </td>
-                  <td className="whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 text-ink">
+                  <td className="whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2 text-ink">
                     {step.action} <span className="text-ink-3">·</span> {step.venue}
                   </td>
-                  <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 font-mono text-xs text-ink">{step.inOut}</td>
-                  <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 text-right font-mono text-xs text-ink">{step.fee}</td>
-                  <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 text-right font-mono text-xs text-ink-2">{step.eta}</td>
-                  <td className={cx("whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 font-tag text-[11px] uppercase", STATE_CLASS[step.state])}>
+                  <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2 font-mono text-xs text-ink">{step.inOut}</td>
+                  <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2 text-right font-mono text-xs text-ink">{step.fee}</td>
+                  <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2 text-right font-mono text-xs text-ink-2">{step.eta}</td>
+                  <td className={cx("whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2 font-tag text-[11px] uppercase", STATE_CLASS[step.state])}>
                     {step.state === "settled" ? (
                       <HutStamp layer={step.toLayer ?? step.layer} time={step.time} size={48} animate delayMs={300 + index * 160} label={`Settled on the ${step.toLayer ?? step.layer}${step.block !== undefined ? `, block ${step.block}` : ""}`} />
                     ) : (
@@ -248,7 +248,7 @@ export function RouteCard({ id, sentence, grade, steps, fees, signatures, quote,
         ) : null}
       </div>
       {/* the stub: keep it */}
-      <aside className="flex flex-col gap-4 border-t-4 border-dashed border-rule/50 px-4 py-4 lg:border-l-4 lg:border-t-0 lg:px-5" aria-label="Route stub">
+      <aside className="flex flex-col gap-4 border-t-2 border-dashed border-rule px-4 py-4 lg:border-l-2 lg:border-t-0 lg:px-5" aria-label="Route stub">
         <p className="caption">Stub · keep</p>
         <div>
           <p className="caption !text-ink-3">Hut fees</p>

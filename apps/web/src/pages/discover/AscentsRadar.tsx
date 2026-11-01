@@ -38,9 +38,9 @@ function RadarScope({ ascents, hover, picked, onPick }: { readonly ascents: read
       <div className="p-4 sm:p-6">
         <PixelCanvas width={compact ? 110 : 140} height={140} aspect={1} draw={draw} animate fps={12} redrawKey={`${picked}|${hover}|${night}|${blips.length}`} label={`First ascents radar: ${ascents.length} newest HyperCore spot tokens, freshest nearest the centre${picked ? `; picked ${picked}` : ""}`} />
       </div>
-      <div className="flex flex-wrap justify-center gap-3 border-t-4 border-rule px-4 py-4" role="group" aria-label="Pick a launch on the radar">
+      <div className="flex flex-wrap justify-center gap-3 border-t-2 border-rule px-4 py-4" role="group" aria-label="Pick a launch on the radar">
         {ascents.slice(0, 5).map((ascent) => (
-          <button key={ascent.name} type="button" aria-pressed={picked === ascent.name} onClick={() => onPick(ascent.name)} className={cx("px-2 py-0.5 font-tag text-[11px] uppercase px-frame-thin px-press", picked === ascent.name ? "bg-signal text-signal-ink" : "bg-card text-ink", FOCUS_RING)}>
+          <button key={ascent.name} type="button" aria-pressed={picked === ascent.name} onClick={() => onPick(ascent.name)} className={cx("px-btn px-btn-thin px-2 py-0.5 font-tag text-[11px] uppercase", picked === ascent.name ? "px-btn-signal text-signal-ink" : "px-btn-paper text-ink", FOCUS_RING)}>
             {ascent.name}
           </button>
         ))}
@@ -98,7 +98,7 @@ export function AscentsRadar({ mode: appMode }: { readonly mode: NetworkEnvironm
           <RadarScope ascents={ascents} hover={hover} picked={chosen} onPick={(name) => setPicked(name)} />
         )}
         <section aria-labelledby="ascents-title" className="flex min-w-0 flex-col bg-card px-frame px-drop">
-          <header className="flex flex-col items-center gap-2 border-b-4 border-rule px-5 py-5 text-center">
+          <header className="flex flex-col items-center gap-2 border-b-2 border-rule px-5 py-5 text-center">
             <p className="caption">{mode === "mainnet" ? "HyperCore mainnet · read only" : "HyperCore testnet"}</p>
             <h3 id="ascents-title" className="font-display text-[24px] font-bold leading-none text-ink">
               Newest on the Floor
@@ -109,7 +109,7 @@ export function AscentsRadar({ mode: appMode }: { readonly mode: NetworkEnvironm
           ) : (
             <ol className="flex flex-col" aria-label="Newest HyperCore spot tokens">
               {(query.isPending ? [] : ascents).map((ascent, rank) => (
-                <li key={ascent.name} onMouseEnter={() => setHover(ascent.name)} onMouseLeave={() => setHover(null)} className={cx("grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-x-3 border-b-2 border-dashed border-rule/20 px-5 py-2.5", chosen === ascent.name && "bg-signal text-signal-ink")}>
+                <li key={ascent.name} onMouseEnter={() => setHover(ascent.name)} onMouseLeave={() => setHover(null)} className={cx("grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-x-3 border-b-2 border-dashed border-rule px-5 py-2.5", chosen === ascent.name && "bg-signal text-signal-ink")}>
                   <span className="tnum font-tag text-[11px] opacity-70">{String(rank + 1).padStart(2, "0")}</span>
                   <span className="min-w-0">
                     <span className="flex items-baseline gap-2">
@@ -143,7 +143,7 @@ export function AscentsRadar({ mode: appMode }: { readonly mode: NetworkEnvironm
                 : null}
             </ol>
           )}
-          <p className="mt-auto border-t-4 border-dashed border-rule/30 px-5 py-4 text-center font-mono text-[11px] leading-relaxed text-ink-2 text-pretty">
+          <p className="mt-auto border-t-2 border-dashed border-rule px-5 py-4 text-center font-mono text-[11px] leading-relaxed text-ink-2 text-pretty">
             {tradable ? "" : "Mainnet, read only: the practice wall trades testnet, so these rows do not open the terminal. "}Fresh launches read CAUTION until Shield has checked them. New Elysium pools join this radar when the discovery API&apos;s launch indexer comes online.
           </p>
         </section>

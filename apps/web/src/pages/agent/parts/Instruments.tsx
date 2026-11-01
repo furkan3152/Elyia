@@ -26,7 +26,7 @@ const LINE_TONE = { up: "text-up", down: "text-down", strong: "font-semibold tex
 export function InstrumentCard({ title, aside, children, className, tone = "ink" }: { readonly title: React.ReactNode; readonly aside?: React.ReactNode; readonly children: React.ReactNode; readonly className?: string; readonly tone?: "ink" | "summit" }) {
   return (
     <section className={cx("flex min-w-0 flex-col bg-card px-frame px-drop", className)}>
-      <header className={cx("flex min-h-[44px] items-center justify-between gap-3 border-b-4 border-rule px-4 py-2", tone === "summit" ? "bg-accent text-accent-ink" : "bg-paper-2")}>
+      <header className={cx("flex min-h-[44px] items-center justify-between gap-3 border-b-2 border-rule px-4 py-2", tone === "summit" ? "bg-accent text-accent-ink" : "bg-paper-2")}>
         <h3 className={cx("truncate font-tag text-[12px] uppercase", tone === "summit" ? "text-accent-ink" : "text-ink")}>{title}</h3>
         {aside ? <div className={cx("flex shrink-0 items-center gap-2 font-tag text-[11px] uppercase", tone === "summit" ? "text-accent-ink" : "text-ink-2")}>{aside}</div> : null}
       </header>
@@ -51,7 +51,7 @@ export function MorningBulletin({ columns, now, sample, onAsk }: { readonly colu
         const sky = skyFor(column, index);
         return (
           <li key={column.title} className="flex flex-col bg-card px-frame px-drop">
-            <header className="flex flex-col items-center gap-2 border-b-4 border-rule bg-paper-2 px-4 pb-3 pt-4 text-center">
+            <header className="flex flex-col items-center gap-2 border-b-2 border-rule bg-paper-2 px-4 pb-3 pt-4 text-center">
               <PixelGlyph rows={weatherGlyph(sky)} scale={4} label={`${column.title}: ${sky === "storm" ? "storm" : sky === "overcast" ? "overcast" : sky === "few" ? "a few clouds" : "clear"}`} />
               <h3 className="font-display text-[22px] font-bold text-ink">{column.title}</h3>
               <span className="font-tag text-[11px] uppercase text-ink-3">
@@ -67,7 +67,7 @@ export function MorningBulletin({ columns, now, sample, onAsk }: { readonly colu
                 </p>
               ))}
               {column.ask ? (
-                <button type="button" onClick={() => onAsk(column.ask!.question)} className={cx("mt-auto self-center bg-signal px-3 py-1.5 font-tag text-[11px] uppercase text-signal-ink px-frame-thin px-drop px-press", FOCUS_RING)}>
+                <button type="button" onClick={() => onAsk(column.ask!.question)} className={cx("px-btn px-btn-thin mt-auto self-center px-btn-signal px-3 py-1.5 font-tag text-[11px] uppercase text-signal-ink", FOCUS_RING)}>
                   Ask Ely: {column.ask.label} ▸
                 </button>
               ) : null}
@@ -145,14 +145,14 @@ export function StandingOrders({ rules, statuses, onToggle, onRemove, onAsk, cla
             title="No standing orders"
             description="Tell Ely what to watch and what to draft when it happens. It drafts; you sign."
             action={
-              <button type="button" onClick={() => onAsk("when any rope is under 10%, close half")} className={cx("bg-card px-3 py-1.5 font-mono text-[12px] text-ink px-frame-thin px-drop px-press", FOCUS_RING)}>
+              <button type="button" onClick={() => onAsk("when any rope is under 10%, close half")} className={cx("px-btn px-btn-thin px-btn-paper px-3 py-1.5 font-mono text-[12px] text-ink", FOCUS_RING)}>
                 “when any rope is under 10%, close half” ▸
               </button>
             }
           />
         </div>
       ) : (
-        <ul className="flex flex-1 flex-col divide-y-2 divide-dashed divide-rule/20">
+        <ul className="flex flex-1 flex-col divide-y-2 divide-dashed divide-rule">
           {rules.map((rule) => {
             const status = statuses.get(rule.id);
             return (
@@ -164,7 +164,7 @@ export function StandingOrders({ rules, statuses, onToggle, onRemove, onAsk, cla
                   type="button"
                   onClick={() => onToggle(rule)}
                   aria-pressed={rule.armed}
-                  className={cx("flex items-center gap-1.5 px-2 py-0.5 font-tag text-[11px] uppercase px-frame-thin px-press", rule.armed ? "bg-signal text-signal-ink" : "bg-card text-ink-3", FOCUS_RING)}
+                  className={cx("px-btn px-btn-thin flex items-center gap-1.5 px-2 py-0.5 font-tag text-[11px] uppercase", rule.armed ? "px-btn-signal text-signal-ink" : "px-btn-paper text-ink-3", FOCUS_RING)}
                 >
                   <span aria-hidden="true">{rule.armed ? "●" : "○"}</span>
                   {rule.armed ? "Armed" : "Paused"}
@@ -256,7 +256,7 @@ export function KillNote({ side, on }: { readonly side: "stops" | "works"; reado
     : ["Closing positions (reduce-only)", "Cancelling open orders", "Reading the range and the radio", "Your wallet, which never signed here"];
   return (
     <section className="flex h-full flex-col bg-card px-frame px-drop" aria-labelledby={`kill-${side}`}>
-      <header className={cx("flex items-center justify-center gap-2 border-b-4 border-rule px-4 py-3", stops ? "bg-down text-card" : "bg-up text-card")}>
+      <header className={cx("flex items-center justify-center gap-2 border-b-2 border-rule px-4 py-3", stops ? "bg-down text-card" : "bg-up text-card")}>
         <h3 id={`kill-${side}`} className="font-tag text-[12px] uppercase">
           {stops ? "✕ What it stops" : "✓ What still works"}
         </h3>
@@ -269,7 +269,7 @@ export function KillNote({ side, on }: { readonly side: "stops" | "works"; reado
           </li>
         ))}
       </ul>
-      <p className="border-t-4 border-dashed border-rule/30 px-4 py-2 text-center font-tag text-[11px] uppercase text-ink-3">{stops ? (on ? "now: stopped" : "now: running") : "always"}</p>
+      <p className="border-t-2 border-dashed border-rule px-4 py-2 text-center font-tag text-[11px] uppercase text-ink-3">{stops ? (on ? "now: stopped" : "now: running") : "always"}</p>
     </section>
   );
 }

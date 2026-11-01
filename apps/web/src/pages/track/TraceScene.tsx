@@ -44,7 +44,7 @@ export function TraceScene({ stations, idleText, idleMood, caption, label, class
     <PixelFigure className={className} caption={caption}>
       <PixelCanvas width={compact ? 200 : 400} height={compact ? 108 : 120} draw={draw} animate fps={12} redrawKey={`${key}|${idleText}|${night}|${compact}`} label={label} />
       {stations.length > 0 ? (
-        <ol className="grid border-t-4 border-rule" style={{ gridTemplateColumns: `repeat(${stations.length}, minmax(0, 1fr))`, paddingLeft: gutter, paddingRight: gutter }} aria-label="Stages">
+        <ol className="grid border-t-2 border-rule" style={{ gridTemplateColumns: `repeat(${stations.length}, minmax(0, 1fr))`, paddingLeft: gutter, paddingRight: gutter }} aria-label="Stages">
           {stations.map((station, index) => (
             <li key={station.label} className={cx("flex min-w-0 flex-col items-center gap-1 px-1 py-3 text-center", STATE_CLASS[station.state])}>
               <span className="tnum font-tag text-[10px] uppercase opacity-80">

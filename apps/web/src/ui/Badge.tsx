@@ -17,12 +17,19 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 const VARIANT = { soft: SOFT_TONE, outline: OUTLINE_TONE, solid: SOLID_TONE } as const;
 
+/** Ink-text tones keep the tone line (never an ink outline); coloured tones outline in their own colour. */
+const INK_TONES: ReadonlySet<Tone> = new Set<Tone>(["neutral", "gold", "signal"]);
+function frameColour(tone: Tone, variant: "soft" | "outline" | "solid"): string | false {
+  return variant !== "solid" && !INK_TONES.has(tone) && "[--pf-c:currentColor]";
+}
+
 /** Static label: status, network, "sample", "live". Silkscreen caps in a 2 px stepped frame of its own colour. */
 export function Badge({ tone = "neutral", variant = "soft", size = "sm", dot = false, mono = true, className, children, ...rest }: BadgeProps) {
   return (
     <span
       className={cx(
-        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-frame-thin [--pf-c:currentColor]",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-frame-thin",
+        frameColour(tone, variant),
         size === "sm" ? "h-5 px-2 text-[11px]" : "h-6 px-2.5 text-xs",
         mono && "font-tag uppercase tracking-[0.04em]",
         VARIANT[variant][tone],
@@ -45,7 +52,7 @@ export interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 
 /**
  * Interactive token: example intents, filters and presets. With `selected`
- * it is a toggle button (aria-pressed) and turns into an ink block.
+ * it is a toggle button (aria-pressed) and turns into a glacier bevel.
  */
 export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(function Chip(
   { tone = "neutral", selected, mono = false, className, type = "button", children, ...rest },
@@ -59,7 +66,7 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(function Chip
       className={cx(
         "inline-flex min-h-8 items-center gap-1.5 px-2.5 py-1 text-left text-[13px] px-frame-thin transition-[background-color,color,transform] duration-fast ease-standard active:translate-y-[2px]",
         mono && "font-mono text-xs",
-        selected ? "bg-ink text-paper" : cx(SOFT_TONE[tone], "[--pf-c:currentColor] hover:text-ink"),
+        selected ? "px-btn px-btn-thin px-btn-accent text-accent-ink" : cx(SOFT_TONE[tone], frameColour(tone, "soft"), "hover:text-ink"),
         FOCUS_RING,
         className,
       )}

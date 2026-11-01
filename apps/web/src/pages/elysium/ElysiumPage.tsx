@@ -158,7 +158,7 @@ function BlockRegister({ rows }: { readonly rows: readonly RegisterLine[] }) {
   return (
     <ol aria-label="Latest Elysium testnet blocks, newest first" className="m-0 flex list-none flex-col p-0">
       {rows.map((row, index) => (
-        <li key={row.id} className={cx("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 py-2", index > 0 && "border-t-2 border-dashed border-rule/20")}>
+        <li key={row.id} className={cx("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 py-2", index > 0 && "border-t-2 border-dashed border-rule")}>
           <span className="flex min-w-0 flex-col">
             {EXPLORER ? (
               <a href={`${EXPLORER.url}/block/${row.number}`} target="_blank" rel="noopener noreferrer" className={cx("tnum self-start font-display text-[18px] font-bold leading-tight text-ink hover:text-summit-ink", FOCUS_RING)}>

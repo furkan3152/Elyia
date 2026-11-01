@@ -105,7 +105,7 @@ export function NumberInput({
                 if (next !== null) onChange(next);
               }}
               className={cx(
-                "h-7 bg-card px-2.5 font-tag text-[11px] text-ink-2 px-frame-thin transition-colors duration-fast hover:bg-ink hover:text-paper disabled:opacity-45",
+                "h-7 bg-card px-2.5 font-tag text-[11px] text-ink-2 px-frame-thin transition-colors duration-fast hover:bg-paper-2 hover:text-ink disabled:opacity-45",
                 FOCUS_RING,
               )}
             >

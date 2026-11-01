@@ -38,22 +38,22 @@ export function SummitRegister({ rows, caption, empty, className }: SummitRegist
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="font-tag text-[11px] uppercase tracking-[0.04em] text-ink-2">
-            <th scope="col" className="w-10 border-b-4 border-rule py-2 pl-4 pr-2 text-right font-medium">
+            <th scope="col" className="w-10 border-b-2 border-rule py-2 pl-4 pr-2 text-right font-medium">
               No.
             </th>
-            <th scope="col" className="border-b-4 border-rule px-3 py-2 text-left font-medium">
+            <th scope="col" className="border-b-2 border-rule px-3 py-2 text-left font-medium">
               When
             </th>
-            <th scope="col" className="border-b-4 border-rule px-3 py-2 text-left font-medium">
+            <th scope="col" className="border-b-2 border-rule px-3 py-2 text-left font-medium">
               Entry
             </th>
-            <th scope="col" className="border-b-4 border-rule px-3 py-2 text-left font-medium">
+            <th scope="col" className="border-b-2 border-rule px-3 py-2 text-left font-medium">
               Where
             </th>
-            <th scope="col" className="border-b-4 border-rule px-3 py-2 text-right font-medium">
+            <th scope="col" className="border-b-2 border-rule px-3 py-2 text-right font-medium">
               Amount
             </th>
-            <th scope="col" className="border-b-4 border-rule px-3 py-2 text-right font-medium">
+            <th scope="col" className="border-b-2 border-rule px-3 py-2 text-right font-medium">
               Proof
             </th>
           </tr>
@@ -61,17 +61,17 @@ export function SummitRegister({ rows, caption, empty, className }: SummitRegist
         <tbody>
           {rows.map((row, index) => (
             <tr key={row.id} className="align-baseline">
-              <td className="tnum border-b-2 border-dashed border-rule/15 py-2 pl-4 pr-2 text-right font-mono text-[11px] text-ink-3">{String(index + 1).padStart(2, "0")}</td>
-              <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 font-mono text-xs text-ink-2">{row.when}</td>
-              <td className="min-w-[14rem] border-b-2 border-dashed border-rule/15 px-3 py-2 text-ink">{row.entry}</td>
-              <td className="whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2">
+              <td className="tnum border-b-2 border-dashed border-rule py-2 pl-4 pr-2 text-right font-mono text-[11px] text-ink-3">{String(index + 1).padStart(2, "0")}</td>
+              <td className="tnum whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2 font-mono text-xs text-ink-2">{row.when}</td>
+              <td className="min-w-[14rem] border-b-2 border-dashed border-rule px-3 py-2 text-ink">{row.entry}</td>
+              <td className="whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2">
                 <LayerChip layer={row.layer} />
               </td>
-              <td className={cx("tnum whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 text-right font-mono", row.direction === "up" ? "text-up" : row.direction === "down" ? "text-down" : "text-ink")}>
+              <td className={cx("tnum whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2 text-right font-mono", row.direction === "up" ? "text-up" : row.direction === "down" ? "text-down" : "text-ink")}>
                 {row.direction === "up" ? "▲ " : row.direction === "down" ? "▼ " : ""}
                 {row.amount ?? "—"}
               </td>
-              <td className="whitespace-nowrap border-b-2 border-dashed border-rule/15 px-3 py-2 text-right font-mono text-xs">
+              <td className="whitespace-nowrap border-b-2 border-dashed border-rule px-3 py-2 text-right font-mono text-xs">
                 {row.proof ? (
                   <a href={row.proof.href} target="_blank" rel="noopener noreferrer" className="text-summit-ink underline decoration-1 underline-offset-2 hover:text-ink">
                     {row.proof.label}

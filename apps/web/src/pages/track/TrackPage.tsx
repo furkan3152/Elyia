@@ -39,7 +39,7 @@ function LocalJourney({ record }: { readonly record: JourneyRecord }) {
       {record.legs.length > 1 ? (
         <div className="flex flex-wrap justify-center gap-4" role="group" aria-label="Proofs of this journey">
           {record.legs.map((item, at) => (
-            <button key={item.reference} type="button" onClick={() => setIndex(at)} aria-pressed={at === index} className={cx("px-3 py-1 font-mono text-[11px] px-frame-thin px-press", at === index ? "bg-ink text-paper" : "bg-card text-ink-2", FOCUS_RING)}>
+            <button key={item.reference} type="button" onClick={() => setIndex(at)} aria-pressed={at === index} className={cx("px-3 py-1 font-mono text-[11px] px-frame-thin px-press", at === index ? "px-btn px-btn-thin px-btn-accent text-accent-ink" : "bg-card text-ink-2", FOCUS_RING)}>
               {item.label}
             </button>
           ))}
@@ -116,7 +116,7 @@ export default function TrackPage() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <span className="font-tag text-[11px] uppercase text-ink-3">try a live one</span>
           {SAMPLES.map((sample) => (
-            <button key={sample.hash} type="button" onClick={() => navigate(routeHref("track", { id: sample.hash }))} className={cx("bg-card px-3 py-1.5 font-mono text-[12px] text-ink px-frame-thin px-drop px-press", FOCUS_RING)}>
+            <button key={sample.hash} type="button" onClick={() => navigate(routeHref("track", { id: sample.hash }))} className={cx("px-btn px-btn-thin px-btn-paper px-3 py-1.5 font-mono text-[12px] text-ink", FOCUS_RING)}>
               {sample.label}
             </button>
           ))}

@@ -94,7 +94,7 @@ export function DataTable<T>({
                   aria-sort={ariaSort}
                   style={column.width ? { width: column.width } : undefined}
                   className={cx(
-                    "whitespace-nowrap border-b-4 border-rule font-tag text-[11px] uppercase tracking-[0.04em] text-ink-2",
+                    "whitespace-nowrap border-b-2 border-rule font-tag text-[11px] uppercase tracking-[0.04em] text-ink-2",
                     cellPad,
                     ALIGN[align],
                     stickyHeader && "sticky top-0 z-[1] bg-card",
@@ -135,7 +135,7 @@ export function DataTable<T>({
             ? Array.from({ length: loadingRows }, (_, index) => (
                 <tr key={`loading-${index}`}>
                   {columns.map((column) => (
-                    <td key={column.id} className={cx("border-b border-rule/15", cellPad)}>
+                    <td key={column.id} className={cx("border-b border-rule", cellPad)}>
                       <Skeleton className={cx("h-3", column.align === "right" ? "ml-auto w-14" : "w-20")} />
                     </td>
                   ))}
@@ -173,7 +173,7 @@ export function DataTable<T>({
                         <td
                           key={column.id}
                           className={cx(
-                            "whitespace-nowrap border-b border-rule/15 text-ink",
+                            "whitespace-nowrap border-b border-rule text-ink",
                             cellPad,
                             ALIGN[align],
                             numeric && "tnum font-mono",

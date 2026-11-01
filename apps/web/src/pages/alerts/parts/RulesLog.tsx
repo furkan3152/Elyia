@@ -22,7 +22,7 @@ export function RulesLog({ rules, statuses, now, onToggle, onRemove, onBuild }: 
           description="Build one above, or ask Ely: “alert me if BTC drops below 90k”. Every rule you arm shows up here as its own trail."
           action={
             onBuild ? (
-              <button type="button" onClick={onBuild} className={cx("bg-signal px-3 py-1.5 font-tag text-[11px] uppercase text-signal-ink px-frame-thin px-drop px-press", FOCUS_RING)}>
+              <button type="button" onClick={onBuild} className={cx("px-btn px-btn-thin px-btn-signal px-3 py-1.5 font-tag text-[11px] uppercase text-signal-ink", FOCUS_RING)}>
                 Build the first one ▲
               </button>
             ) : undefined
@@ -37,7 +37,7 @@ export function RulesLog({ rules, statuses, now, onToggle, onRemove, onBuild }: 
         const status = statuses.get(rule.id);
         return (
           <li key={rule.id} className={cx("flex flex-col bg-card px-frame px-drop", !rule.armed && "opacity-75")}>
-            <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-paper-2 px-4 py-2">
+            <header className="flex items-center justify-between gap-3 border-b-2 border-rule bg-paper-2 px-4 py-2">
               <span className="font-tag text-[11px] uppercase text-ink-2">
                 <span className="tnum text-ink">{String(index + 1).padStart(2, "0")}</span> · {KIND_LABEL[rule.kind]}
                 {rule.action ? " · standing order" : ""}
@@ -47,7 +47,7 @@ export function RulesLog({ rules, statuses, now, onToggle, onRemove, onBuild }: 
                 onClick={() => onToggle(rule)}
                 aria-pressed={rule.armed}
                 aria-label={`${rule.armed ? "Pause" : "Arm"}: ${ruleCondition(rule)}`}
-                className={cx("flex items-center gap-1.5 px-2 py-0.5 font-tag text-[11px] uppercase px-frame-thin px-press", rule.armed ? "bg-signal text-signal-ink" : "bg-card text-ink-3", FOCUS_RING)}
+                className={cx("px-btn px-btn-thin flex items-center gap-1.5 px-2 py-0.5 font-tag text-[11px] uppercase", rule.armed ? "px-btn-signal text-signal-ink" : "px-btn-paper text-ink-3", FOCUS_RING)}
               >
                 <span aria-hidden="true">{rule.armed ? "●" : "○"}</span>
                 {rule.armed ? "Armed" : "Paused"}
@@ -60,7 +60,7 @@ export function RulesLog({ rules, statuses, now, onToggle, onRemove, onBuild }: 
               </p>
               <div className="mt-auto">{status ? <TrailGauge status={status} rule={rule} /> : <p className="text-center font-mono text-[12px] text-ink-3">waiting for the first reading…</p>}</div>
             </div>
-            <footer className="flex items-center justify-between gap-3 border-t-4 border-dashed border-rule/30 px-4 py-2 font-mono text-[11px] text-ink-3">
+            <footer className="flex items-center justify-between gap-3 border-t-2 border-dashed border-rule px-4 py-2 font-mono text-[11px] text-ink-3">
               <span className="min-w-0 truncate">
                 {rule.action ? `drafts “${rule.action}” · ` : ""}
                 {rule.channels.telegram ? "feed + Telegram" : "feed"}

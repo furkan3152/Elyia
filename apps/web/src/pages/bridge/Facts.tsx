@@ -41,7 +41,7 @@ export function TicketWatch({ className }: { readonly className?: string }) {
   ] as const;
   return (
     <section className={cx("flex flex-col bg-card px-frame px-drop", className)} aria-labelledby="ticket-watch">
-      <header className="flex flex-col items-center gap-2 border-b-4 border-rule px-5 py-5 text-center">
+      <header className="flex flex-col items-center gap-2 border-b-2 border-rule px-5 py-5 text-center">
         <p className="caption">Retryable · 7-day life</p>
         <h3 id="ticket-watch" className="font-display text-[28px] font-bold leading-none text-ink">
           Ticket watch
@@ -54,7 +54,7 @@ export function TicketWatch({ className }: { readonly className?: string }) {
             return (
               <li key={index} className={cx("relative flex h-[76px] flex-col items-center justify-between py-2 px-frame-thin", manual ? "bg-paper-2" : "bg-card")} aria-hidden="true">
                 <span className="tnum font-tag text-[11px] text-ink-2">#{index + 1}</span>
-                <span className="w-full border-t-2 border-dashed border-rule/40" />
+                <span className="w-full border-t-2 border-dashed border-rule" />
                 <InkStamp text={manual ? "by hand" : "auto ✓"} tone={manual ? "down" : "up"} rotate={index % 2 === 0 ? -7 : 5} delay={200 + index * 120} />
               </li>
             );
@@ -69,7 +69,7 @@ export function TicketWatch({ className }: { readonly className?: string }) {
         <ol className="mt-auto grid grid-cols-2 gap-4 sm:grid-cols-4">
           {stages.map(([title, body], index) => (
             <li key={title} className="flex flex-col items-center gap-1 text-center">
-              <span className="flex h-7 w-7 items-center justify-center bg-ink font-tag text-[12px] text-paper">{index + 1}</span>
+              <span className="flex h-7 w-7 items-center justify-center bg-accent font-tag text-[12px] text-accent-ink">{index + 1}</span>
               <span className="font-tag text-[11px] uppercase text-ink">{title}</span>
               <span className="text-[12px] leading-snug text-ink-2">{body}</span>
             </li>
@@ -149,7 +149,7 @@ export function DescentClock({ mode, night, className }: { readonly mode: Networ
   ];
   return (
     <section className={cx("flex flex-col bg-card px-frame px-drop", className)} aria-labelledby="descent-clock">
-      <header className="flex flex-col items-center gap-2 border-b-4 border-rule px-5 py-5 text-center">
+      <header className="flex flex-col items-center gap-2 border-b-2 border-rule px-5 py-5 text-center">
         <p className="caption">Descent clock · the challenge period</p>
         <h3 id="descent-clock" className="font-display text-[28px] font-bold leading-none text-ink">
           Up by cable car. Down on foot.

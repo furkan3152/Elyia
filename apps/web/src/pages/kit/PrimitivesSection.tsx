@@ -66,7 +66,7 @@ export function PrimitivesSection() {
   const [where, setWhere] = useState("ascend 1,000 USDC: half to kHYPE, half to the Kalos pool");
 
   return (
-    <Section id="primitives" tag="06 · Primitives · src/ui" title="Stepped frames, one block shadow." lede="Every primitive keeps its props and gains the pixel: a 4 px stepped frame drawn with box-shadow, one solid block drop, Pixelify labels, and a dashed sun outline for focus.">
+    <Section id="primitives" tag="06 · Primitives · src/ui" title="Game buttons, tone frames." lede="Every primitive keeps its props and gains the pixel: buttons are bevelled like a retro game (light top-left, dark bottom-right, stepped corners), cards sit in a thin tone line with a depth band, Pixelify labels, and a dashed sun outline for focus.">
       <ImportLine>{'import { Button, Panel, Tabs, Slider, Toggle, Input, Dialog, toast } from "src/ui"'}</ImportLine>
 
       <Split>
@@ -194,7 +194,7 @@ export function PrimitivesSection() {
         </Panel>
         <Panel padding="lg" className="flex h-full flex-col items-center justify-center text-center">
           <p className="caption !text-ink">Panel · raised (default)</p>
-          <p className="mt-2 text-sm text-ink-2">Frame and one block drop.</p>
+          <p className="mt-2 text-sm text-ink-2">Tone line and a depth band.</p>
         </Panel>
         <Panel variant="sheet" padding="lg" fold className="flex h-full flex-col items-center justify-center text-center">
           <p className="caption !text-ink">Panel · sheet · fold</p>

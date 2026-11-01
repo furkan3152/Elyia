@@ -123,13 +123,13 @@ export function MapSheet({ label, elevation, titleBlock, furniture, ticks = true
   return (
     <Element className={cx("relative bg-card px-frame px-drop", className)} aria-label={rest["aria-label"]}>
       {ticks ? <span aria-hidden="true" className="el-neat-ticks pointer-events-none absolute inset-[5px]" /> : null}
-      <div className="relative flex min-h-[34px] flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b-4 border-rule px-4 py-1.5 font-tag text-[11px] uppercase text-ink-2">
+      <div className="relative flex min-h-[34px] flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b-2 border-rule px-4 py-1.5 font-tag text-[11px] uppercase text-ink-2">
         <span className="text-ink">{label}</span>
         {elevation ? <span className="tnum normal-case tracking-normal">{elevation}</span> : null}
       </div>
       <div className={cx("relative", bodyClassName)}>{children}</div>
       {furniture || titleBlock ? (
-        <div className="relative flex flex-wrap items-end justify-between gap-3 border-t-4 border-rule px-4 py-2.5">
+        <div className="relative flex flex-wrap items-end justify-between gap-3 border-t-2 border-rule px-4 py-2.5">
           <div className="flex flex-wrap items-end gap-4">{furniture}</div>
           {titleBlock ? <TitleBlockBox block={titleBlock} /> : null}
         </div>
@@ -142,15 +142,15 @@ export function TitleBlockBox({ block, className }: { readonly block: TitleBlock
   return (
     <dl className={cx("grid grid-cols-[auto_auto] bg-card font-mono text-[11px] leading-tight text-ink-2 px-frame-thin", className)}>
       <dt className="col-span-2 bg-ink px-2 py-1 font-tag uppercase text-paper">{block.name}</dt>
-      <dt className="border-b border-r border-rule/40 px-2 py-0.5 uppercase tracking-[0.1em]">Scale</dt>
-      <dd className="tnum border-b border-rule/40 px-2 py-0.5 text-ink">{block.scale ?? "1 : 25 000"}</dd>
+      <dt className="border-b border-r border-rule px-2 py-0.5 uppercase tracking-[0.1em]">Scale</dt>
+      <dd className="tnum border-b border-rule px-2 py-0.5 text-ink">{block.scale ?? "1 : 25 000"}</dd>
       {block.date ? (
         <>
-          <dt className="border-b border-r border-rule/40 px-2 py-0.5 uppercase tracking-[0.1em]">Date</dt>
-          <dd className="tnum border-b border-rule/40 px-2 py-0.5 text-ink">{block.date}</dd>
+          <dt className="border-b border-r border-rule px-2 py-0.5 uppercase tracking-[0.1em]">Date</dt>
+          <dd className="tnum border-b border-rule px-2 py-0.5 text-ink">{block.date}</dd>
         </>
       ) : null}
-      <dt className="border-r border-rule/40 px-2 py-0.5 uppercase tracking-[0.1em]">Survey</dt>
+      <dt className="border-r border-rule px-2 py-0.5 uppercase tracking-[0.1em]">Survey</dt>
       <dd className="px-2 py-0.5 text-ink">
         {block.surveyor ?? "Elyia"}
         {block.mode ? ` · ${block.mode}` : ""}

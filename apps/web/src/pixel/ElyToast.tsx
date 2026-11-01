@@ -40,7 +40,7 @@ export function ElyToast({ tone = "info", title, description, from = "BASE", tim
     <div className={cx("relative flex w-full items-end gap-3", pop && "px-pop", className)}>
       <Ely state={meta.state} size={66} label={null} className="-mb-1 shrink-0" />
       <div className="min-w-0 flex-1 bg-card px-frame px-drop">
-        <div className="flex items-center gap-2 border-b-2 border-dashed border-rule/40 px-3 py-1.5 font-tag text-[11px] uppercase text-ink-2">
+        <div className="flex items-center gap-2 border-b-2 border-dashed border-rule px-3 py-1.5 font-tag text-[11px] uppercase text-ink-2">
           <span aria-hidden="true" className={meta.tone}>
             {meta.mark}
           </span>
@@ -53,7 +53,7 @@ export function ElyToast({ tone = "info", title, description, from = "BASE", tim
               type="button"
               aria-label="Dismiss message"
               onClick={onDismiss}
-              className={cx("-mr-1 ml-auto inline-flex h-6 w-6 items-center justify-center text-ink-3 hover:bg-ink hover:text-paper", FOCUS_RING)}
+              className={cx("-mr-1 ml-auto inline-flex h-6 w-6 items-center justify-center text-ink-3 hover:bg-paper-2 hover:text-ink", FOCUS_RING)}
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>

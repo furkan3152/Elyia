@@ -34,7 +34,7 @@ export default {
         mint: channel("on-mint"),
         rose: channel("on-rose"),
       },
-      rule: channel("rule"),
+      rule: { DEFAULT: channel("rule"), strong: channel("rule-strong") },
       contour: channel("contour"),
       signal: { DEFAULT: channel("signal"), ink: channel("on-signal") },
       accent: { DEFAULT: channel("accent"), line: channel("accent-line"), ink: channel("on-accent") },
@@ -106,18 +106,19 @@ export default {
         4: "4px",
       },
       boxShadow: {
-        // One solid block offset, in whole pixel units. No blur, ever.
-        hard: "4px 4px 0 0 rgb(var(--shadow-ink))",
-        "hard-sm": "2px 2px 0 0 rgb(var(--shadow-ink))",
-        "hard-lg": "8px 8px 0 0 rgb(var(--shadow-ink))",
-        "hard-xl": "12px 12px 0 0 rgb(var(--shadow-ink))",
+        // Style A: no black block drops. "hard" names are a 2 px tone outline
+        // plus a translucent depth band inside the bottom edge. No blur, ever.
+        hard: "var(--shadow-hard)",
+        "hard-sm": "0 0 0 2px rgb(var(--rule))",
+        "hard-lg": "var(--shadow-hard-lg)",
+        "hard-xl": "var(--shadow-hard-xl)",
         none: "none",
-        // legacy names, now block shadows
-        panel: "4px 4px 0 0 rgb(var(--shadow-ink))",
-        raised: "8px 8px 0 0 rgb(var(--shadow-ink))",
-        "glow-violet": "4px 4px 0 0 rgb(var(--shadow-ink))",
+        // legacy names
+        panel: "var(--shadow-hard)",
+        raised: "var(--shadow-hard-lg)",
+        "glow-violet": "var(--shadow-hard)",
         "glow-gold": "0 0 0 2px rgb(var(--signal))",
-        sm: "2px 2px 0 0 rgb(var(--shadow-ink))",
+        sm: "0 0 0 2px rgb(var(--rule))",
         focus: "0 0 0 2px rgb(var(--paper)), 0 0 0 4px rgb(var(--signal))",
       },
       // Pixel things move in steps.

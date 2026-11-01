@@ -137,7 +137,7 @@ export function OrderBook({ levels: maxLevels = 20, className, heading }: { read
                       setPrefs({ bookGrouping: index });
                       close();
                     }}
-                    className={cx("flex w-full items-center justify-between px-2 py-1.5 font-mono text-xs hover:bg-paper-2", index === groupingIndex ? "bg-ink text-paper hover:bg-ink" : "text-ink", FOCUS_RING)}
+                    className={cx("flex w-full items-center justify-between px-2 py-1.5 font-mono text-xs hover:bg-paper-2", index === groupingIndex ? "bg-accent text-accent-ink hover:bg-accent" : "text-ink", FOCUS_RING)}
                   >
                     {option.label}
                     {index === 0 ? <span className="opacity-70">tick</span> : null}

@@ -97,7 +97,7 @@ export function TerrainSection({ trader }: { readonly trader: TraderView }) {
             resolution={narrow ? 120 : 200}
             label={`${sample ? "Sample portfolio" : `Live portfolio of testnet trader ${shortAddress(snapshot.address)}`} as a pixel elevation map at a ${shock}% shock: ${model.peaks.map((peak) => `${peak.holding.label} ${peak.snapped ? "rope snapped" : peak.lake ? "short (lake)" : compact(peak.value)}`).join(", ")}`}
           />
-          <figcaption className="border-t-4 border-rule">
+          <figcaption className="border-t-2 border-rule">
             <LayerBar trader={trader} />
           </figcaption>
         </figure>

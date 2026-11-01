@@ -8,7 +8,7 @@ export interface KbdProps {
   readonly className?: string;
 }
 
-/** One key cap: a small ink-bordered block with a hard 2 px shadow. */
+/** One key cap: a small tone-outlined cap with a depth band. */
 export function Kbd({ children, className }: KbdProps) {
   return (
     <kbd

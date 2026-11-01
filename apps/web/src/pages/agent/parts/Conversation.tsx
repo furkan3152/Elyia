@@ -139,7 +139,7 @@ function Outcome({ outcome }: { readonly outcome: NonNullable<GuideMessage["outc
 function ProposalCard({ head, aside, children, className }: { readonly head: React.ReactNode; readonly aside?: React.ReactNode; readonly children: React.ReactNode; readonly className?: string }) {
   return (
     <div className={cx("el-rise bg-card px-frame px-drop", className)}>
-      <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b-4 border-rule bg-paper-2 px-3 py-1.5">
+      <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b-2 border-rule bg-paper-2 px-3 py-1.5">
         <span className="font-tag text-[11px] uppercase text-ink">{head}</span>
         {aside ? <span className="font-mono text-[11px] text-ink-2">{aside}</span> : null}
       </p>
@@ -280,7 +280,7 @@ function GuideTurn({ message, streaming, onAct, onAsk, sample }: { readonly mess
           <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
             <span className="font-tag text-[11px] uppercase text-ink-3">Or ask</span>
             {reply.followUps.map((question) => (
-              <button key={question} type="button" onClick={() => onAsk(question)} className={cx("bg-paper px-2.5 py-1 font-mono text-[12px] text-ink-2 px-frame-thin px-press hover:bg-card hover:text-ink", FOCUS_RING)}>
+              <button key={question} type="button" onClick={() => onAsk(question)} className={cx("px-btn px-btn-thin px-btn-paper px-2.5 py-1 font-mono text-[12px] text-ink-2 hover:text-ink", FOCUS_RING)}>
                 “{question}”
               </button>
             ))}

@@ -9,8 +9,10 @@
  * write `bg-paper/80` (tailwind.config.js maps every name). `*-ink` variants
  * are the text-safe versions of graphic colours (WCAG AA on paper and card).
  *
- * The pixel unit is 4 px (--pu). Frames are drawn with box-shadow so their
- * corners step (src/styles/pixel.css); there is no radius and no blur.
+ * The pixel unit is 4 px (--pu). Style A ("game button"): no ink outlines and
+ * no black block shadows. Frames are 2 px tone lines (--rule) with stepped
+ * corners, cards carry a translucent depth band (--depth), buttons a 4 px
+ * bevel from the --bv-* triplets (src/styles/pixel.css). No radius, no blur.
  * The old "Lumine" names stay at the bottom as aliases for pages not yet rebuilt.
  */
 
@@ -28,8 +30,31 @@
   --ink: 22 32 27; /* #16201B text, frames */
   --ink-2: 74 85 79; /* #4A554F secondary text (AA) */
   --ink-3: 92 103 96; /* #5C6760 tertiary (AA on paper) */
-  --rule: 22 32 27; /* pixel frames and block shadows */
-  --shadow-ink: 22 32 27;
+  --rule: 201 191 166; /* #C9BFA6 tone line: frames, outlines, seams (never ink) */
+  --rule-strong: 168 156 128; /* #A89C80 the emphasised outline (trade ticket, dialogs) */
+  --shadow-ink: 201 191 166; /* legacy name: no black blocks, it follows the tone line */
+  /* Depth: a translucent band laid inside the bottom of a card (any fill) */
+  --depth: rgb(22 32 27 / 0.07);
+  /* Bevels (style A, game buttons): fill / light top-left / dark bottom-right */
+  --bv-accent: #17788c;
+  --bv-accent-hi: #3fa0b3;
+  --bv-accent-sh: #0f5a6a;
+  --bv-signal: #f2c200;
+  --bv-signal-hi: #ffe27a;
+  --bv-signal-sh: #b89100;
+  --bv-paper: #e9e1cd;
+  --bv-paper-hi: #fffdf6;
+  --bv-paper-sh: #c9bfa6;
+  --bv-down: #c62d1f;
+  --bv-down-hi: #e2584a;
+  --bv-down-sh: #8f1f15;
+  --bv-up: #1f7a4c;
+  --bv-up-hi: #3fa26f;
+  --bv-up-sh: #155636;
+  --bv-ink: #2e3a34;
+  --bv-ink-hi: #4a5750;
+  --bv-ink-sh: #16201b;
+  --bv-on-dark: #fff9ec;
 
   /* Survey colours */
   --contour: 122 82 48; /* #7A5230 contour ink */
@@ -65,9 +90,10 @@
   --pu: 4px;
   --border: 4px;
   --border-thin: 2px;
-  --shadow-hard: 4px 4px 0 0 rgb(var(--shadow-ink));
-  --shadow-hard-lg: 8px 8px 0 0 rgb(var(--shadow-ink));
-  --shadow-hard-xl: 12px 12px 0 0 rgb(var(--shadow-ink));
+  /* Style A: no block drops. The legacy "hard" shadows are a tone outline + depth band. */
+  --shadow-hard: 0 0 0 2px rgb(var(--rule)), inset 0 -4px 0 0 var(--depth);
+  --shadow-hard-lg: 0 0 0 2px rgb(var(--rule-strong)), inset 0 -4px 0 0 var(--depth);
+  --shadow-hard-xl: 0 0 0 2px rgb(var(--rule-strong)), inset 0 -6px 0 0 var(--depth);
 
   /* Motion: stepped, never smooth for pixel things */
   --dur-instant: 90ms;
@@ -99,8 +125,29 @@
     --ink: 238 231 216;
     --ink-2: 174 184 177;
     --ink-3: 150 161 153;
-    --rule: 238 231 216;
-    --shadow-ink: 238 231 216;
+    --rule: 58 81 68; /* #3A5144 tone line */
+    --rule-strong: 84 112 96; /* #547060 */
+    --shadow-ink: 58 81 68;
+    --depth: rgb(0 0 0 / 0.22);
+    --bv-accent: #6fd3e3;
+    --bv-accent-hi: #b0edf5;
+    --bv-accent-sh: #3a9caf;
+    --bv-signal: #f2c200;
+    --bv-signal-hi: #ffe27a;
+    --bv-signal-sh: #9c7b00;
+    --bv-paper: #26372d;
+    --bv-paper-hi: #3a5144;
+    --bv-paper-sh: #0e1512;
+    --bv-down: #ff6b5e;
+    --bv-down-hi: #ffa198;
+    --bv-down-sh: #c4463a;
+    --bv-up: #5fd39a;
+    --bv-up-hi: #a2ebc6;
+    --bv-up-sh: #2f9c66;
+    --bv-ink: #eee7d8;
+    --bv-ink-hi: #fffaf0;
+    --bv-ink-sh: #b8b09e;
+    --bv-on-dark: #fff9ec;
     --contour: 201 146 90;
     --signal: 242 194 0;
     --on-signal: 14 21 18;
@@ -137,8 +184,29 @@
   --ink: 238 231 216;
   --ink-2: 174 184 177;
   --ink-3: 150 161 153;
-  --rule: 238 231 216;
-  --shadow-ink: 238 231 216;
+  --rule: 58 81 68; /* #3A5144 tone line */
+  --rule-strong: 84 112 96; /* #547060 */
+  --shadow-ink: 58 81 68;
+  --depth: rgb(0 0 0 / 0.22);
+  --bv-accent: #6fd3e3;
+  --bv-accent-hi: #b0edf5;
+  --bv-accent-sh: #3a9caf;
+  --bv-signal: #f2c200;
+  --bv-signal-hi: #ffe27a;
+  --bv-signal-sh: #9c7b00;
+  --bv-paper: #26372d;
+  --bv-paper-hi: #3a5144;
+  --bv-paper-sh: #0e1512;
+  --bv-down: #ff6b5e;
+  --bv-down-hi: #ffa198;
+  --bv-down-sh: #c4463a;
+  --bv-up: #5fd39a;
+  --bv-up-hi: #a2ebc6;
+  --bv-up-sh: #2f9c66;
+  --bv-ink: #eee7d8;
+  --bv-ink-hi: #fffaf0;
+  --bv-ink-sh: #b8b09e;
+  --bv-on-dark: #fff9ec;
   --contour: 201 146 90;
   --signal: 242 194 0;
   --on-signal: 14 21 18;
@@ -175,8 +243,8 @@
   --text-0: var(--ink);
   --text-1: var(--ink-2);
   --text-2: var(--ink-3);
-  --line: rgb(var(--rule) / 0.18);
-  --line-strong: rgb(var(--rule) / 0.55);
+  --line: rgb(var(--rule));
+  --line-strong: rgb(var(--rule));
   --violet: var(--accent);
   --violet-glow: var(--accent-line);
   --violet-soft: var(--summit-ink);

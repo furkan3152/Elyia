@@ -51,7 +51,7 @@ export default function SystemPage() {
         <PixelScene />
         <nav aria-label="Key sections" className="mt-12 flex flex-wrap justify-center gap-4">
           {INDEX.map(([id, label], index) => (
-            <a key={id} href={`#${id}`} className={cx("inline-flex items-center gap-2 bg-card px-3 py-1.5 font-tag text-[12px] uppercase text-ink px-frame-thin px-drop px-press", FOCUS_RING)}>
+            <a key={id} href={`#${id}`} className={cx("px-btn px-btn-thin inline-flex items-center gap-2 px-btn-paper px-3 py-1.5 font-tag text-[12px] uppercase text-ink", FOCUS_RING)}>
               <span className="tnum text-ink-3">{String(index + 1).padStart(2, "0")}</span>
               {label}
             </a>

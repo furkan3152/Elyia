@@ -342,7 +342,7 @@ export function PriceChart({ className }: { readonly className?: string }) {
           onClick={() => setPrefs({ interval: option })}
           className={cx(
             "h-6 min-w-[30px] px-1.5 font-tag text-[11px] uppercase transition-colors duration-fast",
-            option === interval ? "bg-ink text-paper" : "text-ink-2 hover:bg-paper-2 hover:text-ink",
+            option === interval ? "px-btn px-btn-thin px-btn-accent text-accent-ink" : "text-ink-2 hover:bg-paper-2 hover:text-ink",
             FOCUS_RING,
           )}
         >

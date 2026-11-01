@@ -133,17 +133,15 @@
     color: rgb(var(--ink));
   }
 
-  /* A card sheet: card stock in a 4 px stepped frame with a block drop. */
+  /* A card sheet: card stock in a 2 px stepped tone outline with a depth band (no block drop). */
   .sheet {
     background: rgb(var(--card));
     box-shadow:
-      0 -4px 0 0 rgb(var(--rule)),
-      0 4px 0 0 rgb(var(--rule)),
-      -4px 0 0 0 rgb(var(--rule)),
-      4px 0 0 0 rgb(var(--rule)),
-      4px 12px 0 0 rgb(var(--shadow-ink)),
-      12px 4px 0 0 rgb(var(--shadow-ink)),
-      8px 8px 0 0 rgb(var(--shadow-ink));
+      0 -2px 0 0 rgb(var(--rule)),
+      0 2px 0 0 rgb(var(--rule)),
+      -2px 0 0 0 rgb(var(--rule)),
+      2px 0 0 0 rgb(var(--rule)),
+      inset 0 -4px 0 0 var(--depth);
   }
 
   .glass {

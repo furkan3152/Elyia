@@ -1,14 +1,16 @@
 import { cx, FOCUS_RING } from "./cx";
 
 /**
- * Pixel Survey button variants. Every framed button is a 4 px stepped pixel
- * frame (2 px at xs/sm) with one block drop; hover lifts it 2 px, pressing
- * pushes it 2 px. Labels are Pixelify Sans.
- * - primary: THE action of a view. Glacier fill.
+ * Pixel Survey button variants, style A ("game button", src/styles/pixel.css
+ * `.px-btn`): a flat fill with 4 px stepped corners and a 4 px inner bevel
+ * (light top-left, dark bottom-right). No ink outline, no block shadow.
+ * Hover brightens, pressing inverts the bevel and drops the label 2 px,
+ * disabled is flat. Labels are Pixelify Sans.
+ * - primary: THE action of a view. Glacier bevel.
  * - signpost: sun-yellow wayfinding ("go there" links, suggestions).
- * - ink: card stock (the secondary action).
- * - solid-ink: an ink block with paper text (strong neutral, selected).
- * - danger: rope-red frame and words; destructive or risky.
+ * - ink: paper stock (the secondary action).
+ * - solid-ink: a dark bevel with paper text (strong neutral, selected).
+ * - danger: rope-red bevel; destructive or risky.
  * - ghost: no frame (toolbars, dense rows).
  * - long / short: trade sides (up / down fills).
  * Legacy names map onto these: violet/gold -> primary, soft/outline -> ink.
@@ -32,25 +34,25 @@ export type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl";
 const BASE =
   "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-display font-bold tracking-[0.02em] disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45";
 
-const FRAMED = "px-frame px-drop px-press";
+const BEVEL = "px-btn";
 
 const VARIANTS: Readonly<Record<ButtonVariant, string>> = {
-  primary: cx(FRAMED, "bg-accent text-accent-ink"),
-  violet: cx(FRAMED, "bg-accent text-accent-ink"),
-  gold: cx(FRAMED, "bg-accent text-accent-ink"),
-  signpost: cx(FRAMED, "bg-signal text-signal-ink"),
-  ink: cx(FRAMED, "bg-card text-ink hover:bg-paper-2"),
-  soft: cx(FRAMED, "bg-card text-ink hover:bg-paper-2"),
-  outline: cx(FRAMED, "bg-card text-ink hover:bg-paper-2"),
-  "solid-ink": cx(FRAMED, "bg-ink text-paper"),
-  danger: cx(FRAMED, "px-tone-down bg-card text-down hover:bg-down hover:text-card"),
+  primary: cx(BEVEL, "px-btn-accent text-accent-ink"),
+  violet: cx(BEVEL, "px-btn-accent text-accent-ink"),
+  gold: cx(BEVEL, "px-btn-accent text-accent-ink"),
+  signpost: cx(BEVEL, "px-btn-signal text-signal-ink"),
+  ink: cx(BEVEL, "px-btn-paper text-ink"),
+  soft: cx(BEVEL, "px-btn-paper text-ink"),
+  outline: cx(BEVEL, "px-btn-paper text-ink"),
+  "solid-ink": cx(BEVEL, "px-btn-ink text-paper"),
+  danger: cx(BEVEL, "px-btn-down text-card"),
   ghost: "bg-transparent text-ink-2 transition-colors duration-fast hover:bg-paper-2 hover:text-ink",
-  long: cx(FRAMED, "bg-up text-card"),
-  short: cx(FRAMED, "bg-down text-card"),
+  long: cx(BEVEL, "px-btn-up text-card"),
+  short: cx(BEVEL, "px-btn-down text-card"),
 };
 
-/** xs and sm use the 2 px frame so dense rows stay readable. */
-const THIN: Readonly<Record<ButtonSize, boolean>> = { xs: true, sm: true, md: false, lg: false, xl: false };
+/** xs keeps a 2 px bevel so dense rows stay readable. */
+const THIN: Readonly<Record<ButtonSize, boolean>> = { xs: true, sm: false, md: false, lg: false, xl: false };
 
 const SIZES: Readonly<Record<ButtonSize, string>> = {
   xs: "h-7 px-2.5 text-[13px]",
@@ -78,5 +80,5 @@ export interface ButtonStyleOptions {
 
 /** Class recipe shared by Button, ButtonLink and anything that must look like a button. */
 export function buttonClasses({ variant = "primary", size = "md", fullWidth, iconOnly, className }: ButtonStyleOptions = {}): string {
-  return cx(BASE, FOCUS_RING, VARIANTS[variant], THIN[size] && variant !== "ghost" && "px-frame-thin", iconOnly ? cx(ICON_SIZES[size], "px-0") : SIZES[size], fullWidth && "w-full", className);
+  return cx(BASE, FOCUS_RING, VARIANTS[variant], THIN[size] && variant !== "ghost" && "px-btn-thin", iconOnly ? cx(ICON_SIZES[size], "px-0") : SIZES[size], fullWidth && "w-full", className);
 }

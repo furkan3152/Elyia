@@ -40,7 +40,7 @@ function RopeCard({ rope }: { readonly rope: RopeLine }) {
       <div className="mt-auto px-4 pb-2 pt-5">
         <PixelRope symbol={rope.coin} side={rope.side} entry={rope.entry} mark={rope.mark} liquidation={rope.liquidation} formatPrice={price} />
       </div>
-      <p className={cx("flex items-center justify-center gap-2 border-t-4 border-dashed border-rule/30 px-4 py-3 font-tag text-[12px] uppercase", fraying ? "text-down" : "text-ink-2")}>
+      <p className={cx("flex items-center justify-center gap-2 border-t-2 border-dashed border-rule px-4 py-3 font-tag text-[12px] uppercase", fraying ? "text-down" : "text-ink-2")}>
         Rope left
         <b className={cx("tnum font-display text-[22px] font-bold normal-case", fraying ? "text-down" : "text-ink")}>{pct !== null ? `${pct.toFixed(pct < 10 ? 1 : 0)}%` : "—"}</b>
       </p>

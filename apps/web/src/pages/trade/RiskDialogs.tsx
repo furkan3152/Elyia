@@ -81,7 +81,7 @@ function FlattenBody({ onClose }: { readonly onClose: () => void }) {
     <div className="flex flex-col gap-4">
       <RappelScene phase={phase} progress={hold} />
       {positions.length > 0 ? (
-        <ul className="px-frame-thin flex flex-col divide-y divide-dashed divide-rule/30 bg-card">
+        <ul className="px-frame-thin flex flex-col divide-y divide-dashed divide-rule bg-card">
           {positions.map((position) => {
             const market = marketByCoin.get(position.coin) ?? null;
             return (

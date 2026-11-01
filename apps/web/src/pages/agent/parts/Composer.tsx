@@ -29,7 +29,7 @@ export const Composer = forwardRef<HTMLInputElement, ComposerProps>(function Com
       <ul className="flex flex-wrap justify-center gap-x-4 gap-y-4" aria-label="Questions to start with">
         {starters.map((starter) => (
           <li key={starter}>
-            <button type="button" onClick={() => onAsk(starter)} disabled={busy} className={cx("bg-card px-2.5 py-1 font-mono text-[12px] text-ink-2 px-frame-thin px-press hover:text-ink disabled:opacity-50", FOCUS_RING)}>
+            <button type="button" onClick={() => onAsk(starter)} disabled={busy} className={cx("px-btn px-btn-thin px-btn-paper px-2.5 py-1 font-mono text-[12px] text-ink-2 hover:text-ink disabled:opacity-50", FOCUS_RING)}>
               “{starter}”
             </button>
           </li>
@@ -42,7 +42,7 @@ export const Composer = forwardRef<HTMLInputElement, ComposerProps>(function Com
           submit();
         }}
       >
-        <label htmlFor="guide-ask" className="flex shrink-0 items-center border-r-4 border-rule bg-ink px-3 font-tag text-[12px] uppercase text-paper sm:px-4">
+        <label htmlFor="guide-ask" className="flex shrink-0 items-center border-r-2 border-rule bg-ink px-3 font-tag text-[12px] uppercase text-paper sm:px-4">
           Ask<span className="hidden sm:inline">&nbsp;Ely</span>
         </label>
         <input
@@ -73,7 +73,7 @@ export const Composer = forwardRef<HTMLInputElement, ComposerProps>(function Com
         <span className="hidden items-center gap-1 px-2 font-mono text-[11px] text-ink-3 md:flex">
           <Kbd>A</Kbd> focus · <Kbd>↵</Kbd>
         </span>
-        <button type="submit" disabled={busy || value.trim() === ""} className={cx("shrink-0 border-l-4 border-rule bg-accent px-4 font-display text-[16px] font-bold text-accent-ink transition-opacity disabled:opacity-45 sm:px-6", FOCUS_RING)}>
+        <button type="submit" disabled={busy || value.trim() === ""} className={cx("shrink-0 border-l-2 border-rule bg-accent px-4 font-display text-[16px] font-bold text-accent-ink transition-opacity disabled:opacity-45 sm:px-6", FOCUS_RING)}>
           Ask ▸
         </button>
       </form>

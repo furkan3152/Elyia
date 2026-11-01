@@ -26,7 +26,7 @@ const STAMP: Readonly<Record<PixelStampState, { readonly word: string; readonly 
   settled: { word: "SETTLED", color: "rgb(var(--down))", mark: "✓" },
   signed: { word: "SIGNED", color: "rgb(var(--up))", mark: "✎" },
   queued: { word: "SIGNATURE QUEUED", color: "rgb(var(--accent))", mark: "…" },
-  refused: { word: "REFUSED", color: "rgb(var(--ink))", mark: "✕" },
+  refused: { word: "REFUSED", color: "rgb(var(--ink-2))", mark: "✕" },
 };
 
 const SIZE = { sm: "px-1.5 py-0.5 text-[11px]", md: "px-2.5 py-1 text-[13px]", lg: "px-4 py-2 text-lg" } as const;

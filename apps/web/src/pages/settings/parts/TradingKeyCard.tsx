@@ -62,7 +62,7 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
   return (
     <div className="flex flex-col gap-8">
       <article className="relative bg-card px-frame px-drop-lg" aria-label="Trading key">
-        <header className="flex flex-col items-center gap-2 border-b-4 border-rule bg-paper-2 px-4 py-3 text-center sm:flex-row sm:justify-between sm:px-6 sm:text-left">
+        <header className="flex flex-col items-center gap-2 border-b-2 border-rule bg-paper-2 px-4 py-3 text-center sm:flex-row sm:justify-between sm:px-6 sm:text-left">
           <h3 className="flex items-center gap-3 font-tag text-[12px] uppercase text-ink">
             <PixelGlyph rows={ITEM.key} scale={3} label={null} />
             elyia-web · trade-only key
@@ -162,7 +162,7 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
           ) : null}
           {api.progress.step === "error" && api.progress.error ? <p className="text-[13px] text-down">{api.progress.error}</p> : null}
         </div>
-        <footer className="flex flex-col items-center gap-1 border-t-4 border-dashed border-rule/30 px-4 py-3 text-center font-mono text-[11px] text-ink-3 sm:flex-row sm:justify-between sm:px-6">
+        <footer className="flex flex-col items-center gap-1 border-t-2 border-dashed border-rule px-4 py-3 text-center font-mono text-[11px] text-ink-3 sm:flex-row sm:justify-between sm:px-6">
           <span>AES-GCM in this browser · never sent anywhere</span>
           <span className="font-tag uppercase text-down">Trade only · cannot withdraw</span>
         </footer>
@@ -188,7 +188,7 @@ export function TradingKeyCard({ api, connected, now, onEnable }: { readonly api
           ) : api.agents.length === 0 ? (
             <p className="text-[14px] text-ink-2">No named agents yet.</p>
           ) : (
-            <ul className="divide-y-2 divide-dashed divide-rule/20 bg-card px-frame-thin">
+            <ul className="divide-y-2 divide-dashed divide-rule bg-card px-frame-thin">
               {api.agents.map((agent) => (
                 <li key={agent.address} className="flex items-center justify-between gap-3 px-3 py-2 font-mono text-[12px]">
                   <span className="min-w-0 truncate text-ink">

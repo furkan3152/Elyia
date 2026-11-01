@@ -124,14 +124,14 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
   // Phones read the verdict before the checks: form, then the sign, then the
   // list. From md up the form and its checks share one card beside the sign.
   const checksBlock = (
-    <div className={cx("flex flex-1 flex-col", !narrow && "border-t-4 border-rule")} aria-live="polite">
+    <div className={cx("flex flex-1 flex-col", !narrow && "border-t-2 border-rule")} aria-live="polite">
       {state.kind === "done" ? (
         <>
           <ol className="relative">
             {state.report.checks.map((check, index) => {
               const mark = MARK[check.result];
               return (
-                <li key={check.id} className="el-rise grid grid-cols-[1.25rem_7.5rem_minmax(0,1fr)] items-baseline gap-x-3 border-b-2 border-dashed border-rule/20 px-5 py-2 sm:grid-cols-[1.25rem_9.5rem_minmax(0,1fr)]" style={{ animationDelay: `${index * 60}ms` }}>
+                <li key={check.id} className="el-rise grid grid-cols-[1.25rem_7.5rem_minmax(0,1fr)] items-baseline gap-x-3 border-b-2 border-dashed border-rule px-5 py-2 sm:grid-cols-[1.25rem_9.5rem_minmax(0,1fr)]" style={{ animationDelay: `${index * 60}ms` }}>
                   <span className={cx("font-mono text-[12px]", mark.tone)} aria-hidden="true">
                     {mark.glyph}
                   </span>
@@ -198,7 +198,7 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
   );
   const formCard = (
   <section aria-labelledby="shield-title" className="flex min-w-0 flex-col bg-card px-frame px-drop">
-    <header className="flex flex-col items-center gap-2 border-b-4 border-rule px-5 py-5 text-center">
+    <header className="flex flex-col items-center gap-2 border-b-2 border-rule px-5 py-5 text-center">
       <p className="caption">read from the public RPC</p>
       <h3 id="shield-title" className="font-display text-[24px] font-bold leading-none text-ink">
         Check a token
@@ -262,7 +262,7 @@ export function ShieldPanel({ mode }: { readonly mode: NetworkEnvironment }) {
                 setValue(token.address!);
                 void run(token.address!, network);
               }}
-              className={cx("bg-card px-2 py-0.5 font-tag text-[11px] uppercase text-ink px-frame-thin px-press", FOCUS_RING)}
+              className={cx("px-btn px-btn-thin px-btn-paper px-2 py-0.5 font-tag text-[11px] uppercase text-ink", FOCUS_RING)}
             >
               {token.symbol}
             </button>

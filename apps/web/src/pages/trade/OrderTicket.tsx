@@ -98,7 +98,7 @@ function SlippagePicker() {
                   setPrefs({ slippageBps: choice });
                   close();
                 }}
-                className={cx("px-frame-thin h-8 font-mono text-xs", choice === slippage ? "bg-ink text-paper" : "bg-card text-ink-2 hover:bg-paper-2 hover:text-ink", FOCUS_RING)}
+                className={cx("px-frame-thin h-8 font-mono text-xs", choice === slippage ? "px-btn px-btn-thin px-btn-accent text-accent-ink" : "bg-card text-ink-2 hover:bg-paper-2 hover:text-ink", FOCUS_RING)}
               >
                 {(choice / 100).toFixed(choice < 100 ? 1 : 0)}%
               </button>
@@ -133,8 +133,8 @@ function SideSwitch({ long, spot, onChange }: { readonly long: boolean; readonly
           aria-pressed={side.on}
           onClick={() => onChange(side.id)}
           className={cx(
-            "relative flex h-12 items-center justify-center gap-2 font-display text-[18px] font-bold uppercase tracking-[0.04em] first:[box-shadow:4px_0_0_0_rgb(var(--rule))]",
-            side.on ? (side.id === "buy" ? "bg-up text-card" : "bg-down text-card") : side.id === "buy" ? "bg-card text-up hover:bg-up/10" : "bg-card text-down hover:bg-down/10",
+            "relative flex h-12 items-center justify-center gap-2 font-display text-[18px] font-bold uppercase tracking-[0.04em] first:[box-shadow:2px_0_0_0_rgb(var(--rule))]",
+            side.on ? (side.id === "buy" ? "px-btn px-btn-up text-card" : "px-btn px-btn-down text-card") : side.id === "buy" ? "bg-card text-up hover:bg-up/10" : "bg-card text-down hover:bg-down/10",
             FOCUS_RING,
           )}
         >
@@ -381,7 +381,7 @@ export function OrderTicket({ className, bare = false }: { readonly className?: 
                   title={`${percent === 100 ? "Max" : `${percent}%`} of what you can open (key ${index + 1})`}
                   className={cx(
                     "px-frame-thin h-8 font-tag text-[11px] disabled:opacity-40",
-                    chosen ? "bg-ink text-paper" : "bg-card text-ink-2 hover:bg-paper-2 hover:text-ink",
+                    chosen ? "px-btn px-btn-thin px-btn-accent text-accent-ink" : "bg-card text-ink-2 hover:bg-paper-2 hover:text-ink",
                     FOCUS_RING,
                   )}
                 >

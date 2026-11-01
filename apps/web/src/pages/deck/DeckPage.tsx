@@ -233,7 +233,7 @@ function MiniTerrain({ range, portfolioHref }: { readonly range: RangeData; read
   const sample = range.source === "sample";
   return (
     <Panel variant="sheet" padding="none" className="flex flex-col">
-      <div className="flex items-center justify-between gap-3 border-b-4 border-rule px-4 py-2.5">
+      <div className="flex items-center justify-between gap-3 border-b-2 border-rule px-4 py-2.5">
         <h3 className="caption !font-tag !text-ink">Your range · pixel terrain{sample ? " · sample" : ""}</h3>
         <span className="font-tag text-[11px] uppercase text-ink-2">{usdShort(snapshot.totals.netWorthUsd)}</span>
       </div>
@@ -261,7 +261,7 @@ function MiniTerrain({ range, portfolioHref }: { readonly range: RangeData; read
           />
         )}
       </div>
-      <p className="border-t-4 border-dashed border-rule/30 px-4 py-2.5 text-center font-tag text-[11px] uppercase text-ink-2">Floor · Ridge · Summit, left to right · tap a peak to survey it</p>
+      <p className="border-t-2 border-dashed border-rule px-4 py-2.5 text-center font-tag text-[11px] uppercase text-ink-2">Floor · Ridge · Summit, left to right · tap a peak to survey it</p>
     </Panel>
   );
 }

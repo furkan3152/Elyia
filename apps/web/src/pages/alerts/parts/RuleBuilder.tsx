@@ -140,13 +140,13 @@ export function RuleBuilder({ coins, ropeCoins, readings, telegramLinked, priceW
 
   return (
     <section className="bg-card px-frame px-drop-lg" aria-labelledby="rule-builder-title">
-      <header className="flex flex-col items-center gap-1 border-b-4 border-rule bg-paper-2 px-4 py-2.5 text-center sm:flex-row sm:justify-between">
+      <header className="flex flex-col items-center gap-1 border-b-2 border-rule bg-paper-2 px-4 py-2.5 text-center sm:flex-row sm:justify-between">
         <h2 id="rule-builder-title" className="font-tag text-[12px] uppercase text-ink">
           New alert · one sentence · watched live
         </h2>
         <span className="font-tag text-[11px] uppercase text-ink-2">{priceWord}</span>
       </header>
-      <div role="radiogroup" aria-label="What to watch" className="grid grid-cols-5 border-b-4 border-rule">
+      <div role="radiogroup" aria-label="What to watch" className="grid grid-cols-5 border-b-2 border-rule">
         {KINDS.map((entry) => {
           const selected = entry.kind === draft.kind;
           return (
@@ -157,14 +157,14 @@ export function RuleBuilder({ coins, ropeCoins, readings, telegramLinked, priceW
               aria-checked={selected}
               title={entry.hint}
               onClick={() => patch({ kind: entry.kind, value: "", coin: entry.kind === "rope" || entry.kind === "fill" ? "ANY" : (coins.includes(draft.coin) ? draft.coin : (coins[0] ?? "BTC")), direction: entry.kind === "rope" ? "below" : draft.direction })}
-              className={cx("relative flex flex-col items-center gap-1.5 border-r-4 border-rule px-1 pb-3 pt-3.5 text-center transition-colors duration-fast last:border-r-0 focus-visible:z-10", selected ? "bg-signal text-signal-ink" : "text-ink hover:bg-paper-2", FOCUS_RING)}
+              className={cx("relative flex flex-col items-center gap-1.5 border-r-2 border-rule px-1 pb-3 pt-3.5 text-center transition-colors duration-fast last:border-r-0 focus-visible:z-10", selected ? "bg-signal text-signal-ink" : "text-ink hover:bg-paper-2", FOCUS_RING)}
             >
               <span className={cx("inline-flex p-1", selected ? "bg-card px-frame-thin" : "")}>
                 <PixelGlyph rows={GLYPHS[entry.kind]} scale={3} label={null} />
               </span>
               <span className="font-tag text-[10px] uppercase sm:text-[12px]">{KIND_LABEL[entry.kind]}</span>
               <span className={cx("hidden font-mono text-[11px] leading-tight md:block", selected ? "text-signal-ink" : "text-ink-3")}>{entry.hint}</span>
-              {selected ? <span aria-hidden="true" className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 bg-ink" /> : null}
+              {selected ? <span aria-hidden="true" className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 bg-accent" /> : null}
             </button>
           );
         })}
@@ -218,7 +218,7 @@ export function RuleBuilder({ coins, ropeCoins, readings, telegramLinked, priceW
         </div>
 
         <form
-          className="mt-9 flex w-full max-w-[720px] flex-col items-center gap-3 border-t-4 border-dashed border-rule/30 pt-7"
+          className="mt-9 flex w-full max-w-[720px] flex-col items-center gap-3 border-t-2 border-dashed border-rule pt-7"
           onSubmit={(event) => {
             event.preventDefault();
             readSentence();
@@ -260,7 +260,7 @@ function Check({ checked, onChange, label, disabled = false, hint }: { readonly 
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={cx("flex h-9 items-center gap-2 px-3 font-tag text-[11px] uppercase px-frame-thin px-press disabled:cursor-not-allowed disabled:opacity-55", checked ? "bg-ink text-paper" : "bg-card text-ink-2", FOCUS_RING)}
+      className={cx("flex h-9 items-center gap-2 px-3 font-tag text-[11px] uppercase px-frame-thin px-press disabled:cursor-not-allowed disabled:opacity-55", checked ? "px-btn px-btn-thin px-btn-accent text-accent-ink" : "bg-card text-ink-2", FOCUS_RING)}
     >
       <span aria-hidden="true" className={cx("flex h-3.5 w-3.5 items-center justify-center text-[10px] leading-none", checked ? "bg-signal text-signal-ink" : "bg-paper-2")}>
         {checked ? "✓" : ""}

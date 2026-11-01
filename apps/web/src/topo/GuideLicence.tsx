@@ -47,7 +47,7 @@ export function GuideLicence({ agent, holder, markets, actions, limits, validFro
   const status = revoked ? "Void" : expired ? "Expired" : `Valid · ${days - used} of ${days} days left`;
   return (
     <article className={cx("relative bg-card px-frame px-drop", className)} aria-labelledby={`${id}-title`}>
-      <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-signal px-4 py-2.5 text-signal-ink">
+      <header className="flex items-center justify-between gap-3 border-b-2 border-rule bg-signal px-4 py-2.5 text-signal-ink">
         <h3 id={`${id}-title`} className="font-display text-xl font-bold">
           Guide&apos;s licence
         </h3>
@@ -120,7 +120,7 @@ export function GuideLicence({ agent, holder, markets, actions, limits, validFro
           <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-[14deg] bg-card px-5 py-1 font-display text-5xl font-bold tracking-[0.18em] text-down px-frame px-tone-down">VOID</span>
         </div>
       ) : null}
-      {footer ? <footer className="flex flex-wrap items-center justify-between gap-3 border-t-4 border-dashed border-rule/40 px-4 py-3">{footer}</footer> : null}
+      {footer ? <footer className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-rule px-4 py-3">{footer}</footer> : null}
       {revoked ? <p className="sr-only">This licence is void: the keeper can no longer trade for you.</p> : null}
     </article>
   );

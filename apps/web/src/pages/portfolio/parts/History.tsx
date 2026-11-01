@@ -239,7 +239,7 @@ export function Register({ history, address, mode, sample, className }: { readon
       </div>
       <SummitRegister className="hidden sm:block" rows={rows} caption="Activity register: fills, funding and transfers" empty={history ? "Nothing logged in this range yet." : "Reading the register…"} />
       {/* Phones: the same log book as ruled entries, nothing cut at the edge. */}
-      <ol className="divide-y-2 divide-dashed divide-rule/20 bg-card px-frame px-drop sm:hidden" aria-label="Activity register">
+      <ol className="divide-y-2 divide-dashed divide-rule bg-card px-frame px-drop sm:hidden" aria-label="Activity register">
         {rows.length === 0 ? <li className="px-3 py-3 text-sm text-ink-2">{history ? "Nothing logged in this range yet." : "Reading the register…"}</li> : null}
         {rows.map((row) => (
           <li key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 px-3 py-2.5">

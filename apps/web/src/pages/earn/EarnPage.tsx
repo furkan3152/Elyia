@@ -76,7 +76,7 @@ export default function EarnPage() {
       <Section id="log" tag={`Yield log · ${yields.rows.length} ranked · score = APR × TVL weight`} title="Read the peak, then climb it." lede="The log ranks every yield by the same rule. Pick one: kHYPE stakes through a route card here; the rest open on Hyperliquid until Elyia's planner runs them, and say so.">
         <Split>
           <section className="flex flex-col bg-card px-frame px-drop" aria-labelledby="yield-log">
-            <h3 id="yield-log" className="border-b-4 border-rule px-5 py-4 text-center font-display text-[22px] font-bold leading-none text-ink">
+            <h3 id="yield-log" className="border-b-2 border-rule px-5 py-4 text-center font-display text-[22px] font-bold leading-none text-ink">
               Yield log
             </h3>
             <ol className="flex flex-col">
@@ -84,7 +84,7 @@ export default function EarnPage() {
                 const active = row.id === chosen?.id;
                 const apr = row.aprPct ?? 0;
                 return (
-                  <li key={row.id} className="border-b-2 border-dashed border-rule/20 last:border-b-0">
+                  <li key={row.id} className="border-b-2 border-dashed border-rule last:border-b-0">
                     <button type="button" onClick={() => setSelected(row.id)} aria-pressed={active} className={cx("grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 text-left", active ? "bg-signal text-signal-ink" : "text-ink hover:bg-paper-2", FOCUS_RING)}>
                       <span className="tnum font-tag text-[11px] opacity-70">{String(index + 1).padStart(2, "0")}</span>
                       <span className="min-w-0">
@@ -108,7 +108,7 @@ export default function EarnPage() {
                 </li>
               ) : null}
             </ol>
-            <p className="mt-auto border-t-4 border-dashed border-rule/30 px-5 py-4 text-center text-[13px] leading-relaxed text-ink-2 text-pretty">
+            <p className="mt-auto border-t-2 border-dashed border-rule px-5 py-4 text-center text-[13px] leading-relaxed text-ink-2 text-pretty">
               <span className="font-semibold text-ink">How the rank works.</span> Score = APR × a TVL weight: 0 at $10k, 1 at $10M, a third per decade between. A 300% APR on $5k never outranks HLP. Losing vaults are lakes on the skyline.
             </p>
           </section>

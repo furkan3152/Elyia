@@ -61,7 +61,7 @@ export function RuleBookEditor() {
   const worried = loosened.length > 0 || draft.paused;
   return (
     <div className="bg-card px-frame px-drop-lg">
-      <header className="flex flex-col items-center gap-3 border-b-4 border-rule bg-paper-2 px-4 py-4 text-center">
+      <header className="flex flex-col items-center gap-3 border-b-2 border-rule bg-paper-2 px-4 py-4 text-center">
         <span className="flex items-center gap-3">
           <PixelGlyph rows={ITEM.book} scale={3} label={null} />
           <span className="font-tag text-[12px] uppercase text-ink">Rule Book · printed on this device</span>
@@ -97,7 +97,7 @@ export function RuleBookEditor() {
           </div>
         ) : null}
       </div>
-      <footer className="flex flex-col items-center gap-5 border-t-4 border-dashed border-rule/30 px-4 py-5 sm:flex-row sm:justify-between sm:px-6">
+      <footer className="flex flex-col items-center gap-5 border-t-2 border-dashed border-rule px-4 py-5 sm:flex-row sm:justify-between sm:px-6">
         <Button
           variant="ghost"
           onClick={() => {
@@ -114,7 +114,7 @@ export function RuleBookEditor() {
           </Button>
         </div>
       </footer>
-      <p className="border-t-4 border-rule bg-paper-2 px-4 py-3 text-center text-[12px] leading-relaxed text-ink-3 sm:px-6">Shared with the terminal and Ely. The same evaluator ({DEFAULT_RULE_BOOK.schema}) runs in the API and the keeper; Ely can never loosen it.</p>
+      <p className="border-t-2 border-rule bg-paper-2 px-4 py-3 text-center text-[12px] leading-relaxed text-ink-3 sm:px-6">Shared with the terminal and Ely. The same evaluator ({DEFAULT_RULE_BOOK.schema}) runs in the API and the keeper; Ely can never loosen it.</p>
     </div>
   );
 }

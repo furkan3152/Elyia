@@ -51,7 +51,7 @@ export function YieldRange({ rows, selectedId, onSelect, source, className }: Yi
         redrawKey={`${key}|${selectedId}|${night}|${compact}`}
         label={`Yield skyline, ranked: ${rows.map((row, index) => `${index + 1}. ${row.name}, ${formatApr(row.aprPct)} APR, ${formatTvl(row.tvlUsd)} TVL`).join("; ")}`}
       />
-      <ol className="grid border-t-4 border-rule" style={{ gridTemplateColumns: `repeat(${Math.max(1, rows.length)}, minmax(0, 1fr))`, paddingLeft: gutter, paddingRight: gutter }} aria-label="Yields, ranked">
+      <ol className="grid border-t-2 border-rule" style={{ gridTemplateColumns: `repeat(${Math.max(1, rows.length)}, minmax(0, 1fr))`, paddingLeft: gutter, paddingRight: gutter }} aria-label="Yields, ranked">
         {rows.map((row, index) => {
           const on = row.id === selectedId;
           return (

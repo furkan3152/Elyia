@@ -92,7 +92,7 @@ export function AccountPanel({ className, showLegend = true }: { readonly classN
                 )}
               >
                 {item.label}
-                {item.count ? <span className={cx("tnum inline-flex h-4 min-w-4 items-center justify-center px-1 font-mono text-[10px]", selected ? "bg-ink text-paper" : "bg-ink/10 text-ink-2")}>{item.count}</span> : null}
+                {item.count ? <span className={cx("tnum inline-flex h-4 min-w-4 items-center justify-center px-1 font-mono text-[10px]", selected ? "bg-accent text-accent-ink" : "bg-paper-3 text-ink-2")}>{item.count}</span> : null}
               </button>
             );
           })}

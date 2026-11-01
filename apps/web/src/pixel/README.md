@@ -12,7 +12,7 @@ import { Ely, ElyLoader, ElyEmpty, PixelScene, PixelTerrain, PixelRope, Cards, S
 ## Rules (non-negotiable)
 
 1. **One centre axis.** Build pages with the layout primitives below. 12 columns, 1200 px max, 24 px gutters. Section heads are centred: tag chip, headline, lede. Cards in a row are equal in width and height. Never 2/3 + 1/3.
-2. **The pixel unit is 4 px.** Frames are `px-frame` (4 px) or `px-frame-thin` (2 px): box-shadow frames with stepped corners. Drop shadows are one solid block (`px-drop`, `px-drop-lg`). No radius, no blur. Frames sit outside the box: keep 12 px or more between framed things (24 px in rows of buttons).
+2. **The pixel unit is 4 px.** Style A ("game button", chosen by the owner): no ink outlines and no black block shadows anywhere. Frames are `px-frame` / `px-frame-thin`: a 2 px tone line (`--rule`) drawn with box-shadow so the corners step. `px-drop` adds a translucent depth band inside the bottom edge, `px-drop-lg` a stronger tone line and deeper band. Buttons are `px-btn` + a tone (`px-btn-accent | -signal | -paper | -down | -up | -ink`): flat fill, 4 px stepped corners, 4 px bevel (light top-left, dark bottom-right), pressed inverts it. No radius, no blur.
 3. **Every drawing is a canvas** through `PixelCanvas`: `image-rendering: pixelated`, an integer device-pixel scale at any DPR.
 4. **Type:** Pixelify Sans (`font-display`) for headings and big numbers, Silkscreen (`font-tag`) for tags, labels and nav, IBM Plex Mono (`font-sans` / `font-mono`) for body and data.
 5. **Ely speaks the state**, purposefully: loaders (`ElyLoader`), empty states (`ElyEmpty` / `EmptyState`), success, risk, Guide messages (`ElyToast`, used by every `toast()`).

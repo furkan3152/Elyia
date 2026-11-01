@@ -150,7 +150,7 @@ function FieldConsole({ results }: { readonly results: ReadonlyMap<string, Probe
           Send →
         </Button>
       </div>
-      <div className={cx("relative border-t-4 border-rule", SCREEN)}>
+      <div className={cx("relative border-t-2 border-rule", SCREEN)}>
         <div className="flex flex-col items-center gap-2 border-b-2 border-dashed border-[#CFEFF3]/25 px-4 pb-4 pt-5 text-center">
           <Ely state={ely.state} size={88} label={`Ely: ${ely.words}`} />
           <p className="font-tag text-[12px] uppercase" aria-live="polite">
@@ -198,7 +198,7 @@ function TrailProfile({ groups }: { readonly groups: readonly AltitudeGroup[] })
       <div className="hidden sm:block">
         <PixelCanvas width={200} height={PROFILE_H} pixelSize={5} draw={draw} animate fps={8} decorative redrawKey={theme} />
       </div>
-      <ol className="m-0 flex list-none flex-wrap justify-center gap-y-3 border-t-4 border-rule px-2 py-4 sm:gap-y-0">
+      <ol className="m-0 flex list-none flex-wrap justify-center gap-y-3 border-t-2 border-rule px-2 py-4 sm:gap-y-0">
         {ordered.slice(0, CAMP_HEIGHTS.length).map((group) => {
           const counts = surveyCounts([group]);
           return (
@@ -219,12 +219,12 @@ function TrailProfile({ groups }: { readonly groups: readonly AltitudeGroup[] })
 
 /* The log book ------------------------------------------------------------- */
 
-const METHOD: Readonly<Record<string, string>> = { GET: "bg-card text-ink", SSE: "bg-summit text-[#16201B]", POST: "bg-ink text-paper", PATCH: "bg-ink text-paper", DELETE: "bg-down text-card" };
+const METHOD: Readonly<Record<string, string>> = { GET: "bg-card text-ink", SSE: "bg-summit text-[#16201B]", POST: "bg-accent text-accent-ink", PATCH: "bg-ridge text-card", DELETE: "bg-down text-card" };
 
 function ManualGroup({ group, results }: { readonly group: AltitudeGroup; readonly results: ReadonlyMap<string, Probe> }) {
   return (
     <section id={`alt-${group.altitude}`} aria-labelledby={`alt-${group.altitude}-title`} className="scroll-mt-28 bg-card px-frame px-drop">
-      <header className="flex flex-col items-center gap-0.5 border-b-4 border-rule px-5 pb-3 pt-4 text-center">
+      <header className="flex flex-col items-center gap-0.5 border-b-2 border-rule px-5 pb-3 pt-4 text-center">
         <h3 id={`alt-${group.altitude}-title`} className={cx("font-display text-[26px] font-bold leading-tight", ALT_TEXT[group.altitude])}>
           {group.title}
         </h3>
@@ -234,7 +234,7 @@ function ManualGroup({ group, results }: { readonly group: AltitudeGroup; readon
         {group.endpoints.map((endpoint, index) => {
           const probe = endpoint.probe ? results.get(endpoint.probe) : undefined;
           return (
-            <li key={`${endpoint.method} ${endpoint.path}`} className={cx("grid grid-cols-1 gap-x-6 gap-y-2 px-5 py-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_11rem] md:items-center", index > 0 && "border-t-2 border-dashed border-rule/20")}>
+            <li key={`${endpoint.method} ${endpoint.path}`} className={cx("grid grid-cols-1 gap-x-6 gap-y-2 px-5 py-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_11rem] md:items-center", index > 0 && "border-t-2 border-dashed border-rule")}>
               <code className="flex min-w-0 items-center gap-3 font-mono text-[13px] text-ink">
                 <span className={cx("w-[3.25rem] shrink-0 py-0.5 text-center font-tag text-[10px] px-frame-thin", METHOD[endpoint.method])}>{endpoint.method}</span>
                 <span className="break-all">{endpoint.path}</span>
@@ -276,7 +276,7 @@ function SnippetCard({ snippet, index }: { readonly snippet: Snippet; readonly i
         <h3 className="font-display text-[24px] font-bold leading-tight text-ink">{snippet.title}</h3>
         <ConditionSign condition={CONDITION[snippet.survey]} size="sm" />
       </header>
-      <div className="flex items-center justify-between gap-3 border-t-4 border-rule px-4 py-3">
+      <div className="flex items-center justify-between gap-3 border-t-2 border-rule px-4 py-3">
         {languages.length > 1 ? (
           <SegmentedControl size="sm" label={`${snippet.title}: language`} value={language} onChange={setLanguage} options={languages.map((value) => ({ value, label: value === "ts" ? "TypeScript" : value }))} />
         ) : (
@@ -380,7 +380,7 @@ export default function DevelopersPage() {
             <span className="font-tag text-[12px] uppercase text-ink">The error envelope · every refusal looks like this</span>
             <span className="font-tag text-[10px] uppercase text-ink-2">4xx · 5xx</span>
           </figcaption>
-          <pre className={cx("m-0 whitespace-pre-wrap break-words border-t-4 border-rule px-5 py-4 font-mono text-[12px] leading-[1.6]", SCREEN)} tabIndex={0} aria-label="Error envelope example">
+          <pre className={cx("m-0 whitespace-pre-wrap break-words border-t-2 border-rule px-5 py-4 font-mono text-[12px] leading-[1.6]", SCREEN)} tabIndex={0} aria-label="Error envelope example">
             {ERROR_EXAMPLE}
           </pre>
           <p className="px-5 py-3 text-center font-mono text-[11px] leading-relaxed text-ink-2">

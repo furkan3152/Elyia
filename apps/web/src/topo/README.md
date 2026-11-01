@@ -21,7 +21,7 @@ app shells already do.
 - Fonts: Space Grotesk (`font-sans`, headings/body), IBM Plex Mono (`font-mono`, every number + captions), Instrument Serif italic (`font-map` / `.map-label`, map labels only).
 - Tokens (tailwind names): `paper`, `paper-2`, `paper-3`, `card`, `ink`, `ink-2`, `ink-3`, `rule`, `contour`, `signal` (yellow highlight only), `accent` (glacier, the primary action), `floor`, `ridge`, `summit` (+ `summit-ink` for words), `up`, `down`, `warn` (+ `warn-ink`), `water`, `blaze-red`, `blaze-blue`. Alpha works: `bg-signal/40`.
 - Sheets: `html[data-theme=day|night]`; `.el-day` / `.el-night` force a sheet on a subtree.
-- Objects: 2 px ink border, hard shadow (`shadow-hard`, `shadow-hard-lg`), square corners; captions are `.caption` (mono micro-caps, " · ").
+- Objects: 2 px tone line (`--rule`), never ink and never a block shadow (`shadow-hard*` are now tone outline + depth band), stepped corners; captions are `.caption` (mono micro-caps, " · ").
 - Legacy class names (`bg-bg-1`, `text-text-0`, `violet`, `gold`, `mint`, `rose`, `sky`) still compile and map onto Survey tokens; new code uses Survey names.
 
 ## Artifacts

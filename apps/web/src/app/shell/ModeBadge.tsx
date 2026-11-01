@@ -22,8 +22,8 @@ export function ModeBadge({ className, compact = false }: { readonly className?:
           type="button"
           {...props}
           className={cx(
-            "inline-flex h-6 shrink-0 items-center gap-2 px-2 font-tag text-[11px] uppercase px-frame-thin",
-            mode === "testnet" ? "bg-signal text-[#16201B] [--pf-c:#16201B]" : "bg-ink text-paper",
+            "inline-flex h-6 shrink-0 items-center gap-2 px-2.5 font-tag text-[11px] uppercase px-btn px-btn-thin",
+            mode === "testnet" ? "px-btn-signal text-[#16201B]" : "px-btn-ink text-paper",
             FOCUS_RING,
             className,
           )}

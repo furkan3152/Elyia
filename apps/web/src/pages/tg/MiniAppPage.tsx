@@ -73,7 +73,7 @@ function AltimeterCard({ range }: { readonly range: RangeData }) {
   const today = dayChange(range.history);
   return (
     <section aria-label="Net worth" className="flex flex-col bg-card px-frame px-drop" ref={measure}>
-      <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-paper-2 px-3 py-2">
+      <header className="flex items-center justify-between gap-3 border-b-2 border-rule bg-paper-2 px-3 py-2">
         <h2 className="font-tag text-[11px] uppercase text-ink">
           Altimeter · net worth{range.source === "sample" ? <span className="ml-1.5 bg-signal px-1 text-signal-ink">sample</span> : null}
         </h2>
@@ -117,7 +117,7 @@ function BulletinCard({ bulletin, onMute, sample }: { readonly bulletin: CampBul
         Ely → you · {new Date(now).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
         {sample ? " · sample" : ""}
       </span>
-      <header className={cx("flex items-center gap-2 border-b-4 border-rule px-3 pb-2 pt-5", TONE_TAB[bulletin.tone])}>
+      <header className={cx("flex items-center gap-2 border-b-2 border-rule px-3 pb-2 pt-5", TONE_TAB[bulletin.tone])}>
         <span aria-hidden="true" className="font-tag text-[12px]">
           {bulletin.tone === "calm" ? "◇" : "⚑"}
         </span>
@@ -129,7 +129,7 @@ function BulletinCard({ bulletin, onMute, sample }: { readonly bulletin: CampBul
       <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] gap-x-4 gap-y-4 px-3 pb-4 pt-1">
         {bulletin.actions.map((action) =>
           action.kind === "mute" ? (
-            <button key={action.label} type="button" onClick={onMute} className={cx("h-11 bg-card px-2.5 font-tag text-[11px] uppercase text-ink-2 px-frame-thin px-press hover:text-ink", FOCUS_RING)}>
+            <button key={action.label} type="button" onClick={onMute} className={cx("px-btn px-btn-thin h-11 px-btn-paper px-2.5 font-tag text-[11px] uppercase text-ink-2 hover:text-ink", FOCUS_RING)}>
               {action.label}
             </button>
           ) : action.href ? (
@@ -137,14 +137,14 @@ function BulletinCard({ bulletin, onMute, sample }: { readonly bulletin: CampBul
               {action.label}
             </ButtonLink>
           ) : (
-            <button key={action.label} type="button" onClick={() => openOracle()} className={cx("col-span-3 h-12 bg-signal font-display text-[18px] font-bold text-signal-ink px-frame px-drop px-press", FOCUS_RING)}>
+            <button key={action.label} type="button" onClick={() => openOracle()} className={cx("px-btn col-span-3 h-12 px-btn-signal font-display text-[18px] font-bold text-signal-ink", FOCUS_RING)}>
               {action.label} ▸
             </button>
           ),
         )}
       </div>
       {bulletin.tone !== "calm" ? (
-        <p className="flex items-center justify-center gap-2 border-t-4 border-dashed border-rule/30 px-3 py-2 text-center font-mono text-[11px] text-ink-2">
+        <p className="flex items-center justify-center gap-2 border-t-2 border-dashed border-rule px-3 py-2 text-center font-mono text-[11px] text-ink-2">
           <Blaze grade={bulletin.grade as 1 | 2 | 3 | 4 | 5 | 6} size={11} /> drafts a route card · you sign in the deck
         </p>
       ) : null}
@@ -156,7 +156,7 @@ function RopesCard({ range }: { readonly range: RangeData }) {
   const ropes = useMemo(() => sortRopes(range.ropes).slice(0, 4), [range.ropes]);
   return (
     <section aria-labelledby="camp-ropes" className="bg-card px-frame px-drop">
-      <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-paper-2 px-3 py-2">
+      <header className="flex items-center justify-between gap-3 border-b-2 border-rule bg-paper-2 px-3 py-2">
         <h2 id="camp-ropes" className="font-tag text-[11px] uppercase text-ink">
           Ropes · {range.ropes.length}
           {range.source === "sample" ? " · sample" : ""}
@@ -166,7 +166,7 @@ function RopesCard({ range }: { readonly range: RangeData }) {
       {ropes.length === 0 ? (
         <p className="px-3 py-5 text-center text-[14px] text-ink-2">No ropes out. Every position you open hangs here, from the crevasse to the flag.</p>
       ) : (
-        <ul className="divide-y-2 divide-dashed divide-rule/20">
+        <ul className="divide-y-2 divide-dashed divide-rule">
           {ropes.map((rope) => (
             <li key={`${rope.dex}|${rope.coin}`}>
               <Link to={routeHref("trade", { market: rope.dex ? `${rope.dex}:${rope.coin}` : rope.coin })} className={cx("block px-3 pb-3 pt-3 hover:bg-paper-2/60", FOCUS_RING)}>
@@ -269,9 +269,9 @@ function WatchLine({ followed, source, onWatch }: { readonly followed: string | 
 /** The fixed WHERE TO? bar; inside Telegram, Telegram's own main button carries it instead. */
 function WhereToBar() {
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 border-t-4 border-rule bg-paper pb-[max(env(safe-area-inset-bottom),14px)] pt-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 border-t-2 border-rule bg-paper pb-[max(env(safe-area-inset-bottom),14px)] pt-4">
       <div className="pointer-events-auto mx-auto max-w-[440px] px-5">
-        <button type="button" onClick={() => openOracle()} className={cx("flex h-14 w-full items-center justify-center gap-3 bg-signal px-4 text-signal-ink px-frame px-drop px-press", FOCUS_RING)}>
+        <button type="button" onClick={() => openOracle()} className={cx("px-btn flex h-14 w-full items-center justify-center gap-3 px-btn-signal px-4 text-signal-ink", FOCUS_RING)}>
           <span className="shrink-0 whitespace-nowrap font-display text-[22px] font-bold">Where to?</span>
           <span className="min-w-0 truncate font-mono text-[12px] opacity-80">long ETH 5x with 200 USDC…</span>
         </button>
@@ -341,8 +341,8 @@ function Camp() {
         <h1 className="mt-5 font-display text-[56px] font-bold leading-[1.02] text-ink">Base camp, in your pocket.</h1>
         <p className="mt-4 max-w-[560px] text-[17px] leading-relaxed text-ink-2">Opened from Telegram, this page takes the chat&apos;s colours and puts WHERE TO? on Telegram&apos;s own main button. It reads and drafts; signing stays in your wallet.</p>
       </header>
-      <div className="relative mx-auto flex max-w-[440px] flex-col gap-7 px-5 pb-36 pt-4 xl:mb-16 xl:bg-paper xl:pt-6 xl:shadow-[0_-4px_0_0_rgb(var(--rule)),0_4px_0_0_rgb(var(--rule)),-4px_0_0_0_rgb(var(--rule)),4px_0_0_0_rgb(var(--rule)),12px_16px_0_0_rgb(var(--shadow-ink))]">
-        <header className="flex items-center gap-3 border-b-4 border-rule pb-3">
+      <div className="relative mx-auto flex max-w-[440px] flex-col gap-7 px-5 pb-36 pt-4 xl:mb-16 xl:bg-paper xl:pt-6 xl:shadow-[0_-2px_0_0_rgb(var(--rule)),0_2px_0_0_rgb(var(--rule)),-2px_0_0_0_rgb(var(--rule)),2px_0_0_0_rgb(var(--rule)),inset_0_-6px_0_0_var(--depth)]">
+        <header className="flex items-center gap-3 border-b-2 border-rule pb-3">
           <ElyiaMark size={30} />
           <div className="min-w-0 flex-1">
             <p className="font-display text-[22px] font-bold leading-none">Elyia</p>

@@ -31,16 +31,16 @@ export function Toggle({ checked, onChange, label, description, disabled, hideLa
         className={cx(
           "relative inline-flex shrink-0 items-center px-frame-thin transition-[background-color] duration-fast ease-standard disabled:cursor-not-allowed disabled:opacity-50",
           small ? "h-4 w-8" : "h-5 w-10",
-          checked ? "bg-accent" : "bg-paper-2",
+          checked ? "bg-accent" : "bg-paper-3",
           FOCUS_RING,
         )}
       >
         <span
           aria-hidden="true"
           className={cx(
-            "inline-block bg-ink transition-transform duration-fast ease-spring",
+            "px-bevel px-bevel-thin inline-block transition-transform duration-fast ease-spring",
             small ? "h-4 w-4" : "h-5 w-5",
-            checked ? cx("shadow-[inset_0_0_0_4px_rgb(var(--ink)),inset_0_0_0_10px_rgb(var(--signal))]", small ? "translate-x-4" : "translate-x-5") : "translate-x-0",
+            checked ? cx("px-btn-signal", small ? "translate-x-4" : "translate-x-5") : "px-btn-paper translate-x-0",
           )}
         />
       </button>

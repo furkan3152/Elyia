@@ -82,7 +82,7 @@ export function ConnectionDot({ className }: { readonly className?: string }) {
 /** One instrument on the strip: a caption over a mono reading, ruled off from its neighbour. */
 function Instrument({ label, children, hint, className, centred = false }: { readonly label: ReactNode; readonly children: ReactNode; readonly hint?: string; readonly className?: string; readonly centred?: boolean }) {
   const body = (
-    <div className={cx("flex min-w-0 flex-col justify-center gap-1.5 leading-none", centred ? "items-center text-center" : "border-l-2 border-dotted border-rule/30 pl-4", className)} tabIndex={hint ? 0 : undefined}>
+    <div className={cx("flex min-w-0 flex-col justify-center gap-1.5 leading-none", centred ? "items-center text-center" : "border-l-2 border-dotted border-rule pl-4", className)} tabIndex={hint ? 0 : undefined}>
       <span className="whitespace-nowrap font-tag text-[11px] uppercase text-ink-3">{label}</span>
       <span className="tnum flex items-center gap-1.5 whitespace-nowrap font-mono text-[13px] text-ink">{children}</span>
     </div>

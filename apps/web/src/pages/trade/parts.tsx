@@ -24,7 +24,7 @@ export function Caption({ parts, className, tone = "ink-2" }: { readonly parts: 
 /**
  * A terminal panel in pixel dress: card stock inside a 4 px stepped frame
  * (corners cut), a Silkscreen head ruled off by a dashed pixel seam. Dense
- * panels stay flat; the ticket is the one raised card (a block drop).
+ * panels stay flat; the ticket is the one raised card (stronger tone line, depth band).
  */
 export function Frame({
   title,

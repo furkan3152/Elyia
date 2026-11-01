@@ -47,7 +47,7 @@ export function TelegramCard({ preview }: { readonly preview: string }) {
 
   return (
     <section className="flex h-full flex-col bg-card px-frame px-drop" aria-labelledby="tg-title">
-      <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-paper-2 px-4 py-2.5">
+      <header className="flex items-center justify-between gap-3 border-b-2 border-rule bg-paper-2 px-4 py-2.5">
         <h3 id="tg-title" className="font-tag text-[12px] uppercase text-ink">
           Telegram · base-camp radio
         </h3>

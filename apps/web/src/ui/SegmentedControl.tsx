@@ -24,10 +24,10 @@ export interface SegmentedControlProps<V extends string> {
 }
 
 const SELECTED: Readonly<Record<NonNullable<SegmentedControlProps<string>["tone"]>, string>> = {
-  violet: "bg-ink text-paper",
-  mint: "bg-up text-card",
-  rose: "bg-down text-card",
-  gold: "bg-signal text-signal-ink",
+  violet: "px-btn px-btn-thin px-btn-accent text-accent-ink",
+  mint: "px-btn px-btn-thin px-btn-up text-card",
+  rose: "px-btn px-btn-thin px-btn-down text-card",
+  gold: "px-btn px-btn-thin px-btn-signal text-signal-ink",
 };
 
 /** One choice out of a few (radiogroup with arrow-key navigation). */
@@ -60,7 +60,7 @@ export function SegmentedControl<V extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cx("inline-flex gap-[2px] bg-rule px-frame-thin", fullWidth && "flex w-full", className)}
+      className={cx("inline-flex gap-[2px] bg-paper-2 p-[2px] px-frame-thin", fullWidth && "flex w-full", className)}
     >
       {options.map((option, index) => {
         const selected = option.value === value;

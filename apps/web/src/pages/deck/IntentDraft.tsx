@@ -134,7 +134,7 @@ export function IntentDraft({ sentence, account }: { readonly sentence: string; 
   const trade = /\b(long|short|buy|sell)\s+([a-z0-9]{2,10})\b/iu.exec(sentence);
   return (
     <article className="el-rise relative bg-card text-left px-frame px-drop-lg" aria-label="Route card draft">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-dashed border-rule/40 px-4 py-2.5 font-tag text-[11px] uppercase text-ink-2">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-dashed border-rule px-4 py-2.5 font-tag text-[11px] uppercase text-ink-2">
         <span className="text-ink">Route card {id} · draft</span>
         <span className="flex items-center gap-2">
           <Blaze grade={sketch.grade} size={14} /> grade T{sketch.grade}
@@ -160,7 +160,7 @@ export function IntentDraft({ sentence, account }: { readonly sentence: string; 
           ))}
         </ol>
       </div>
-      <footer className="flex flex-wrap items-center gap-x-6 gap-y-5 border-t-4 border-dashed border-rule/30 px-4 py-4">
+      <footer className="flex flex-wrap items-center gap-x-6 gap-y-5 border-t-2 border-dashed border-rule px-4 py-4">
         {trade ? (
           <ButtonLink to={routeHref("trade", { market: trade[2]!.toUpperCase() })} variant="primary" size="sm" grade={sketch.grade}>
             Open the {trade[2]!.toUpperCase()} terminal

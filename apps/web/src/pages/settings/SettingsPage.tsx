@@ -149,7 +149,7 @@ export default function SettingsPage() {
             <div className="flex flex-1 items-center bg-paper-2 p-4">
               <MotionArt night={night} />
             </div>
-            <figcaption className="border-t-4 border-rule px-4 py-2 text-center font-tag text-[11px] uppercase text-ink-2">{reduced ? "end state · motion off" : "the map draws in band by band · loops every 6 s"}</figcaption>
+            <figcaption className="border-t-2 border-rule px-4 py-2 text-center font-tag text-[11px] uppercase text-ink-2">{reduced ? "end state · motion off" : "the map draws in band by band · loops every 6 s"}</figcaption>
           </figure>
         </Split>
       </Section>
@@ -175,7 +175,7 @@ export default function SettingsPage() {
                 className={cx("flex flex-col items-center gap-4 bg-card px-6 py-6 text-center px-frame", selected ? "px-drop-lg" : "px-drop opacity-90", network.open ? "px-press" : "cursor-not-allowed", FOCUS_RING)}
               >
                 <span className="flex items-center gap-3">
-                  <span aria-hidden="true" className={cx("inline-flex h-5 w-5 items-center justify-center font-tag text-[11px]", selected ? "bg-ink text-paper" : "bg-paper-2 text-transparent")}>
+                  <span aria-hidden="true" className={cx("inline-flex h-5 w-5 items-center justify-center font-tag text-[11px]", selected ? "bg-accent text-accent-ink" : "bg-paper-2 text-transparent")}>
                     ✓
                   </span>
                   <span className={cx("px-2.5 py-1 font-display text-[18px] font-bold px-frame-thin", network.value === "testnet" ? "bg-signal text-signal-ink" : "bg-card text-ink")}>{network.name}</span>

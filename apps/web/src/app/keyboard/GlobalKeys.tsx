@@ -50,7 +50,7 @@ export function GlobalKeys() {
 
   return (
     <Sheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} title="Keyboard shortcuts" description="Every action in Elyia is reachable from the keyboard.">
-      <ul className="divide-y divide-rule/15">
+      <ul className="divide-y divide-rule">
         {SHORTCUT_DOCS.map((doc) => (
           <li key={`${doc.label}-${doc.keys.join("")}`} className="flex items-center justify-between gap-4 py-2.5 text-sm">
             <span className="text-ink-2">{doc.label}</span>

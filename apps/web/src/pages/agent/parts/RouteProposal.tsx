@@ -75,7 +75,7 @@ export function RouteProposal({ sentence, onOpen }: { readonly sentence: string;
   const draw = useCallback((ctx: CanvasRenderingContext2D) => paintSteps(ctx, layers), [layers]);
   return (
     <article className="el-rise relative bg-card px-frame px-drop" aria-label="Route card proposal">
-      <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-paper-2 px-3 py-1.5">
+      <header className="flex items-center justify-between gap-3 border-b-2 border-rule bg-paper-2 px-3 py-1.5">
         <span className="font-tag text-[11px] uppercase text-ink">Route card · draft</span>
         <span className="flex items-center gap-1.5 font-tag text-[11px] uppercase text-ink-2">
           <Blaze grade={sketch.grade} size={12} /> T{sketch.grade}
@@ -99,7 +99,7 @@ export function RouteProposal({ sentence, onOpen }: { readonly sentence: string;
           </figcaption>
         </figure>
       </div>
-      <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t-4 border-dashed border-rule/30 px-3 py-3">
+      <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t-2 border-dashed border-rule px-3 py-3">
         <Button variant="primary" size="sm" grade={sketch.grade} onClick={onOpen}>
           Open the route card ▸
         </Button>

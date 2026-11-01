@@ -315,10 +315,10 @@ a.el-blade {
 /* Coordinate ticks on a map sheet's neat-line. */
 .el-neat-ticks {
   background:
-    repeating-linear-gradient(to right, rgb(var(--rule) / 0.55) 0 1px, transparent 1px 48px) top left / 100% 5px no-repeat,
-    repeating-linear-gradient(to right, rgb(var(--rule) / 0.55) 0 1px, transparent 1px 48px) bottom left / 100% 5px no-repeat,
-    repeating-linear-gradient(to bottom, rgb(var(--rule) / 0.55) 0 1px, transparent 1px 48px) top left / 5px 100% no-repeat,
-    repeating-linear-gradient(to bottom, rgb(var(--rule) / 0.55) 0 1px, transparent 1px 48px) top right / 5px 100% no-repeat;
+    repeating-linear-gradient(to right, rgb(var(--rule)) 0 1px, transparent 1px 48px) top left / 100% 5px no-repeat,
+    repeating-linear-gradient(to right, rgb(var(--rule)) 0 1px, transparent 1px 48px) bottom left / 100% 5px no-repeat,
+    repeating-linear-gradient(to bottom, rgb(var(--rule)) 0 1px, transparent 1px 48px) top left / 5px 100% no-repeat,
+    repeating-linear-gradient(to bottom, rgb(var(--rule)) 0 1px, transparent 1px 48px) top right / 5px 100% no-repeat;
 }
 
 /* Perforation: a dashed tear line with two half-moon notches (route card stub, licence). */

@@ -29,7 +29,7 @@ const upSoft = "border-up/55 bg-up/[0.1] text-up";
 const downSoft = "border-down/55 bg-down/[0.08] text-down";
 const waterSoft = "border-water/55 bg-water/[0.08] text-water";
 const warnSoft = "border-warn/70 bg-warn/[0.14] text-warn-ink";
-const neutralSoft = "border-rule/40 bg-paper-2/70 text-ink-2";
+const neutralSoft = "border-rule bg-paper-2/70 text-ink-2";
 
 /** Soft fill + border + text. */
 export const SOFT_TONE: ToneMap = {
@@ -80,7 +80,7 @@ export const SOLID_TONE: ToneMap = {
   sky: "border-rule bg-water text-card",
   water: "border-rule bg-water text-card",
   warn: "border-rule bg-warn text-warn-on",
-  neutral: "border-rule bg-ink text-paper",
+  neutral: "border-rule bg-ink-2 text-paper",
   floor: "border-rule bg-floor text-card",
   ridge: "border-rule bg-ridge text-card",
   summit: "border-rule bg-summit-ink text-card",

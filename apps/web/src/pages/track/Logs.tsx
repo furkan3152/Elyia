@@ -24,7 +24,7 @@ export function JourneysLog({ activeId, className }: { readonly activeId: string
   const journeys = useJourneys();
   return (
     <section className={cx("flex flex-col bg-card px-frame px-drop", className)} aria-labelledby="journeys-log">
-      <header className="flex flex-col items-center gap-2 border-b-4 border-rule px-5 py-5 text-center">
+      <header className="flex flex-col items-center gap-2 border-b-2 border-rule px-5 py-5 text-center">
         <p className="caption">from bridge · swap · earn</p>
         <h3 id="journeys-log" className="font-display text-[24px] font-bold leading-none text-ink">
           Journeys · {journeys.length}
@@ -35,7 +35,7 @@ export function JourneysLog({ activeId, className }: { readonly activeId: string
       ) : (
         <ol className="relative">
           {journeys.map((journey: JourneyRecord, index) => (
-            <li key={journey.id} className={cx("grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b-2 border-dashed border-rule/20 py-3 pl-5 pr-4", journey.id === activeId && "bg-signal text-signal-ink")}>
+            <li key={journey.id} className={cx("grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b-2 border-dashed border-rule py-3 pl-5 pr-4", journey.id === activeId && "bg-signal text-signal-ink")}>
               <span className="tnum font-mono text-[12px] text-ink-2">{String(index + 1).padStart(2, "0")}</span>
               <Link to={routeHref("track", { id: journey.id })} className="min-w-0 hover:underline">
                 <span className="block truncate font-mono text-[13px] text-ink">“{journey.sentence}”</span>
@@ -63,7 +63,7 @@ function WatchedRow({ entry }: { readonly entry: WatchedAddress }) {
   const packs = usePacks(entry.address);
   const hype = [packs.summit.HYPE, packs.ridge.HYPE, packs.floor.HYPE].filter((value): value is number => value !== null);
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b-2 border-dashed border-rule/20 px-5 py-3">
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b-2 border-dashed border-rule px-5 py-3">
       <div className="min-w-0">
         <p className="truncate text-[15px] font-semibold text-ink">
           {entry.label || shortAddress(entry.address)} <span className="font-mono text-[12px] font-normal text-ink-3">{shortAddress(entry.address)}</span>
@@ -93,14 +93,14 @@ export function WatchList({ className }: { readonly className?: string }) {
   const valid = /^0x[0-9a-fA-F]{40}$/u.test(address.trim());
   return (
     <section className={cx("flex flex-col bg-card px-frame px-drop", className)} aria-labelledby="watch-list">
-      <header className="flex flex-col items-center gap-2 border-b-4 border-rule px-5 py-5 text-center">
+      <header className="flex flex-col items-center gap-2 border-b-2 border-rule px-5 py-5 text-center">
         <p className="caption">read only · live packs</p>
         <h3 id="watch-list" className="font-display text-[24px] font-bold leading-none text-ink">
           Watched · {watched.length}
         </h3>
       </header>
       <form
-        className="flex flex-col gap-4 border-b-4 border-dashed border-rule/30 p-5 sm:flex-row sm:items-end"
+        className="flex flex-col gap-4 border-b-2 border-dashed border-rule p-5 sm:flex-row sm:items-end"
         onSubmit={(event) => {
           event.preventDefault();
           if (!valid) return;

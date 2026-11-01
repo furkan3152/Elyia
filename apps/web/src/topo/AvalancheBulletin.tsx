@@ -64,7 +64,7 @@ export function AvalancheBulletin({ positions, netWorth, driver = "HYPE", concen
   const shockPct = Math.round(shock * 100);
   return (
     <section className={cx("bg-card px-frame px-drop", className)} aria-labelledby={`${id}-title`}>
-      <header className={cx("flex items-center gap-4 border-b-4 border-rule p-4", LEVEL_TINT[level])}>
+      <header className={cx("flex items-center gap-4 border-b-2 border-rule p-4", LEVEL_TINT[level])}>
         <AvalanchePictogram level={level} />
         <div className="min-w-0 flex-1">
           <h3 id={`${id}-title`} className="font-display text-xl font-bold leading-tight text-ink">
@@ -78,7 +78,7 @@ export function AvalancheBulletin({ positions, netWorth, driver = "HYPE", concen
         {level >= 3 || result.snapped > 0 ? <Ely state="worry" size={66} label={null} className="-my-2 shrink-0" /> : <Ely state="idle" size={66} label={null} className="-my-2 shrink-0" />}
       </header>
       {slider ? (
-        <div className="border-b-2 border-dashed border-rule/40 px-5 pb-4 pt-4">
+        <div className="border-b-2 border-dashed border-rule px-5 pb-4 pt-4">
           <div className="flex items-baseline justify-between gap-3">
             <label htmlFor={`${id}-shock`} className="caption">
               Shock slider · what if {driver} moves
@@ -107,7 +107,7 @@ export function AvalancheBulletin({ positions, netWorth, driver = "HYPE", concen
           </div>
         </div>
       ) : null}
-      <ul className="divide-y-2 divide-dashed divide-rule/15 px-5 py-1">
+      <ul className="divide-y-2 divide-dashed divide-rule px-5 py-1">
         {result.positions.map((position) => {
           const fraying = position.after !== null && position.after < 0.1;
           return (
@@ -133,7 +133,7 @@ export function AvalancheBulletin({ positions, netWorth, driver = "HYPE", concen
           );
         })}
       </ul>
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t-4 border-rule px-5 py-3">
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-rule px-5 py-3">
         <p className="tnum font-mono text-[13px] text-ink-2">
           Net worth {shock === 0 ? "" : "after the shock "}
           <span className="font-display text-base font-bold text-ink">{formatUsd(result.netWorth)}</span>

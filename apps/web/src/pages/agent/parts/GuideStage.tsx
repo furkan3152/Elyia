@@ -34,7 +34,7 @@ export function GuideStage({ mood, pixelSize, className }: { readonly mood: Mood
         redrawKey={`${mood.state}|${night}|${wide}`}
         label={`Ely, the Guide, across the survey table: ${mood.word.toLowerCase()}. ${mood.line}`}
       />
-      <figcaption className="flex flex-col items-center gap-1 border-y-4 border-rule bg-paper-2 px-4 py-2.5 text-center sm:flex-row sm:justify-center sm:gap-3">
+      <figcaption className="flex flex-col items-center gap-1 border-y-2 border-rule bg-paper-2 px-4 py-2.5 text-center sm:flex-row sm:justify-center sm:gap-3">
         <span className="inline-flex items-center gap-2 font-tag text-[12px] uppercase text-ink">
           <span aria-hidden="true" className={cx("inline-block h-2 w-2", mood.state === "worry" ? "bg-down" : mood.state === "summit" ? "bg-up" : mood.state === "watch" ? "bg-signal" : "bg-accent")} />
           Ely · {mood.word}

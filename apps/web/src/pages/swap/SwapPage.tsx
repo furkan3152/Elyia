@@ -174,7 +174,7 @@ export default function SwapPage() {
                   hint={address ? `in your pack: ${packFigure(balance, from === "HYPE" ? 4 : 2)} ${from}` : "connect to read your pack"}
                 />
                 <div className="relative flex items-center justify-center">
-                  <span aria-hidden="true" className="absolute inset-x-0 top-1/2 border-t-4 border-dashed border-rule/30" />
+                  <span aria-hidden="true" className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-rule" />
                   <button
                     type="button"
                     onClick={() => {
@@ -182,7 +182,7 @@ export default function SwapPage() {
                       setAmount("");
                       reset();
                     }}
-                    className={cx("relative bg-card px-4 py-1.5 font-tag text-[12px] uppercase text-ink px-frame-thin px-drop px-press", FOCUS_RING)}
+                    className={cx("px-btn px-btn-thin relative px-btn-paper px-4 py-1.5 font-tag text-[12px] uppercase text-ink", FOCUS_RING)}
                     aria-label={`Flip: pay ${to}, receive ${from}`}
                   >
                     ▲▼ flip
@@ -247,7 +247,7 @@ export default function SwapPage() {
                     );
                   })}
                 </ul>
-                <div className="mt-auto flex flex-col items-center gap-3 border-t-4 border-dashed border-rule/30 pt-5">
+                <div className="mt-auto flex flex-col items-center gap-3 border-t-2 border-dashed border-rule pt-5">
                   <span className="caption">Max slippage</span>
                   <SegmentedControl
                     label="Max slippage"

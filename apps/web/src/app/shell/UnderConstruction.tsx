@@ -64,7 +64,7 @@ export function UnderConstruction({ icon: Icon, title, eyebrow, description, pla
             </Chip>
           </div>
         ) : null}
-        <div className="flex flex-wrap gap-4 border-t-4 border-dashed border-rule/30 pt-6">
+        <div className="flex flex-wrap gap-4 border-t-2 border-dashed border-rule pt-6">
           <Button variant="primary" onClick={() => openOracle(example)}>
             Where to?
           </Button>

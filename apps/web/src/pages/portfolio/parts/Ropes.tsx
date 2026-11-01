@@ -49,7 +49,7 @@ export function RopeList({ ropes, max = 5, sample = false, className }: { readon
       ) : null}
       <FeaturedRope rope={sorted[0]!} />
       {sorted.length > 1 ? (
-        <ul className="flex flex-col divide-y-2 divide-dashed divide-rule/15 border-t-4 border-dashed border-rule/20">
+        <ul className="flex flex-col divide-y-2 divide-dashed divide-rule border-t-2 border-dashed border-rule">
           {sorted.slice(1).map((rope) => (
             <li key={`${rope.dex}|${rope.coin}`}>
               <RopeRow rope={rope} />

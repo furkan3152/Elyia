@@ -3,9 +3,10 @@ import React from "react";
 import { cx } from "./cx";
 
 /**
- * Pixel Survey panels are card stock in a 4 px stepped pixel frame. `flat`
- * is the frame alone (dense app grids); `raised` (default) adds one block
- * drop; `sheet` a two-unit drop for the one thing that matters on a view;
+ * Pixel Survey panels are card stock in a 2 px stepped tone line (never
+ * ink, never a block shadow). `flat` is the line alone (dense app grids);
+ * `raised` (default) adds a depth band inside the bottom edge; `sheet` a
+ * stronger tone line and deeper band for the one thing that matters on a view;
  * `well` is a sunk paper area without a frame. Frames are drawn outside the
  * box: keep at least 12 px between panels (the layout primitives do).
  * Legacy names: glass -> raised, glow -> sheet.
@@ -79,7 +80,7 @@ export interface PanelHeaderProps {
 /** The mono caps header row used by every panel. */
 export function PanelHeader({ title, aside, id, className, ruled = false }: PanelHeaderProps) {
   return (
-    <div className={cx("flex min-h-6 items-center justify-between gap-3", ruled ? "border-b-4 border-rule px-4 py-2.5" : "mb-4", className)}>
+    <div className={cx("flex min-h-6 items-center justify-between gap-3", ruled ? "border-b-2 border-rule px-4 py-2.5" : "mb-4", className)}>
       <h2 id={id} className="caption truncate !font-tag !text-ink">
         {title}
       </h2>

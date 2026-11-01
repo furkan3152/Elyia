@@ -116,12 +116,12 @@ export function SheetPicker({ value, onChange }: { readonly value: ThemePreferen
             onClick={() => onChange(choice.value)}
             className={cx("flex flex-col bg-card text-center px-frame px-press", selected ? "px-drop-lg" : "px-drop", FOCUS_RING)}
           >
-            <span className="block border-b-4 border-rule bg-paper-2 p-1.5 sm:p-3">
+            <span className="block border-b-2 border-rule bg-paper-2 p-1.5 sm:p-3">
               <SheetArt choice={choice.value} />
             </span>
             <span className={cx("flex flex-1 flex-col items-center gap-1 px-2 py-3", selected && "bg-signal text-signal-ink")}>
               <span className="flex items-center gap-2 font-display text-[16px] font-bold leading-tight sm:text-[20px]">
-                <span aria-hidden="true" className={cx("inline-flex h-4 w-4 items-center justify-center font-tag text-[10px]", selected ? "bg-ink text-paper" : "bg-paper-2")}>
+                <span aria-hidden="true" className={cx("inline-flex h-4 w-4 items-center justify-center font-tag text-[10px]", selected ? "bg-accent text-accent-ink" : "bg-paper-2")}>
                   {selected ? "✓" : ""}
                 </span>
                 {choice.name}

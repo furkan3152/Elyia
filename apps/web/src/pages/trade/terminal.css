@@ -7,20 +7,20 @@
 
 /* A dashed pixel seam under a panel head: 2 px dashes of 8 on a 12 px period. */
 .tx-seam-b {
-  background-image: linear-gradient(to right, rgb(var(--rule) / 0.45) 0 8px, transparent 8px 12px);
+  background-image: linear-gradient(to right, rgb(var(--rule)) 0 8px, transparent 8px 12px);
   background-size: 12px 2px;
   background-repeat: repeat-x;
   background-position: 0 100%;
 }
 .tx-seam-t {
-  background-image: linear-gradient(to right, rgb(var(--rule) / 0.45) 0 8px, transparent 8px 12px);
+  background-image: linear-gradient(to right, rgb(var(--rule)) 0 8px, transparent 8px 12px);
   background-size: 12px 2px;
   background-repeat: repeat-x;
   background-position: 0 0;
 }
 /* A row seam: 2 px dots of the faint rule, every 6 px. */
 .tx-row-seam {
-  background-image: linear-gradient(to right, rgb(var(--rule) / 0.16) 0 2px, transparent 2px 6px);
+  background-image: linear-gradient(to right, rgb(var(--rule)) 0 2px, transparent 2px 6px);
   background-size: 6px 1px;
   background-repeat: repeat-x;
   background-position: 0 100%;

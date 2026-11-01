@@ -19,8 +19,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 /**
- * The Elyia button. `primary` is the one action of a view (filled glacier,
- * ink border, hard shadow); `signpost` a pointed wayfinding blade; `ink`
+ * The Elyia button. `primary` is the one action of a view (glacier game
+ * bevel, stepped corners); `signpost` the sun bevel for wayfinding; `ink`
  * the secondary; `solid-ink`, `danger`, `ghost`, `long`, `short`. Sizes
  * xs-xl; md is the 40 px default, lg the 48 px touch size.
  */

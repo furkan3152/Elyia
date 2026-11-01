@@ -25,7 +25,7 @@ function PaneTabs({ pane }: { readonly pane: SidePane }) {
           role="tab"
           aria-selected={pane === id}
           onClick={() => useTerminalUi.getState().set({ sidePane: id })}
-          className={cx("h-6 px-2 font-tag text-[11px] uppercase", pane === id ? "bg-ink text-paper" : "text-ink-3 hover:text-ink", FOCUS_RING)}
+          className={cx("h-6 px-2 font-tag text-[11px] uppercase", pane === id ? "px-btn px-btn-thin px-btn-accent text-accent-ink" : "text-ink-3 hover:text-ink", FOCUS_RING)}
         >
           {id}
         </button>

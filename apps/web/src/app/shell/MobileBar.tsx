@@ -33,7 +33,7 @@ export function MobileBar() {
   const moreActive = more.some((item) => location.pathname === item.href || location.pathname.startsWith(`${item.href}/`));
   return (
     <>
-      <nav aria-label="Deck" className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t-4 border-rule bg-paper md:hidden">
+      <nav aria-label="Deck" className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t-2 border-rule bg-paper md:hidden">
         <ul className="grid h-16 grid-cols-5 items-stretch gap-2 px-3 py-2">
           {PRIMARY_NAV.map((item) => (
             <li key={item.id} className="flex min-w-0">

@@ -91,7 +91,7 @@ const GRID_KEEP: Readonly<Record<NonNullable<GridProps["cols"]>, string>> = {
   12: "grid-cols-12",
 };
 
-/** The 12-column grid with equal spans (24 px gutters, 28 px between rows so block shadows clear). */
+/** The 12-column grid with equal spans (24 px gutters, 28 px between rows so frames clear). */
 export function Grid({ cols = 12, keep = false, as = "div", className, children }: GridProps) {
   const Element = as;
   return <Element className={cx("grid gap-x-6 gap-y-7", keep ? GRID_KEEP[cols] : cx("grid-cols-1", GRID_COLS[cols]), as !== "div" && "m-0 list-none p-0", className)}>{children}</Element>;

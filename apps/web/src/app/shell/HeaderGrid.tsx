@@ -7,9 +7,9 @@ import { isApplePlatform } from "../../ui/platform";
 import { Link } from "../routes/Link";
 import { ElyiaLogo } from "./ElyiaMark";
 
-/** Nav link: Silkscreen caps; the current page carries a 4 px sun bar. */
+/** Nav link: Silkscreen caps; the current page carries a 4 px glacier pixel underline. */
 export const NAV_LINK =
-  "relative inline-flex h-[76px] items-center font-tag text-[13px] uppercase tracking-[0.04em] text-ink-2 hover:text-ink aria-[current=page]:text-ink after:absolute after:inset-x-0 after:bottom-[20px] after:h-1 after:bg-signal after:opacity-0 aria-[current=page]:after:opacity-100";
+  "relative inline-flex h-[76px] items-center font-tag text-[13px] uppercase tracking-[0.04em] text-ink-2 hover:text-ink aria-[current=page]:text-ink after:absolute after:inset-x-0 after:bottom-[20px] after:h-1 after:bg-accent after:opacity-0 aria-[current=page]:after:opacity-100";
 
 /** "WHERE TO? ⌘K": opens the command dialog. */
 export function WhereToTrigger({ className }: { readonly className?: string }) {
@@ -47,11 +47,12 @@ export interface HeaderGridProps {
 /**
  * The header on one centre axis: logo left, nav centred, actions right, in a
  * 1fr · auto · 1fr grid so the nav sits exactly on the page axis whatever the
- * two sides hold. A 4 px ink rule under it, then the thin layer strip.
+ * two sides hold. Card stock with a thin 2 px tone line under it (no ink
+ * rule), then the layer strip: a subtle tinted band with the same line.
  */
 export function HeaderGrid({ home, homeLabel, nav, navLabel, actions, strip, sticky = false }: HeaderGridProps) {
   return (
-    <header className={cx("relative z-40 bg-paper", sticky && "sticky top-0")}>
+    <header className={cx("relative z-40 bg-card", sticky && "sticky top-0")}>
       <div className="mx-auto grid h-[76px] max-w-[1248px] grid-cols-[1fr_auto] items-center gap-4 px-6 lg:grid-cols-[1fr_auto_1fr]">
         <Link to={home} aria-label={homeLabel} className={cx("inline-flex justify-self-start", FOCUS_RING)}>
           <ElyiaLogo size="sm" className="sm:hidden" />
@@ -62,9 +63,9 @@ export function HeaderGrid({ home, homeLabel, nav, navLabel, actions, strip, sti
         </nav>
         <div className="flex min-w-0 items-center justify-self-end gap-2 sm:gap-3">{actions}</div>
       </div>
-      <div aria-hidden="true" className="h-1 bg-rule" />
+      <div aria-hidden="true" className="h-[2px] bg-rule" />
       {strip ? (
-        <div className="border-b-4 border-rule/15 bg-card/70">
+        <div className="border-b-2 border-rule bg-paper-2/60">
           <div className="mx-auto grid h-8 max-w-[1248px] grid-cols-[1fr_auto] items-center gap-3 px-6 font-tag text-[11px] uppercase sm:grid-cols-[1fr_auto_1fr]">{strip}</div>
         </div>
       ) : null}

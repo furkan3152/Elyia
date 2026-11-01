@@ -69,7 +69,7 @@ function MarginLine() {
 /** The centred pixel title block: four equal cells. */
 function TitleBlock({ cells }: { readonly cells: ReadonlyArray<readonly [string, string]> }) {
   return (
-    <dl className="mx-auto grid w-full max-w-[720px] grid-cols-2 gap-[4px] bg-rule px-frame sm:grid-cols-4">
+    <dl className="mx-auto grid w-full max-w-[720px] grid-cols-2 gap-[2px] bg-rule px-frame sm:grid-cols-4">
       {cells.map(([term, value]) => (
         <div key={term} className="flex flex-col items-center gap-1 bg-card px-3 py-2.5 text-center">
           <dt className="font-tag text-[11px] uppercase text-ink-2">{term}</dt>

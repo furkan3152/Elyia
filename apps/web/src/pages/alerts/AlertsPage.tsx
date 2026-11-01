@@ -169,7 +169,7 @@ export default function AlertsPage() {
         <Split>
           {feed.length === 0 ? (
             <section className="flex flex-col bg-card px-frame px-drop" aria-labelledby="feed-title">
-              <header className="flex items-center justify-between gap-3 border-b-4 border-rule bg-paper-2 px-4 py-2.5">
+              <header className="flex items-center justify-between gap-3 border-b-2 border-rule bg-paper-2 px-4 py-2.5">
                 <h3 id="feed-title" className="font-tag text-[12px] uppercase text-ink">
                   In-app feed · 0 heard
                 </h3>
@@ -178,7 +178,7 @@ export default function AlertsPage() {
               <div className="flex flex-1 items-center justify-center">
                 <ElyEmpty compact title="Quiet on the radio" description="When a rule fires, it lands here first, with the reading that tripped it." />
               </div>
-              <footer className="border-t-4 border-dashed border-rule/30 px-4 py-2 text-center font-mono text-[11px] text-ink-3">alerts tell · the Guide drafts · you sign</footer>
+              <footer className="border-t-2 border-dashed border-rule px-4 py-2 text-center font-mono text-[11px] text-ink-3">alerts tell · the Guide drafts · you sign</footer>
             </section>
           ) : (
           <RadioLog

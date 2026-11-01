@@ -31,13 +31,13 @@ function Sign({ sign }: { readonly sign: BoardSign }) {
         <p className="text-[12px] leading-snug text-ink-2">{sign.reason}</p>
         <ul className="mt-auto flex flex-wrap justify-center gap-2" aria-label="Deployments">
           {sign.deployments.map((deployment) => (
-            <li key={`${deployment.network}-${deployment.status}`} className={cx("px-1.5 py-px font-mono text-[10.5px]", deployment.status === "live" || deployment.status === "testnet-live" ? "text-ink px-frame-thin" : "border-2 border-dashed border-rule/40 text-ink-2")}>
+            <li key={`${deployment.network}-${deployment.status}`} className={cx("px-1.5 py-px font-mono text-[10.5px]", deployment.status === "live" || deployment.status === "testnet-live" ? "text-ink px-frame-thin" : "border-2 border-dashed border-rule text-ink-2")}>
               <span className={cx("font-semibold", LAYER_TEXT[deployment.layer])}>{networkShort(deployment.network)}</span> · {statusShort(deployment.status)}
             </li>
           ))}
         </ul>
       </div>
-      <div className="flex items-center justify-between gap-3 border-t-4 border-dashed border-rule/30 px-5 py-3">
+      <div className="flex items-center justify-between gap-3 border-t-2 border-dashed border-rule px-5 py-3">
         <a href={sign.url} target="_blank" rel="noopener noreferrer" className={cx("font-mono text-[11px] text-ink-2 underline decoration-dotted underline-offset-2 hover:text-ink", FOCUS_RING)}>
           {new URL(sign.url).host.replace(/^www\./u, "")} ↗<span className="sr-only"> (opens in a new tab)</span>
         </a>
@@ -110,7 +110,7 @@ export function TrailBoard() {
           title="No sign matches"
           description="The registry only lists what was checked; ask the Guide instead."
           action={
-            <button type="button" className={cx("bg-card px-4 py-2 font-tag text-[12px] uppercase text-ink px-frame-thin px-drop px-press", FOCUS_RING)} onClick={() => setFilter(EMPTY_FILTER)}>
+            <button type="button" className={cx("px-btn px-btn-thin px-btn-paper px-4 py-2 font-tag text-[12px] uppercase text-ink", FOCUS_RING)} onClick={() => setFilter(EMPTY_FILTER)}>
               Clear the filters
             </button>
           }
@@ -123,7 +123,7 @@ export function TrailBoard() {
         </Cards>
       )}
       {visible.length < shown.length ? (
-        <button type="button" onClick={() => setExpanded(true)} className={cx("self-center bg-card px-5 py-2.5 font-tag text-[13px] uppercase text-ink px-frame px-drop px-press", FOCUS_RING)}>
+        <button type="button" onClick={() => setExpanded(true)} className={cx("px-btn self-center px-btn-paper px-5 py-2.5 font-tag text-[13px] uppercase text-ink", FOCUS_RING)}>
           Show all {shown.length} signs ↓
         </button>
       ) : null}

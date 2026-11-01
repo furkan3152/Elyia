@@ -53,7 +53,7 @@ export function AddressPill({ address, network, label, head = 4, tail = 4, class
         type="button"
         onClick={() => void copy()}
         aria-label={`Copy address ${address}`}
-        className={cx("ml-1 inline-flex h-6 w-6 items-center justify-center text-ink-3 transition-colors hover:bg-ink hover:text-paper", FOCUS_RING)}
+        className={cx("ml-1 inline-flex h-6 w-6 items-center justify-center text-ink-3 transition-colors hover:bg-paper-2 hover:text-ink", FOCUS_RING)}
       >
         {copied ? <Check className="h-3.5 w-3.5 text-up" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
       </button>
@@ -64,7 +64,7 @@ export function AddressPill({ address, network, label, head = 4, tail = 4, class
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Open ${shortAddress(address)} in the explorer (new tab)`}
-            className={cx("inline-flex h-6 w-6 items-center justify-center text-ink-3 transition-colors hover:bg-ink hover:text-paper", FOCUS_RING)}
+            className={cx("inline-flex h-6 w-6 items-center justify-center text-ink-3 transition-colors hover:bg-paper-2 hover:text-ink", FOCUS_RING)}
           >
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </a>

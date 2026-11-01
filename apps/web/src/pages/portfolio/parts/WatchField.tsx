@@ -59,7 +59,7 @@ export function WatchField({ hrefFor, example, label = "Watch a range", size = "
           aria-describedby={error ? `${id}-error` : undefined}
           className="min-w-0 flex-1 bg-transparent px-3 font-mono text-sm text-ink outline-none placeholder:text-ink-3"
         />
-        <button type="submit" className={cx("shrink-0 border-l-4 border-rule px-3 font-display text-[15px] font-bold text-ink hover:bg-paper-2", FOCUS_RING)}>
+        <button type="submit" className={cx("shrink-0 border-l-2 border-rule px-3 font-display text-[15px] font-bold text-ink hover:bg-paper-2", FOCUS_RING)}>
           Watch →
         </button>
       </div>

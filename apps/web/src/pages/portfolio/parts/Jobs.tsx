@@ -196,7 +196,7 @@ export function Jobs({ snapshot, history, sample, now, className }: JobsProps) {
             );
           })}
         </ul>
-        <ol className="mt-5 flex flex-col divide-y divide-rule/15 border-y-1.5 border-rule">
+        <ol className="mt-5 flex flex-col divide-y divide-rule border-y-1.5 border-rule">
           {moves.length === 0 ? <li className="py-2.5 text-sm text-ink-2">Already on target. Nothing to move.</li> : null}
           {moves.map((move, index) => (
             <li key={`${move.from}-${move.to}`} className="flex items-baseline gap-3 py-2.5 text-sm">
@@ -229,7 +229,7 @@ export function Jobs({ snapshot, history, sample, now, className }: JobsProps) {
         {dust.length === 0 ? (
           <p className="text-sm text-ink-2">No dust: every token you hold is worth at least $5.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-rule/15 border-y-1.5 border-rule">
+          <ul className="flex flex-col divide-y divide-rule border-y-1.5 border-rule">
             {dust.map((line) => (
               <li key={line.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
                 <span className="text-ink">
@@ -292,7 +292,7 @@ export function Jobs({ snapshot, history, sample, now, className }: JobsProps) {
         {radar.length === 0 ? (
           <p className="text-sm text-ink-2">Nothing on the way down. Withdrawals you start show here until they land.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-rule/15 border-y-1.5 border-rule">
+          <ul className="flex flex-col divide-y divide-rule border-y-1.5 border-rule">
             {radar.map((item) => (
               <li key={item.id} className="flex flex-wrap items-baseline justify-between gap-3 py-2.5 text-sm">
                 <span className="text-ink">

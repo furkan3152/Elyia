@@ -22,7 +22,7 @@ export function MotionToggle({ className, compact = false }: { readonly classNam
       disabled={motion.disabled}
       onClick={() => motion.setOn(!motion.checked)}
       className={cx(
-        "inline-flex h-9 shrink-0 items-center justify-center gap-2 bg-card font-tag text-[11px] uppercase text-ink px-frame-thin px-drop px-press disabled:opacity-50",
+        "inline-flex h-9 shrink-0 items-center justify-center gap-2 font-tag text-[11px] uppercase text-ink px-btn px-btn-paper disabled:opacity-50",
         compact ? "w-9" : "px-2.5",
         FOCUS_RING,
         className,

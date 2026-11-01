@@ -79,7 +79,7 @@ export function PriceAltitude({ marks, reference, loading = false, className }: 
           </div>
         ) : null}
       </div>
-      <ol className="grid border-t-4 border-rule" style={{ gridTemplateColumns: `repeat(${Math.max(1, ordered.length)}, minmax(0, 1fr))`, paddingLeft: gutter, paddingRight: gutter }} aria-label="Prices by venue">
+      <ol className="grid border-t-2 border-rule" style={{ gridTemplateColumns: `repeat(${Math.max(1, ordered.length)}, minmax(0, 1fr))`, paddingLeft: gutter, paddingRight: gutter }} aria-label="Prices by venue">
         {ordered.map((mark, index) => (
           <li key={mark.id} className={cx("flex min-w-0 flex-col items-center gap-1 px-1 py-3 text-center", mark.kind === "reference" && "bg-signal text-signal-ink")}>
             {compact ? (

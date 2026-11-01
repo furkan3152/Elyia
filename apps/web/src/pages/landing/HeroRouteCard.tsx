@@ -133,7 +133,7 @@ export function HeroRouteCard({ formId }: { readonly formId?: string }) {
         </span>
       </div>
 
-      <div className="flex min-h-[60px] items-stretch border-y-4 border-rule">
+      <div className="flex min-h-[60px] items-stretch border-y-2 border-rule">
         <label htmlFor={inputId} className="flex shrink-0 items-center bg-ink px-3 font-display text-[16px] font-bold uppercase text-paper sm:px-4 sm:text-[19px]">
           Where to?
         </label>

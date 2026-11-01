@@ -100,7 +100,7 @@ export function RecentRoutes({ routes, onReplan, className }: { readonly routes:
               onClick={() => onReplan(route.sentence)}
               className={cx("group flex w-full flex-col bg-card text-left px-frame-thin px-drop px-press", examples && "bg-paper-2/60", FOCUS_RING)}
             >
-              <span className="flex items-center justify-between gap-2 border-b-2 border-dashed border-rule/40 px-3 py-1.5 font-tag text-[11px] uppercase text-ink-2">
+              <span className="flex items-center justify-between gap-2 border-b-2 border-dashed border-rule px-3 py-1.5 font-tag text-[11px] uppercase text-ink-2">
                 <span>{examples ? "example" : `route · ${clock(route.at).slice(0, 5)} UTC`}</span>
                 <span className="flex items-center gap-1.5">
                   <Blaze grade={sketch.grade} size={11} /> T{sketch.grade}

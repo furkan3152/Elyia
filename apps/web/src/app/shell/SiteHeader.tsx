@@ -62,7 +62,7 @@ export function SiteHeader() {
       <Sheet open={open} onClose={() => setOpen(false)} side="bottom" title="Elyia">
         <ul className="flex flex-col">
           {LINKS.map((link) => (
-            <li key={link.label} className="border-b-2 border-dashed border-rule/20">
+            <li key={link.label} className="border-b-2 border-dashed border-rule">
               <Link to={link.to} onClick={() => setOpen(false)} className={cx("block px-1 py-3 font-display text-2xl font-bold text-ink hover:bg-paper-2", FOCUS_RING)}>
                 {link.label}
               </Link>

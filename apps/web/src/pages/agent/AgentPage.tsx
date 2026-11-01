@@ -273,7 +273,7 @@ export default function AgentPage() {
         <div ref={table} className="scroll-mt-28">
           <section className="flex min-w-0 flex-col overflow-hidden bg-card px-frame px-drop-lg" aria-label="Conversation with Ely, the Guide">
             <GuideStage mood={mood} />
-            <header className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-b-4 border-dashed border-rule/30 px-4 py-2 text-center">
+            <header className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-b-2 border-dashed border-rule px-4 py-2 text-center">
               <span className={cx("flex items-center gap-1.5 font-tag text-[11px] uppercase", sample ? "text-ink" : "text-up")}>
                 <span aria-hidden="true" className={cx("inline-block h-2 w-2", sample ? "bg-signal" : "bg-up")} />
                 {SOURCE_WORD[range.source]}
@@ -297,7 +297,7 @@ export default function AgentPage() {
                 )}
               </div>
             </div>
-            <div className="border-t-4 border-rule bg-paper-2 px-4 pb-6 pt-5 sm:px-8">
+            <div className="border-t-2 border-rule bg-paper-2 px-4 pb-6 pt-5 sm:px-8">
               <div className="mx-auto max-w-[880px]">
                 <Composer ref={composer} onAsk={(question) => ask(question)} starters={STARTERS.slice(1)} history={history} busy={false} />
               </div>
