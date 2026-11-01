@@ -162,7 +162,7 @@ export default function SwapPage() {
   const plan = useFlowPlan(ask, address ?? null);
   const run = useFlowRun(ask, plan.data ?? null);
   // Probes: every EVM venue by name with a pair it actually holds (dry runs, cached for a minute).
-  const probeVenues = [...venuesOf("summit").map((item) => ({ item, at: "summit" as const })), ...venuesOf("ridge").map((item) => ({ item, at: "ridge" as const }))];
+  const probeVenues = [...venuesOf("summit").map((item) => ({ item, at: "summit" as const })), ...venuesOf("ridge").map((item) => ({ item, at: "ridge" as const }))].filter(({ item }) => item.probe?.liquid !== false);
   const probes = useQueries({
     queries: probeVenues.map(({ item, at }) => {
       const probe = probeAsk(item, at, mode);

@@ -15,6 +15,7 @@
  *
  * Contract types: @elyia/core/api/discovery. Reads only; nothing is signed.
  */
+import { PULSE_WAIT_MS } from "../system/elysium.js";
 import { flaggedToken, flaggedTokensFor, NETWORKS, protocolsTouching, protocolSummary, type NetworkKey } from "@elyia/core";
 import type {
   AddressLookupResponse,
@@ -287,14 +288,16 @@ export const discoveryModule: ApiModule = {
       if (NETWORKS[network].family !== "elysium") throw new ElyiaHttpError("NETWORK_NOT_SUPPORTED", 400, `${network} is not an Elysium network.`, { network });
       const services = discovery();
       const available = services.rpc.available(network);
-      const pulse = available ? await ctx.pulse.waitForPulse(network, { timeoutMs: 1_500 }).catch(() => null) : null;
+      const pulse = available ? await ctx.pulse.waitForPulse(network, { timeoutMs: PULSE_WAIT_MS }).catch(() => ctx.pulse.latest(network)) : null;
       const live = services.live.peek(network);
       // Warm the cache for the next caller (one check per 10 minutes at most).
       if (!live && available) void services.live.check(network).catch(() => undefined);
       const radar = available ? services.radar(network) : null;
       radar?.start();
       const body = elysiumStats({ network, now: ctx.clock.now(), pulse, rows: services.registry.rows, live, radar: radar ? { ...radar.status(), seen: radar.count() } : null });
-      cachePublicly(res, 15);
+      // Never cache a reply without chain figures: the next caller should get a fresh pulse.
+      if (pulse) cachePublicly(res, 15);
+      else res.setHeader("Cache-Control", "no-store");
       res.json(body);
     });
   },

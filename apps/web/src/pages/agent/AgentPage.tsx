@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 
 import { navigate } from "../../app/routes/history";
+import { routeHref } from "../../app/routes/routeTable";
 import { useSearchParam } from "../../app/routes/useRoute";
 import { Cards, Page, Section, Split } from "../../pixel/layout";
 import { useUiStore } from "../../app/state/uiStore";
@@ -89,8 +90,14 @@ export default function AgentPage() {
 
   const ask = useCallback(
     (question: string, options: { readonly silent?: boolean } = {}) => {
-      const at = Date.now();
       const reply = answer(question, facts);
+      // The local Guide reads a few English phrasings only. Anything it cannot place (Turkish, free-form
+      // questions, multi-step moves) goes to Ask Ely, which runs the real agent in either language.
+      if (reply.topic === "help" && !options.silent && question.trim().length > 0) {
+        navigate(`${routeHref("deck")}?intent=${encodeURIComponent(question.trim())}`);
+        return;
+      }
+      const at = Date.now();
       const you: GuideMessage | null = options.silent ? null : { id: guideId("q", at), at, role: "you", text: question };
       const guide: GuideMessage = { id: guideId("g", at), at, role: "guide", text: question, reply, sample };
       useGuideStore.getState().ask(you, guide);

@@ -407,7 +407,7 @@ curl -s "localhost:3001/v1/developers/usage?days=7" -H "Authorization: Bearer $E
 
 ### `POST /v1/mcp` (heavy)
 MCP server, stateless Streamable HTTP (`@modelcontextprotocol/server`
-2.3.1, JSON responses, one JSON-RPC message per request; batches 400).
+2.3.1, each reply is one Server-Sent Events `message` carrying a single JSON-RPC response, one JSON-RPC message per request; batches 400).
 Tools (all read-only): `get_networks`, `get_markets`, `get_market`,
 `get_portfolio`, `get_protocols`, `get_venues`, `plan_intent` (dry run, route
 card), `get_intent`, `shield`, and `create_signing_link` (an Elyia web URL

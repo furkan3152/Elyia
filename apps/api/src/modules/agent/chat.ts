@@ -59,7 +59,7 @@ export async function chatTurn(input: ChatTurnInput): Promise<ChatDoneEvent> {
   const useLlm = Boolean(clientFor(ctx) || input.client) && (await flagOn(ctx, "agentLlm"));
   const mode = useLlm ? "ai" : "deterministic";
   const threadId = thread?.id ?? input.threadId ?? null;
-  input.emit("thread", { threadId, mode, model: useLlm ? ctx.config.agent.model : null });
+  input.emit("thread", { threadId, mode, model: null });
 
   const tools: ToolContext = { ctx, owner, address: input.address.toLowerCase(), integratorFee: input.integratorFee, proposals: [], drafts: [], cards: [] };
   const stateLine = `[elyia-state] mode=${ctx.config.mode} wallet=${tools.address} signed_in=${input.owner ? "yes" : "no"} elysium=${elysiumNetworkFor(ctx.config.mode)}(${getEvmNetwork(elysiumNetworkFor(ctx.config.mode)).chainId}) hypercore=${hypercoreNetworkFor(ctx.config.mode)} prices=${ctx.config.mode === "testnet" ? "reference" : "market"} risk=${memory?.riskProfile ?? "unknown"} goals=${(memory?.goals ?? []).join("|").slice(0, 200) || "none"} locale=${locale}`;
