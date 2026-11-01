@@ -11,7 +11,7 @@ import { MemoryStore } from "../../../store/memory.js";
 import { issueToken } from "../../ops/auth/session.js";
 import { chatTurn } from "../chat.js";
 import { commandOf, movesOf } from "../deterministic.js";
-import { agentActions, runAgentTool } from "../tools.js";
+import { agentActions, recipientsIn, runAgentTool } from "../tools.js";
 import { goalsToActions } from "../../../engine/planner/goals.js";
 import { readText } from "../../../language/reader.js";
 import type { GoalItem } from "@elyia/core";
@@ -143,10 +143,33 @@ describe("agent: chained moves", () => {
   it("rejects a chain that points forwards or at itself", async () => {
     const bad = [{ kind: "swap", network: "elysium-testnet", from: "HYPE", to: "USDC", amount: "max", after: [0] }];
     assert.equal(agentActions.safeParse(bad).success, false);
-    const tools = { ctx, owner: OWNER, address: OWNER, integratorFee: null, proposals: [], drafts: [], cards: [] };
+    const tools = { ctx, owner: OWNER, address: OWNER, integratorFee: null, proposals: [], drafts: [], cards: [], userRecipients: new Set<string>() };
     const outcome = await runAgentTool("plan_intent", { actions: bad }, tools);
     assert.equal(outcome.ok, false);
     assert.match(outcome.summary, /earlier action/u);
+  });
+
+  it("compiles a send to a typed address into a transfer the schema accepts (EN and TR)", () => {
+    const to = "0x1111111111111111111111111111111111111111";
+    for (const text of [`send 1 HYPE to ${to} on Elysium`, `${to} adresine Elysium'da 1 HYPE gönder`]) {
+      const actions = compile(text);
+      assert.equal(actions.length, 1, text);
+      assert.equal(actions[0]?.kind, "transfer");
+      assert.equal(actions[0]?.recipient?.toLowerCase(), to);
+      const parsed = agentActions.safeParse(actions);
+      assert.ok(parsed.success, parsed.success ? text : JSON.stringify(parsed.error.issues));
+    }
+  });
+
+  it("only sends to recipients the user typed, never ones from tool output", async () => {
+    assert.deepEqual([...recipientsIn(["Send 2 HYPE to 0xAbCdEf0000000000000000000000000000000001 and 1 to bona.ely"])], ["0xabcdef0000000000000000000000000000000001", "bona.ely"]);
+    const stranger = "0x2222222222222222222222222222222222222222";
+    const tools = { ctx, owner: OWNER, address: OWNER, integratorFee: null, proposals: [], drafts: [], cards: [], userRecipients: new Set<string>() };
+    const outcome = await runAgentTool("plan_intent", { actions: [{ kind: "transfer", network: "elysium-testnet", from: "HYPE", amount: "1", recipient: stranger }] }, tools);
+    assert.match(outcome.content, /RECIPIENT_NOT_FROM_USER/u);
+    const proposed = await runAgentTool("propose_intent", { title: "Send", explanation: "Send 1 HYPE", actions: [{ kind: "transfer", network: "elysium-testnet", from: "HYPE", amount: "1", recipient: stranger }] }, tools);
+    assert.match(proposed.content, /RECIPIENT_NOT_FROM_USER/u);
+    assert.equal(tools.proposals.length, 0);
   });
 
   it("re-points chain links when a question sits between the moves", () => {

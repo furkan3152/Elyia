@@ -15,7 +15,7 @@ import { flagOn } from "../admin/index.js";
 import { runDeterministicTurn } from "./deterministic.js";
 import { clientFor, runLlmTurn, type LlmTurnInput } from "./llm.js";
 import { appendToThread, memoryOf, threadOf } from "./memory.js";
-import type { ToolContext } from "./tools.js";
+import { recipientsIn, type ToolContext } from "./tools.js";
 
 export interface ChatTurnInput {
   readonly ctx: AppContext;
@@ -61,7 +61,8 @@ export async function chatTurn(input: ChatTurnInput): Promise<ChatDoneEvent> {
   const threadId = thread?.id ?? input.threadId ?? null;
   input.emit("thread", { threadId, mode, model: null });
 
-  const tools: ToolContext = { ctx, owner, address: input.address.toLowerCase(), integratorFee: input.integratorFee, proposals: [], drafts: [], cards: [] };
+  const userTexts = [input.message, ...(thread?.messages ?? []).filter((entry) => entry.role === "user").map((entry) => entry.text)];
+  const tools: ToolContext = { ctx, owner, address: input.address.toLowerCase(), integratorFee: input.integratorFee, proposals: [], drafts: [], cards: [], userRecipients: recipientsIn(userTexts) };
   const stateLine = `[elyia-state] mode=${ctx.config.mode} wallet=${tools.address} signed_in=${input.owner ? "yes" : "no"} elysium=${elysiumNetworkFor(ctx.config.mode)}(${getEvmNetwork(elysiumNetworkFor(ctx.config.mode)).chainId}) hypercore=${hypercoreNetworkFor(ctx.config.mode)} prices=${ctx.config.mode === "testnet" ? "reference" : "market"} risk=${memory?.riskProfile ?? "unknown"} goals=${(memory?.goals ?? []).join("|").slice(0, 200) || "none"} locale=${locale}`;
 
   let text: string;
