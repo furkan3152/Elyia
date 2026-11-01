@@ -32,3 +32,6 @@ logs/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Generated Herd art (built on the API host)
+apps/api/herd-out/
