@@ -45,7 +45,7 @@ export function registerHealth(router: Router, ctx: AppContext, monitor: Depende
         database: ctx.store.kind,
         sessions: ctx.config.sessionSecret ? "enabled" : "needs_configuration",
         telegram: ctx.config.telegram.botToken ? "enabled" : "needs_configuration",
-        agent: ctx.config.agent.anthropicApiKey ? "ai" : "deterministic",
+        agent: ctx.config.agent.anthropicApiKey && ctx.config.agent.model ? "ai" : "deterministic",
       },
     });
   });

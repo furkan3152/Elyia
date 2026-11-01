@@ -60,6 +60,10 @@ export interface CallRequest {
   readonly value?: bigint;
   /** Native balances to pretend for the call (state override). */
   readonly balances?: Readonly<Record<string, bigint>>;
+  /** Runtime code per address (state override `code`): contracts not deployed yet (ElyiaRouter before its deployment). */
+  readonly code?: Readonly<Record<string, Hex>>;
+  /** Storage overrides per contract (`stateDiff`). */
+  readonly storage?: Readonly<Record<string, Readonly<Record<Hex, Hex>>>>;
 }
 
 export type CallResult = { readonly ok: true; readonly data: Hex } | { readonly ok: false; readonly revertData: Hex | null; readonly message: string };
@@ -78,6 +82,8 @@ export interface SimulationRequest {
   readonly balances?: Readonly<Record<string, bigint>>;
   /** Storage overrides per contract (`stateDiff`), e.g. an ERC-20 balance slot. */
   readonly storage?: Readonly<Record<string, Readonly<Record<Hex, Hex>>>>;
+  /** Runtime code per address (state override `code`), e.g. ElyiaRouter simulated before it is deployed. */
+  readonly code?: Readonly<Record<string, Hex>>;
 }
 
 export interface LogFilter {
@@ -139,10 +145,11 @@ function logOf(raw: Record<string, unknown>): EvmLog {
   };
 }
 
-function overrides(balances?: Readonly<Record<string, bigint>>, storage?: SimulationRequest["storage"]): Record<string, Record<string, unknown>> | undefined {
+function overrides(balances?: Readonly<Record<string, bigint>>, storage?: SimulationRequest["storage"], code?: SimulationRequest["code"]): Record<string, Record<string, unknown>> | undefined {
   const out: Record<string, Record<string, unknown>> = {};
   for (const [address, balance] of Object.entries(balances ?? {})) out[address.toLowerCase()] = { balance: hexOf(balance) };
   for (const [address, slots] of Object.entries(storage ?? {})) out[address.toLowerCase()] = { ...(out[address.toLowerCase()] ?? {}), stateDiff: { ...slots } };
+  for (const [address, runtime] of Object.entries(code ?? {})) out[address.toLowerCase()] = { ...(out[address.toLowerCase()] ?? {}), code: runtime };
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
@@ -231,7 +238,7 @@ export class ChainsEvmPort implements EvmPort {
       { ...(request.from ? { from: request.from } : {}), to: request.to, data: request.data, ...(request.value ? { value: hexOf(request.value) } : {}) },
       "latest",
     ];
-    const state = overrides(request.balances);
+    const state = overrides(request.balances, request.storage, request.code);
     if (state) params.push(state);
     try {
       return { ok: true, data: hexValue(await this.raw(network)({ method: "eth_call", params })) };
@@ -262,7 +269,7 @@ export class ChainsEvmPort implements EvmPort {
 
   async simulate(network: NetworkKey, request: SimulationRequest): Promise<SimulatedCall[] | null> {
     if (this.simulateMissing.has(network)) return null;
-    const state = overrides(request.balances, request.storage);
+    const state = overrides(request.balances, request.storage, request.code);
     const params = [
       {
         blockStateCalls: [

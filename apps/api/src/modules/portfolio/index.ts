@@ -7,7 +7,7 @@
  *
  * Contract types: @elyia/core/api/portfolio. Read-only; nothing is signed.
  */
-import { PORTFOLIO_STREAM_EVENTS, type PortfolioMode } from "@elyia/core/api/portfolio";
+import { PORTFOLIO_STREAM_EVENTS, type PortfolioHistory, type PortfolioMode, type PortfolioSnapshot } from "@elyia/core/api/portfolio";
 import { z } from "zod";
 import type { AppContext } from "../../context.js";
 import type { ApiModule } from "../../http/router.js";
@@ -90,3 +90,13 @@ export const portfolioModule: ApiModule = {
     closeLedgerServices(ctx);
   },
 };
+
+/** In-process read of one snapshot (agent, MCP and Telegram reuse it; same caches as the route). */
+export async function readPortfolio(ctx: AppContext, address: string, mode: PortfolioMode): Promise<PortfolioSnapshot> {
+  return buildSnapshot(await portfolioServices(ctx).reader.read(address.toLowerCase(), mode));
+}
+
+/** In-process read of the history (fills, funding, PnL days). */
+export async function readPortfolioHistory(ctx: AppContext, address: string, mode: PortfolioMode, days = 30): Promise<PortfolioHistory> {
+  return portfolioServices(ctx).history.get(address.toLowerCase(), mode, days);
+}

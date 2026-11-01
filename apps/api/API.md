@@ -1,6 +1,6 @@
 # Elyia API reference
 
-Every route the API serves today, with its parameters, the response type in
+Every route the API serves, with its parameters, the response type in
 `@elyia/core` (import paths below) and an example. Base URL in the examples:
 `http://localhost:3001` (set `PORT`). All routes but `GET /health` live under
 `/v1`.
@@ -26,8 +26,11 @@ Every route the API serves today, with its parameters, the response type in
 - **Networks** are core keys: `elysium-testnet`, `elysium-mainnet`,
   `hyperevm-testnet`, `hyperevm-mainnet`, `hypercore-testnet`,
   `hypercore-mainnet`. Defaults follow `ELYIA_MODE` (testnet).
-- The server never signs or sends a transaction. Intents return unsigned
-  payloads; Shield and the smoke tools only simulate.
+- The server never signs or sends a transaction with a user's wallet key (it
+  holds none). Intents return unsigned payloads; Shield and the smoke tools
+  only simulate. The one exception is opt-in Keeper mode: a trade-only
+  HyperCore agent key the owner approves, capped, expiring and revocable,
+  that only places reduce-only orders.
 
 Type paths: `core` = `@elyia/core`, `api/x` = `@elyia/core/api/x`.
 
@@ -320,8 +323,221 @@ curl -s "localhost:3001/v1/venues?network=elysium-testnet&status=live"
 
 ---
 
-## Not served yet
+## Sessions and roles (`api/ops`)
 
-Modules registered without routes: `ops` (sessions, tracking, watchlists,
-alerts, Telegram) and `agent` (chat, automations, proposals, Keeper, MCP).
-Their planned surface is in the master spec §5.
+Wallet sessions are SIWE (EIP-4361) sign-ins answered with an HMAC-SHA256
+token (`es1.<payload>.<mac>`, 24 h) sent back as the **`Elyia-Session`**
+header (never cookies). Roles: `user` (any session), `developer` (the
+address registered a developer profile), `admin` (the address is in
+`ELYIA_ADMIN_ADDRESSES`); developer and admin are re-checked on every
+request. 401 `UNAUTHORIZED` without a valid session, 403 `FORBIDDEN` without
+the role, 503 `SESSIONS_NOT_CONFIGURED` when production has no
+`ELYIA_SESSION_SECRET` (production refuses to boot without it; development
+uses an ephemeral secret and warns). Signing in moves no funds.
+
+| route | body / query | response |
+|---|---|---|
+| `POST /v1/auth/siwe/nonce` (auth) | `{ address?, chainId? }` | `SiweNonceResponse` (nonce, 10 min TTL, domain, uri, chainIds, a ready `message` when address + chainId are sent) |
+| `POST /v1/auth/siwe/verify` (auth) | `{ message, signature }` | `SessionResponse`. Checks domain (web origins' hosts + `ELYIA_SIWE_DOMAINS`), URI, chain id (Elyia's EVM chains, 1, 42161), issuedAt / expiration / notBefore, single-use nonce (`SIWE_NONCE` on replay), EOA signature or ERC-1271/6492 through the chain's RPC. Errors: `SIWE_INVALID`, `SIWE_DOMAIN`, `SIWE_CHAIN`, `SIWE_EXPIRED`, `SIWE_STALE`, `SIWE_SIGNATURE` (401). |
+| `GET /v1/auth/session` | session | `SessionView` |
+| `POST /v1/auth/logout` | session | `{ revoked: true }` (the session id is refused until expiry) |
+| `POST /v1/auth/telegram` (auth) | `{ initData }` | `SessionResponse` for a linked Telegram user (HMAC `WebAppData` check, `auth_date` at most 1 day old). `TELEGRAM_INIT_DATA_INVALID` 401, `TELEGRAM_NOT_LINKED` 403, `TELEGRAM_NOT_CONFIGURED` 503. |
+| `POST /v1/telegram/link-code` (auth) | session | `LinkCodeResponse` (single-use code, 10 min, `t.me/<bot>?start=<code>` deep link) |
+| `GET /v1/telegram/status` | optional session | `TelegramStatusResponse` (`configured`, `mode`: webhook / polling / off, `linked`) |
+
+```sh
+curl -s -X POST localhost:3001/v1/auth/siwe/nonce -H 'content-type: application/json' -d '{"address":"0x…","chainId":99801}'
+curl -s localhost:3001/v1/auth/session -H "Elyia-Session: $TOKEN"
+```
+
+---
+
+## Developer platform (`api/developers`)
+
+API keys are `ely_` + 40 base62 characters, sent as `Authorization: Bearer
+ely_…` (or `Elyia-Key`). Only SHA-256 is stored; the plain key is shown
+once. Requests without a key stay public (per-IP limits). With a key, the
+gate (mounted before every module) authenticates (401 for unknown / revoked
+keys or two different keys), checks the route's **scope** (403 `KEY_SCOPE`)
+and meters the key (429 `QUOTA_EXCEEDED` with `Retry-After`):
+
+| scope | routes | metered as |
+|---|---|---|
+| `read` | every GET | `requests` |
+| `plan` | `POST /intents`, `POST /intents/parse` | `requests` + `plans` (POST /intents) |
+| `execute-prepare` | `POST /intents/:id/steps/:sid/prepare|submit`, `/stop` | `requests` + `prepares` (prepare) |
+| `webhooks` | `/developers/webhooks*` | `requests` |
+
+Default quotas per key: 300 requests/min, 50,000 requests, 5,000 plans and
+2,000 prepares per UTC day (`DEFAULT_KEY_QUOTAS`, caps in `MAX_KEY_QUOTAS`).
+Keys and keyless requests can plan and prepare unsigned payloads only:
+nothing on the platform signs or moves funds.
+
+| route | auth | response |
+|---|---|---|
+| `POST /v1/developers/register` | session | `DeveloperProfile` (201 new, 200 existing) |
+| `GET /v1/developers/me` | developer or key | `{ profile, fee, widget }` |
+| `GET /v1/developers/keys` | developer session | `ApiKeyListResponse` |
+| `POST /v1/developers/keys` (auth) | developer session | `CreateKeyResponse` (`plainKey` once). Body `{ name, scopes?, quotas? }`; at most 10 active keys. |
+| `POST /v1/developers/keys/:id/rotate` (auth) | developer session | `CreateKeyResponse`; the previous secret keeps working 24 h |
+| `DELETE /v1/developers/keys/:id` | developer session | `{ key }`, revoked at once |
+| `GET /v1/developers/usage?days=1..30` | developer or key | `UsageResponse` (per key per day: requests, plans, prepares) |
+| `GET/POST /v1/developers/webhooks` | developer or key `webhooks` | `WebhookListResponse` / `CreateWebhookResponse` (`secret` `whsec_…` once). Body `{ url, events, networks? }`. |
+| `PATCH/DELETE /v1/developers/webhooks/:id` | same | `{ enabled?, events? }` |
+| `POST /v1/developers/webhooks/:id/test` (auth) | same | `{ delivery }` (one signed `webhook.test`) |
+| `GET /v1/developers/webhooks/:id/deliveries` | same | `WebhookDeliveriesResponse` (7 days) |
+| `GET/PUT /v1/developers/fees` | developer (PUT: session) | `IntegratorFeeConfig` (0-50 bps, recipient required above 0; EN/TR disclosure for route cards) |
+| `GET/PUT /v1/developers/widget` | developer (PUT: session) | `WidgetConfig` (allowed origins, theme, networks, fee) |
+| `GET /v1/widget/:developerId` | public, cache 60 s | `WidgetConfig` |
+
+**Webhooks**: events `intent.step.settled`, `intent.failed` (intents
+created with the developer's key), `alert.fired` (alerts of the developer's
+wallet), `launch.new` (the launch radar, per network). Public HTTPS only
+(SSRF guard at registration and at connect time), POST JSON, 5 s timeout,
+redirects not followed, retries after 1 s / 5 s / 25 s / 125 s, paused after
+20 consecutive failures, at least once. Headers: `Elyia-Signature:
+t=<unix>,v1=<hex HMAC-SHA256(secret, "<t>.<raw body>")>`, `Elyia-Event-Id`,
+`Elyia-Event-Type`, `Elyia-Webhook-Id`, `Elyia-Delivery-Attempt`. Verify with
+`@elyia/sdk` `verifyWebhook` (5 min tolerance).
+
+```sh
+curl -s -X POST localhost:3001/v1/developers/keys -H "Elyia-Session: $TOKEN" -H 'content-type: application/json' -d '{"name":"server","scopes":["read","plan"]}'
+curl -s "localhost:3001/v1/developers/usage?days=7" -H "Authorization: Bearer $ELYIA_KEY"
+```
+
+### `POST /v1/mcp` (heavy)
+MCP server, stateless Streamable HTTP (`@modelcontextprotocol/server`
+2.3.1, JSON responses, one JSON-RPC message per request; batches 400).
+Tools (all read-only): `get_networks`, `get_markets`, `get_market`,
+`get_portfolio`, `get_protocols`, `get_venues`, `plan_intent` (dry run, route
+card), `get_intent`, `shield`, and `create_signing_link` (an Elyia web URL
+`/app?intent=…`; it never signs). Origin rule: no Origin is fine; `null` or
+malformed origins 403 `MCP_ORIGIN_FORBIDDEN`; plain HTTP only from localhost
+outside production; `ELYIA_MCP_ALLOWED_ORIGINS` narrows browser origins.
+An API key, when sent, is metered like any request.
+```sh
+curl -s -X POST localhost:3001/v1/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+---
+
+## Elyia contracts and admin (`api/admin`)
+
+The owner deploys Elyia's contracts (ElyiaRouter, ElyAccountFactory,
+ElyOrders; artifacts exported by `packages/contracts` into
+`@elyia/core/contracts`) from **his own wallet**; the server never deploys.
+
+| route | auth | response |
+|---|---|---|
+| `GET /v1/config/contracts?network=` | public, cache 30 s | `ContractsConfigResponse` (recorded addresses per network, artifact versions) |
+| `GET /v1/config/flags` | public | `FeatureFlagsResponse` |
+| `GET /v1/admin/deploy-plan?network=` | admin | `DeployPlanResponse`: creation transactions in manifest order with constructor args filled (`$OWNER` = the admin's wallet, `$ElyiaRouter` = the recorded router) for the web admin panel to send from the wallet |
+| `POST /v1/admin/deployments` (auth) | admin | `RecordDeploymentResponse`. Body `{ network, contract, txHash, address? }`. Recorded only when the receipt succeeded, the created address matches, the deployer is an admin, the creation input starts with the artifact's creation code and the on-chain runtime code equals the artifact's (immutables and metadata masked); else 422 `DEPLOYMENT_REJECTED` with `details.checks`. 503 `CONTRACTS_NOT_EXPORTED` without artifacts. |
+| `GET /v1/admin/deployments?network=` | admin | `{ deployments }` |
+| `GET /v1/admin/router?network=` | admin | `RouterSettingsResponse`: every zero-argument view of the router ABI read live (owner, pendingOwner, protocolFeeBps, feeRecipient, paused, caps); before deployment, the artifact's defaults through a code override |
+| `GET/PUT /v1/admin/flags` | admin | `FeatureFlagsResponse` (`elyiaRouterVenue`, `agentLlm`, `keeper`, `telegram`, `webhooks`, `mcp`, `alerts`) |
+| `GET /v1/admin/system` | admin | `SystemDashboardResponse`: health, today's key usage, queues and workers (alerts, tracker, automations, keepers, webhooks), agent mode |
+
+**Router venue (`elyia-router`).** With the ElyiaRouter artifact loaded the
+engine adds an `elyia-router` swap venue on Elysium testnet: single and
+50/50 split routes across Kalos V3 (each fee tier with liquidity) and Dex Da
+Costa, WHYPE / venue-wrapper hops for native HYPE, `minAmountOut` and the
+deadline on the total, optional integrator fee (`params.integrator`,
+`params.integratorFeeBps`, capped by the router). Quotes are eth_simulateV1
+runs of the real `swap`: before deployment against the artifact's runtime
+code at a virtual address (state override `code`) with the venue allowlist
+written into `venueKind` (`stateDiff`; the slot is found by probing). Until a
+deployment is recorded the venue only quotes when named (`protocol:
+"elyia-router"`) and refuses `prepare` (`ROUTE_UNAVAILABLE`); once recorded it
+runs in every auction next to the direct venues and prepares real
+transactions to the recorded address. Settlement is proven from the router's
+`Swap` event.
+```sh
+curl -s -X POST "localhost:3001/v1/intents?dryRun=true" -H 'content-type: application/json' \
+  -d '{"accounts":["eip155:99801:0x5e9ee1089755c3435139848e47e6635505d5a13a"],"actions":[{"kind":"swap","network":"elysium-testnet","from":"HYPE","to":"USDC","amount":"1","protocol":"elyia-router"}]}'
+```
+
+---
+
+## Ely, the agent (`api/agent`)
+
+Ely runs on Claude (`@anthropic-ai/sdk`, model `ELYIA_AGENT_MODEL`, required
+with the key; optional server-side refusal fallback, streaming tool use) when
+`ANTHROPIC_API_KEY` is set and the `agentLlm` flag is on; otherwise (or when
+the model fails) the deterministic planner answers with the same tools and
+events. **Every write is a proposal the user signs**; the model has no tool
+that signs, sends or withdraws.
+
+| route | auth | response |
+|---|---|---|
+| `POST /v1/agent/chat` (heavy, SSE) | optional session | events `thread`, `token`, `tool_call`, `tool_result`, `proposal`, `route_card`, `note`, `done`, `error`. Body `{ message, address?, threadId?, locale? }` (`address` required without a session; anonymous chats are read-only and not stored). |
+| `GET /v1/agent/threads`, `GET/DELETE /v1/agent/threads/:id` | session | threads per owner (60 messages kept) |
+| `GET/PUT /v1/agent/memory` | session | `AgentMemory` (goals, risk profile, target mix, gas floor, dust threshold, locale) |
+| `GET /v1/agent/insights/:address` (heavy) | public | `InsightsResponse`: rebalance, auto-protect, liquidation-guard, funding-harvest (paper on testnet), idle-cash, what-if shocks, gas-top-up, dust-sweep, explain-pnl; each with its numbers and draft actions |
+| `POST /v1/agent/insights/:address/:insightId/propose` | session (= address) | `Proposal` |
+| `GET/POST /v1/agent/proposals`, `GET /v1/agent/proposals/:id` | session | `Proposal` (dry-run route card, 15 min expiry) |
+| `POST /v1/agent/proposals/:id/decision` | session | `ProposalDecisionResponse`. `{ decision: approve|reject, via?: wallet|keeper }`; wallet approval stores the intent and returns the first step to prepare and sign |
+| `GET /v1/agent/automations`, `POST`, `PATCH/DELETE /:id` | session | automations (`auto-protect`, `liquidation-guard`, `idle-sweep`, `gas-top-up`, `dust-sweep`, `rebalance`, `funding-harvest-paper`): each run turns new findings into proposals (deduped per cooldown) |
+| `GET /v1/agent/skills` | public | automation catalog and insight kinds |
+| `GET /v1/agent/feed` | session | `FeedResponse` |
+| `POST /v1/agent/keeper/prepare` (auth) | session | `KeeperPrepareResponse`: a fresh key's **address only** plus what the owner signs (HyperCore `approveAgent` typed data named `elyia-keeper valid_until <ms>`, at most 30 days; or the ElyAccount `setAgentPolicy` transaction: router swaps only, HYPE caps, expiry) |
+| `POST /v1/agent/keeper/activate` (auth) | session | verifies `extraAgents` (or `ElyAccount.agent()`), then `KeeperStatusResponse` |
+| `GET /v1/agent/keeper` | session | `KeeperStatusResponse` (state, limits, spent today, audit log) |
+| `POST /v1/agent/keeper/revoke` (auth) | session | deletes the key material at once; `KeeperRevokeResponse` with the on-chain revoke to sign |
+| `POST /v1/agent/kill` | session | `{ on }`: pauses the keeper and every automation |
+
+Keeper mode is opt-in and bounded: keys are AES-256-GCM sealed with a key
+derived (HKDF-SHA256) from `ELYIA_KEEPER_SECRET` (503
+`KEEPER_NOT_CONFIGURED` without it), never logged or returned; the keeper
+only signs HyperCore L1 trading actions of proposals that are reduce-only
+orders (protective stops, reduces), inside a per-order and a daily USD cap
+and an optional coin allowlist, before its expiry, with the kill switch off.
+Every step is in the audit log and emitted to Telegram.
+```sh
+curl -sN -X POST localhost:3001/v1/agent/chat -H 'content-type: application/json' -d '{"message":"what is my HYPE exposure?","address":"0x5e9ee1089755c3435139848e47e6635505d5a13a"}'
+curl -s localhost:3001/v1/agent/insights/0x5e9ee1089755c3435139848e47e6635505d5a13a
+```
+
+---
+
+## Tracking, watchlists, alerts, Telegram (`api/ops`)
+
+| route | auth | response |
+|---|---|---|
+| `POST /v1/track` (heavy) | public | `TrackView` (201). `{ network, reference, label? }`: an EVM tx hash (receipt, status, every log's emitter labelled from the registry) or `hc:cloid:<user>:<cloid>` (order status). Re-checked with backoff (5 s doubling to 5 min) for 24 h. |
+| `GET /v1/track/:id`, `GET /v1/track/:id/stream` (SSE) | public | `TrackView`; events `track.snapshot`, `track.updated` |
+| `GET/POST /v1/watch`, `DELETE /v1/watch/:address` | session | `WatchListResponse` (50 addresses) |
+| `GET/POST /v1/alerts`, `PATCH/DELETE /v1/alerts/:id` | session | `AlertListResponse` / `AlertView`. Kinds `price-above|below` (USD), `funding-above|below` (%/h), `liquidation-distance-below` (%), `intent-step` |
+| `GET /v1/alerts/feed` | session | `AlertFeedResponse` |
+
+The evaluator runs every 30 s inside the HyperCore weight budget (one
+`allMids`, one `metaAndAssetCtxs` only for funding alerts, one
+`clearinghouseState` per watched account, skipped under a 200-weight
+reserve), with a cooldown per alert (default 15 min). Firings go to the feed,
+the linked Telegram chat and the owner's developer webhooks.
+
+Telegram (grammY): long polling in development, `POST /telegram/webhook`
+(secret token checked) in production when `TELEGRAM_WEBHOOK_SECRET` is set
+(`setWebhook` with `TELEGRAM_WEBHOOK_URL`); off without
+`TELEGRAM_BOT_TOKEN`. Commands `/start <code>`, `/help`, `/portfolio`,
+`/positions`, `/alerts`, `/price <coin>`, `/agent <question>`, `/link`
+(EN/TR by the user's language), 1 message/s per chat and 25/s overall.
+
+---
+
+## Environment (new)
+
+| variable | purpose |
+|---|---|
+| `ELYIA_SESSION_SECRET` | ≥ 32 chars; signs sessions, seals webhook secrets. Required in production. |
+| `ELYIA_ADMIN_ADDRESSES` | comma list of owner wallets with the admin role |
+| `ELYIA_KEEPER_SECRET` | ≥ 32 chars; keeper key encryption. Keeper mode is off without it. |
+| `ELYIA_SIWE_DOMAINS` | extra SIWE domains (host[:port]) besides the web origins |
+| `ELYIA_MCP_ALLOWED_ORIGINS` | exact browser origins allowed on `/v1/mcp` (empty: any https) |
+| `ANTHROPIC_API_KEY`, `ELYIA_AGENT_MODEL`, `ELYIA_AGENT_SERVER_FALLBACK` | Ely on Claude (key and model both required); deterministic otherwise |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL` | the bot |
+
+Store collections (Postgres `elyia_docs` / `elyia_counters` when
+`ELYIA_DATABASE_URL` is set, created on first use): see
+`apps/api/src/modules/ops/docs.ts` `PLATFORM_COLLECTIONS`; counters
+`dev_usage`, `dev_rate`.

@@ -23,8 +23,8 @@ import type { AppContext } from "../../context.js";
 import { engineFor } from "../../engine/index.js";
 import { activeProtocolIds } from "../../engine/registry.js";
 
-/** Engine adapter ids that are not registry protocols (plain native / ERC-20 sends). */
-export const ENGINE_ONLY_IDS: ReadonlySet<string> = new Set(["evm-transfer"]);
+/** Engine adapter ids that are not registry protocols (plain native / ERC-20 sends; Elyia's own router, recorded in the deployment registry). */
+export const ENGINE_ONLY_IDS: ReadonlySet<string> = new Set(["evm-transfer", "elyia-router"]);
 
 export interface LiveRegistry {
   readonly rows: readonly ProtocolDescriptor[];

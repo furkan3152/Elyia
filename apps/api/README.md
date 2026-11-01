@@ -36,7 +36,7 @@ All variables are optional. See [`.env.example`](./.env.example) for each variab
 | `ELYIA_DATABASE_URL` | (none) | Postgres. Without it, an in-memory store is used |
 | `ELYIA_SESSION_SECRET` | (none) | session signing (at least 32 characters) |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_BOT_USERNAME` | (none) | Telegram bot |
-| `ANTHROPIC_API_KEY`, `ELYIA_AGENT_MODEL` | (none), `claude-sonnet-5-5` | Elysium Agent |
+| `ANTHROPIC_API_KEY`, `ELYIA_AGENT_MODEL`, `ELYIA_AGENT_SERVER_FALLBACK` | (none) | Ely on Claude; both the key and the model are needed |
 | `ELYSIUM_TESTNET_RPC_URL`, `ELYSIUM_MAINNET_RPC_URL`, `HYPEREVM_TESTNET_RPC_URL`, `HYPEREVM_MAINNET_RPC_URL` | (none) | comma-separated RPC URLs, tried before the registry's public ones |
 | `HYPERDEXER_API_KEY` | (none) | Hypedexer indexer |
 | `ELYIA_LOG_LEVEL` | `debug` in development, `info` in production | `debug`, `info`, `warn`, `error` or `silent` |

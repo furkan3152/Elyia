@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NETWORKS } from "@elyia/core";
-import { ConfigError, DEFAULT_AGENT_MODEL, DEFAULT_HYPERLIQUID_WEIGHT_PER_MINUTE, loadConfig, parseOrigin } from "../config.js";
+import { ConfigError, DEFAULT_HYPERLIQUID_WEIGHT_PER_MINUTE, loadConfig, parseOrigin } from "../config.js";
 
 describe("loadConfig", () => {
   it("applies local development defaults", () => {
@@ -13,7 +13,7 @@ describe("loadConfig", () => {
     assert.deepEqual(config.webOrigins, ["http://localhost:5173", "http://localhost:5174"]);
     assert.equal(config.databaseUrl, null);
     assert.equal(config.sessionSecret, null);
-    assert.equal(config.agent.model, DEFAULT_AGENT_MODEL);
+    assert.equal(config.agent.model, null);
     assert.equal(config.hyperliquid.weightPerMinute, DEFAULT_HYPERLIQUID_WEIGHT_PER_MINUTE);
     assert.equal(config.trustProxy, 0);
     assert.equal(config.logLevel, "debug");
