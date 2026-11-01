@@ -13,11 +13,11 @@ const hh = (args, env = {}) => {
 };
 
 hh(["compile", "--quiet"]);
-hh(["test", "--no-compile", "test/unit.router.test.cjs", "test/unit.account.test.cjs", "test/unit.orders.test.cjs", "test/unit.export.test.cjs"]);
+hh(["test", "--no-compile", "test/unit.router.test.cjs", "test/unit.account.test.cjs", "test/unit.orders.test.cjs", "test/unit.herd.test.cjs", "test/unit.export.test.cjs"]);
 if (process.env.ELYIA_SKIP_FORK === "1") {
   console.warn("\n[elyia] WARNING: ELYIA_SKIP_FORK=1, fork tests against Elysium testnet were NOT run.\n");
 } else {
-  hh(["test", "--no-compile", "test/fork.venues.test.cjs"], { ELYIA_FORK: "1" });
+  hh(["test", "--no-compile", "test/fork.venues.test.cjs", "test/fork.herd.test.cjs"], { ELYIA_FORK: "1" });
 }
 const e = spawnSync("node", ["scripts/export.cjs"], { cwd, stdio: "inherit" });
 process.exit(e.status ?? 1);

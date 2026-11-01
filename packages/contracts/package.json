@@ -2,13 +2,13 @@
   "name": "@elyia/contracts",
   "version": "0.1.0",
   "private": true,
-  "description": "Elyia on-chain layer for Elysium: ElyiaRouter, ElyAccount + factory, ElyOrders. Not audited.",
+  "description": "Elyia on-chain layer for Elysium: ElyiaRouter, ElyAccount + factory, ElyOrders, ElyHerd (The Herd NFT). Not audited.",
   "license": "MIT",
   "scripts": {
     "build": "hardhat compile",
     "test": "node scripts/test-all.cjs",
-    "test:unit": "hardhat test test/unit.router.test.cjs test/unit.account.test.cjs test/unit.orders.test.cjs test/unit.export.test.cjs",
-    "test:fork": "ELYIA_FORK=1 hardhat test test/fork.venues.test.cjs",
+    "test:unit": "hardhat test test/unit.router.test.cjs test/unit.account.test.cjs test/unit.orders.test.cjs test/unit.herd.test.cjs test/unit.export.test.cjs",
+    "test:fork": "ELYIA_FORK=1 hardhat test test/fork.venues.test.cjs test/fork.herd.test.cjs",
     "gas": "node scripts/gas-report.cjs",
     "export": "hardhat compile --quiet && node scripts/export.cjs",
     "coverage": "ELYIA_COVERAGE=1 hardhat coverage --testfiles \"test/unit.*.test.cjs\""

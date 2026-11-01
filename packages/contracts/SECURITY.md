@@ -13,6 +13,7 @@
 | `ElyAccount` (EIP-1167 clones) | Yes, the user's own funds. | The user (`owner`, fixed at creation). | No |
 | `ElyAccountFactory` | No | None | No |
 | `ElyOrders` | No (funds stay in maker wallets behind an allowance; asserted after every fill). | None | No |
+| `ElyHerd` (The Herd NFT) | Yes: mint proceeds, until the owner withdraws them. | `owner` (Ownable2Step, renounce disabled): phases, prices, oracle, allocations, lists, metadata, royalty, treasury, pause, withdraw. | No |
 
 **Invariants the code enforces**
 
@@ -24,6 +25,13 @@
 6. Revocation and policy replacement bump `policyEpoch`, which voids every allowlisted call, token rule, market and spend counter at once. Expiry is checked on every agent call.
 7. Only the account owner can produce ERC-1271 signatures, and only over `ElyAccountMessage(hash)` in the account's own EIP-712 domain, so signatures do not replay across accounts of the same owner.
 8. ElyOrders: EIP-712 orders bound to chain id and contract; per-order execution counter, interval, start and deadline; cancel and monotonic nonce floor by the maker; tip <= signed `maxTip` <= 1% of `amountIn`; output always to the maker and re-checked against `minAmountOut`; `nonReentrant` everywhere.
+9. ElyHerd:
+   - Supply: `team + wl + collab + public + burned <= 3333` and `minted <= cap` per bucket, always. Allocations are only settable while `CLOSED`. After that, supply moves only through explicit `rollover` txs with phase rules; burn removes supply for good.
+   - One per wallet: `mintedBy[account]` blocks a second WL, collab or public mint in any phase. Team mints are exempt.
+   - The phase moves forward only. Mints need the current phase, its window (`start <= now < end`) and `!paused`.
+   - Payment: `msg.value >= quote`. The excess goes back to `msg.sender` as the last step (CEI) under a transient reentrancy guard. Mints use `_mint`, so no receiver hook runs.
+   - Oracle: a USD-pegged price needs a TWAP within `maxDeviationBps` of spot and of a fresh fallback, or else a fresh fallback alone. Anything else reverts: fail closed.
+   - Funds leave only through `withdraw(to)` with `to` in {owner, treasury}. ERC-2981 is capped at 10%. Provenance can only change before the first mint, and the metadata freeze is one-way.
 
 ## Threats and mitigations
 
@@ -40,6 +48,12 @@
 | Order replay, forged or tampered orders, cross-contract replay | EIP-712 with chain id + verifying contract; execution counter; cancel; nonce floor | `unit.orders` |
 | Malicious keeper | Recipient fixed to maker; router venue allowlist; `minAmountOut`; tip caps; no integrator fee | `unit.orders` "malicious keeper", fork limit-order test |
 | Oracle manipulation to trigger stop-loss / take-profit | Optional TWAP with spot-vs-TWAP deviation bound; both must satisfy the trigger; fails closed on bad oracle | `unit.orders` oracle tests, fork stop-loss on a real Kalos pool |
+| Herd: second mint from one wallet, contract farms minting from constructors | `mintedBy` across phases; `eoaOnly` (default on) on `mintPublic` | `unit.herd` "second mint…", "contract minter via its constructor…" |
+| Herd: forged or cross-list allowlist proofs, wrong partner tag | Separate WL and collab roots; leaves bind `msg.sender` (and the partner tag) in OZ StandardMerkleTree encoding; per-partner caps inside the collab bucket | `unit.herd` allowlist/collab tests |
+| Herd: reentrancy through the refund | Refund last (CEI), `nonReentrant` on every mint and on withdraw; a rejected refund reverts the whole mint | `unit.herd` "adversarial: reentrancy and refunds" |
+| Herd: price manipulation (USD mode) | TWAP window >= 60 s; spot-vs-TWAP and TWAP-vs-fallback deviation bounds; zero liquidity, extreme ticks, reverting or missing oracle -> revert | `unit.herd` USD tests; `fork.herd` real Kalos pool (cardinality 1 fallback, warmed TWAP, 150 HYPE spot dump fails closed) |
+| Herd: supply over-mint, bad rollover | Packed caps/minted counters; phase-gated rollover; seeded fuzz checks invariants after every step | `unit.herd` allocation tests + seeded fuzz (220 steps) |
+| Herd: trait sniping via reveal timing | Provenance before the first mint; commit only after ENDED or sell-out; offset from the hash of a block 32 blocks after the commit | `unit.herd` metadata tests |
 | Re-initialising an account clone or the implementation | `initialize` only by the factory, once; implementation locked in its constructor | `unit.account` factory tests |
 
 ## Residual risks (honest list)
@@ -55,7 +69,33 @@
 9. **Not upgradeable.** A bug means redeploying and migrating. Accounts are tied to the factory's implementation forever.
 10. **Chain assumptions.** Compiled for `cancun` (PUSH0, MCOPY, TSTORE verified on Elysium testnet by `eth_call` on 2026-11-01). Re-check mainnet (chain 99901) before any mainnet deploy, and build a mainnet venue list: the testnet venues do not exist there.
 11. **Not covered on a fork.** The PerpMe SwapRouter02 adapter (no liquid PerpMe v2 pools at the pinned block) and Morpho-style lending (Cheshire's core exposes no standard market getters) are covered by mock-based unit tests only. SwapRouter02 is therefore excluded from the default venue list.
-12. **Toolchain.** `npm audit` reports advisories in the Hardhat dev toolchain. They are dev-only and not shipped, but keep the toolchain updated.
+12. **ElyHerd: owner powers.**
+    - The owner can do all of the following:
+      - change prices and windows at any time;
+      - pause minting;
+      - set Merkle roots;
+      - move unminted supply (within the phase rules);
+      - change the treasury and then withdraw to it;
+      - set the fallback price.
+    - A compromised owner key can therefore redirect proceeds and reprice the mint. It cannot mint beyond the team bucket or touch holders' tokens.
+    - Keep the owner on a multisig. There is no timelock.
+13. **ElyHerd: oracle.**
+    - Kalos WHYPE/USDC pools on testnet have observation cardinality **1**, so the TWAP is unavailable until someone grows it and swaps write observations. Two of the four pools have zero liquidity.
+    - Testnet prices are fake (≈6,400 test-USDC per HYPE), so testnet uses the fixed 1 HYPE price.
+    - In USD mode with only a TWAP (no fresh fallback), the price is bounded by the spot-vs-TWAP check alone. A manipulator who holds the pool off-price for the whole window moves the quote.
+    - A griefer moving spot beyond `maxDeviationBps` pauses USD-mode mints (fail closed) for as long as they hold it.
+    - The mainnet pool must be re-researched before launch.
+14. **ElyHerd: randomness.**
+    - The reveal offset comes from an L2 block hash 32 blocks after the commit. On an Arbitrum Orbit chain the sequencer produces block hashes and could in theory bias the offset; `prevrandao` is not usable there.
+    - The provenance hash makes any change of the art order after minting detectable, but it does not stop a malicious sequencer.
+    - The 256-block hash window is short on Elysium (sub-second blocks): call `reveal` promptly, or re-commit after expiry.
+15. **ElyHerd: 1 per wallet is not 1 per person.** Sybils with many EOAs can each mint once in public. `eoaOnly` only stops single-tx contract farms. With EIP-7702, delegated EOAs pass `msg.sender == tx.origin`. Allowlists (WL scoring, raffle) carry the anti-sybil work off chain.
+16. **ElyHerd: Kalos.**
+    - Listing on Kalos needs a Kalos admin to register the collection.
+    - Kalos enforces royalties as a marketplace-set creator fee (verified on a fork: 5% to the treasury). ERC-2981 is not read on chain, and other venues or direct transfers pay nothing.
+    - Kalos settles in its own WHYPE (`0x4105…9Ac7`), not the canonical one.
+    - The Kalos deployer also runs fake "BAYC/Punks/…" collections. Never show them as authentic. See `research/kalos-nft.md`.
+17. **Toolchain.** `npm audit` reports advisories in the Hardhat dev toolchain. They are dev-only and not shipped, but keep the toolchain updated.
 
 ## Reporting
 

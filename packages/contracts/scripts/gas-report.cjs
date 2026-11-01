@@ -14,5 +14,5 @@ const run = (files, out, extra = {}) => {
   });
   if (r.status !== 0) process.exit(r.status ?? 1);
 };
-run(["test/unit.router.test.cjs", "test/unit.account.test.cjs", "test/unit.orders.test.cjs"], "gas-unit.txt");
-run(["test/fork.venues.test.cjs"], "gas-fork.txt", { ELYIA_FORK: "1" });
+run(["test/unit.router.test.cjs", "test/unit.account.test.cjs", "test/unit.orders.test.cjs", "test/unit.herd.test.cjs"], "gas-unit.txt");
+run(["test/fork.venues.test.cjs", "test/fork.herd.test.cjs"], "gas-fork.txt", { ELYIA_FORK: "1" });

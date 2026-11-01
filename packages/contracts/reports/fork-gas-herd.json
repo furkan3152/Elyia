@@ -1,0 +1,25 @@
+{
+  "forkBlock": 20530000,
+  "results": [
+    {
+      "label": "ElyHerd deploy",
+      "gasUsed": 5392784
+    },
+    {
+      "label": "Kalos setCollectionApprovalStatus(ElyHerd)",
+      "gasUsed": 88922
+    },
+    {
+      "label": "Kalos createOrUpdateListings (1 ElyHerd)",
+      "gasUsed": 96653
+    },
+    {
+      "label": "ElyHerd.growOracleCardinality(32) on the Kalos pool",
+      "gasUsed": 727296
+    },
+    {
+      "label": "ElyHerd.mintPublic USD mode (real Kalos TWAP)",
+      "gasUsed": 188688
+    }
+  ]
+}

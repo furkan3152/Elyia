@@ -23,6 +23,7 @@ const CONTRACTS = [
   { name: "ElyiaRouter", deployable: true },
   { name: "ElyAccountFactory", deployable: true },
   { name: "ElyOrders", deployable: true },
+  { name: "ElyHerd", deployable: true, note: "The Herd NFT collection. Standalone: deploy from manifest.collections (not part of `order`); its owner and treasury are deploy-time params." },
   { name: "ElyAccount", deployable: false, note: "Do not deploy directly: ElyAccountFactory creates the implementation and EIP-1167 clones. Use the ABI to interact with accounts." },
 ];
 
@@ -61,6 +62,64 @@ const compiler = {
 const version = pkgJson.version;
 const srcHash = sourceHash();
 
+// The Herd (ElyHerd): standalone collection, deployed from the same five-camp flow but outside the
+// platform `order` (it does not depend on the router). Owner and treasury are deploy-time params;
+// they are never defaulted to invented addresses.
+const herd = {
+  key: "herd",
+  contract: "ElyHerd",
+  standalone: true,
+  params: {
+    owner: { type: "address", required: true, suggest: "$OWNER", note: "The admin wallet the owner provides. Suggest the connected wallet; the admin must confirm it." },
+    treasury: { type: "address", required: true, suggest: null, note: "The treasury the owner provides: withdraw target and default ERC-2981 receiver. No default." },
+  },
+  constructor: [
+    { name: "name_", type: "string", value: "The Herd" },
+    { name: "symbol_", type: "string", value: "HERD" },
+    { name: "initialOwner", type: "address", value: "$PARAM.owner" },
+    { name: "treasury_", type: "address", value: "$PARAM.treasury" },
+    { name: "wrappedNative", type: "address", value: venues.tokens.WHYPE.address, source: venues.tokens.WHYPE.source },
+    { name: "usdToken", type: "address", value: venues.tokens.USDC.address, source: venues.tokens.USDC.source },
+    { name: "priceWei", type: "uint96", value: "1000000000000000000", note: "Testnet: 1 HYPE fixed (WL and public)." },
+    { name: "teamAllocation", type: "uint16", value: 111 },
+    { name: "wlAllocation", type: "uint16", value: 1611 },
+    { name: "collabAllocation", type: "uint16", value: 0, note: "Carve collab supply from WL with rollover(WL, COLLAB, n) or setAllocations before opening." },
+    { name: "publicAllocation", type: "uint16", value: 1611 },
+  ],
+  // Before opening a mint phase (setPhase(WL|PUBLIC) requires the provenance hash).
+  initCalls: [
+    { fn: "setProvenanceHash(bytes32)", args: ["$PARAM.provenanceHash"], note: "sha256 of the ordered image hashes, from the art pipeline. Before any mint." },
+    { fn: "setPlaceholderURI(string)", args: ["$PARAM.placeholderURI"] },
+    { fn: "setContractURI(string)", args: ["$PARAM.contractURI"], note: "Collection metadata (ERC-7572) for Kalos and wallets." },
+    { fn: "setMerkleRoot(uint8,bytes32)", args: [0, "$PARAM.wlRoot"], note: "listId 0 = WL, 1 = COLLAB." },
+    { fn: "setPhaseConfig(uint8,uint40,uint40,uint8,uint96,uint64)", args: [1, "$PARAM.wlStart", "$PARAM.wlEnd", 0, "1000000000000000000", 0], note: "phase 1 = WL, 2 = PUBLIC; priceMode 0 = FIXED, 1 = USD." },
+    { fn: "setPhaseConfig(uint8,uint40,uint40,uint8,uint96,uint64)", args: [2, "$PARAM.publicStart", "$PARAM.publicEnd", 0, "1000000000000000000", 0] },
+  ],
+  mainnetPricing: {
+    note: "Mainnet price is $2 in HYPE: setPhaseConfig(.., priceMode 1, 0, 2000000) + setOracle(pool, twapSeconds, maxDeviationBps) + setFallbackPrice(usdPerHype6, maxStaleness). Re-research the mainnet WHYPE/USDC pool and its observation cardinality first (testnet Kalos pools have cardinality 1; call growOracleCardinality).",
+    testnetPool: { address: venues.pools.kalosWHYPE_USDC_2pct.address, source: venues.pools.kalosWHYPE_USDC_2pct.source, observationCardinality: 1 },
+  },
+  kalosListing: {
+    note: "Kalos lists a collection only after a Kalos admin registers it (no permissionless registry). Ask Kalos to run both calls on the marketplace. See research/kalos-nft.md.",
+    marketplace: "0x0FF8b7afC288AC42f82320f54a49c400f233bF07",
+    calls: [
+      "setCollectionApprovalStatus(address collection, uint8 status = 1 (ERC-721), address paymentToken = 0x41051f27c609dB70af05b7128f15155Dc8E49Ac7 (Kalos WHYPE), uint256 = 0)",
+      "setCollectionCreatorFee(address collection, (uint32 feeBps = 500, address recipient = treasury))",
+    ],
+  },
+  postDeployChecks: [
+    { call: "owner()", expect: "$PARAM.owner" },
+    { call: "treasury()", expect: "$PARAM.treasury" },
+    { call: "MAX_SUPPLY()", expect: 3333 },
+    { call: "phase()", expect: 0 },
+    { call: "allocations()", expect: [111, 1611, 0, 1611, 0, 0, 0, 0, 0] },
+    { call: "royaltyInfo(1,10000)", expect: ["$PARAM.treasury", 500] },
+    { call: "supportsInterface(0x80ac58cd)", expect: true },
+    { call: "supportsInterface(0x2a55205a)", expect: true },
+    { call: "supportsInterface(0x49064906)", expect: true },
+  ],
+};
+
 const manifest = {
   $comment:
     "Deterministic deployment plan for the Elyia admin panel. The owner deploys from their own wallet, in `order`. " +
@@ -86,6 +145,7 @@ const manifest = {
     { step: 3, contract: "ElyOrders", constructor: [{ name: "router", type: "address", value: "$ElyiaRouter" }] },
   ],
   initCalls: [],
+  collections: [herd],
   optionalAdminCalls: [
     { contract: "ElyiaRouter", fn: "setProtocolFee(uint16,address)", note: "Default 0 bps. Hard cap 30 bps." },
     { contract: "ElyiaRouter", fn: "setIntegrator(address,uint16)", note: "Developer-portal integrators. Hard cap 50 bps." },
@@ -107,6 +167,7 @@ const manifest = {
     "Addresses come from packages/core/src/protocolData.ts and networks.ts; fork tests re-check code and getters at the pinned block.",
     "Elysium testnet supports Cancun opcodes (PUSH0, TSTORE, MCOPY checked by eth_call on 2026-11-01). Re-check on mainnet (chain 99901) before any mainnet deploy, and build a mainnet venue list: testnet venues do not exist there.",
     "Contract addresses follow the deployer's nonce (CREATE). The panel should compute and display them before each step.",
+    "ElyHerd is in `collections`, not `order`: deploy it on its own. '$PARAM.<name>' values are deploy-time inputs the admin enters (owner, treasury, provenance, URIs, roots, windows); never fill them with guessed addresses.",
   ],
 };
 
