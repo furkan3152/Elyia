@@ -93,7 +93,9 @@ test("helpers: per network, executable, capable, counts", () => {
   assert.ok(protocolsIn("testnet").length > protocolsIn("mainnet").length / 2);
   const executable = executableProtocols().map((protocol) => protocol.id);
   for (const id of ["elysium-canonical-bridge", "hypercore-perps", "hypercore-spot", "hypercore-twap", "hyperevm-core-link"]) assert.ok(executable.includes(id), id);
-  for (const id of ["uniswap", "elysium-corewriter", "hypercore-vaults", "hypercore-staking", "signal", "elyspump", "elysium-names"]) assert.ok(!executable.includes(id), id);
+  for (const id of ["signal", "hyperswap-v3"]) assert.ok(executable.includes(id), `${id}: an engine adapter executes it`);
+  for (const id of ["uniswap", "elysium-corewriter", "hypercore-vaults", "hypercore-staking", "elyspump", "elysium-names"]) assert.ok(!executable.includes(id), id);
+  assert.deepEqual(capableProtocols("hyperevm-testnet", "swap").map((protocol) => protocol.id).sort(), ["hyperswap-v3"]);
   assert.deepEqual(capableProtocols("hypercore-testnet", "long").map((protocol) => protocol.id), ["hypercore-perps"]);
   assert.deepEqual(capableProtocols("hyperevm-testnet", "bridge").map((protocol) => protocol.id).sort(), ["elysium-canonical-bridge", "elysium-mirror-bridge"]);
   assert.deepEqual(capableProtocols("elysium-mainnet", "swap"), [], "nothing executable on mainnet before launch");
@@ -175,8 +177,9 @@ test("appended rows are checked as plain data", () => {
 
 const CENSUS = "/home/user/elyia-design/research/elysium-protocols.json";
 
-test("registry size: 30 hand rows + 154 census rows - 21 merged = 163, every census row once", () => {
-  assert.equal(PROTOCOLS.length, 163);
+test("registry size: 31 hand rows + 154 census rows - 21 merged = 164, every census row once", () => {
+  // 2026-11-01: + hyperswap-v3 (hand row, HyperEVM testnet + mainnet).
+  assert.equal(PROTOCOLS.length, 164);
   const census = PROTOCOLS.filter((protocol) => protocol.researchId);
   assert.equal(census.length, 154);
   assert.equal(new Set(census.map((protocol) => protocol.researchId)).size, 154);
@@ -187,12 +190,12 @@ test("registry size: 30 hand rows + 154 census rows - 21 merged = 163, every cen
 
 test("pinned counts per kind, category and status", () => {
   assert.deepEqual(countByKind(), {
-    bridge: 5, perps: 9, "spot-orderbook": 1, dex: 17, aggregator: 6, lending: 9, cdp: 0, "liquid-staking": 3, staking: 1, vault: 11,
+    bridge: 5, perps: 9, "spot-orderbook": 1, dex: 18, aggregator: 6, lending: 9, cdp: 0, "liquid-staking": 3, staking: 1, vault: 11,
     launchpad: 23, prediction: 8, oracle: 3, infra: 23, wallet: 2, indexer: 1, analytics: 0,
     game: 13, tools: 12, nft: 10, rwa: 3, names: 1, otc: 1, stablecoin: 1,
   });
-  assert.deepEqual(countByProtocolStatus(), { "live-mainnet": 12, "live-testnet": 89, "announced-mainnet": 33, unknown: 28, deprecated: 1 });
-  assert.deepEqual(countByStatus(), { live: 12, "testnet-live": 105, announced: 26, coming: 19, unverified: 11 });
+  assert.deepEqual(countByProtocolStatus(), { "live-mainnet": 13, "live-testnet": 89, "announced-mainnet": 33, unknown: 28, deprecated: 1 });
+  assert.deepEqual(countByStatus(), { live: 13, "testnet-live": 106, announced: 26, coming: 19, unverified: 11 });
   const counts = countByCategory();
   for (const kind of PROTOCOL_KINDS) assert.ok(PROTOCOL_CATEGORIES.includes(KIND_CATEGORY[kind]), kind);
   assert.equal(counts.prediction, 8 + 13, "games file under prediction");
@@ -232,7 +235,7 @@ test("every EVM contract is verified: contractInfo, bytecode, EIP-55, census-ver
       }
     }
   }
-  assert.equal(total, 539);
+  assert.equal(total, 548, "539 of 2026-10-31 + 9 HyperSwap V3 contracts of 2026-11-01");
   const bridge = deploymentOn(getProtocol("elysium-canonical-bridge"), "elysium-testnet");
   assert.equal(bridge.contracts.nodeInterface, undefined, "NodeInterface 0x…C8 has no bytecode: not listed");
   assert.equal(deploymentOn(getProtocol("elyspump"), "elysium-mainnet")?.contracts.launchpadV1, undefined, "unverified on the relay: not listed");
@@ -252,7 +255,7 @@ test("listProtocols filters by network, category/kind, status, executable and ta
     listProtocols({ executable: true }).map((protocol) => protocol.id).sort(),
     [
       "cheshire", "dex-da-costa", "elyra-lending", "elysium-canonical-bridge", "elysium-mirror-bridge", "hexswap", "hypercore-perps", "hypercore-spot",
-      "hypercore-transfers", "hypercore-twap", "hyperevm-core-link", "kalos-stkalos", "kalos-v3", "kinetiq", "perpme", "wrapped-hype",
+      "hypercore-transfers", "hypercore-twap", "hyperevm-core-link", "hyperswap-v3", "kalos-stkalos", "kalos-v3", "kinetiq", "perpme", "signal", "wrapped-hype",
     ],
   );
   assert.deepEqual(listProtocols({ network: "elysium-testnet", executable: true, category: "dex" }).map((protocol) => protocol.id).sort(), ["dex-da-costa", "hexswap", "kalos-v3"], "PerpMe is a launchpad with a V3 venue");
@@ -289,9 +292,10 @@ test("adapter hints: 26 census candidates, verified selectors only", () => {
   assert.ok(kalos.functions.some((fn) => fn.selector === "0x414bf389" && /^exactInputSingle\(/u.test(fn.signature)));
   assert.match(getProtocol("elyspump").adapter.caveat, /never send user transactions/u);
   assert.ok(getProtocol("elyspump").tags.includes("relay-read-only"));
-  // Hints never make a protocol executable: only an engine adapter does.
-  assert.equal(getProtocol("signal").executable, false);
-  assert.deepEqual(getProtocol("signal").capabilities, []);
+  // Hints never make a protocol executable: only an engine adapter does (Signal: the launch-router buy adapter).
+  assert.equal(getProtocol("signal").executable, true);
+  assert.deepEqual(getProtocol("signal").capabilities, ["swap"]);
+  assert.equal(getProtocol("ascend").executable, false, "selectors verified, no adapter");
   assert.deepEqual(getProtocol("kalos-stkalos").capabilities, ["deposit", "withdraw"]);
 });
 

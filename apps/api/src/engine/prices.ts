@@ -95,6 +95,26 @@ export class ReferencePrices {
     return ReferencePrices.symbolMicros(snapshot, key);
   }
 
+  /**
+   * Whether a reference price source exists for an asset at all (stables,
+   * HyperCore margin, tokens of a priced group or coin). False for test tokens,
+   * vault shares, launch tokens and app-specific test stables: those fall under
+   * the Rule Book's `unpriced` rules instead of failing as a missing price.
+   */
+  static hasReference(asset: string, symbol?: string): boolean {
+    const parsed = parseAssetId(asset);
+    if (!parsed) return false;
+    if (parsed.namespace === "margin") return true;
+    const known = (name: string) => STABLE_SYMBOLS.has(name.toUpperCase()) || COIN_FOR[name.toUpperCase()] !== undefined;
+    if (parsed.network.vm === "hypercore") return symbol !== undefined && known(symbol);
+    if (parsed.namespace === "slip44") return true;
+    const token = getToken(asset);
+    if (!token) return false;
+    if ((token.tags as readonly string[]).includes("non-canonical")) return false;
+    if (token.group === "USDC" || token.group === "USDT" || token.group === "USDH") return true;
+    return known(token.group ?? token.symbol);
+  }
+
   /** USD (2 decimals) of `units` base units at `micros` per whole unit; null when unpriced. */
   static usdText(units: bigint, decimals: number, micros: bigint | null): string | null {
     if (micros === null) return null;

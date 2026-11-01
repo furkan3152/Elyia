@@ -23,6 +23,11 @@
  * `executable` is true only where an Elyia engine adapter exists
  * (apps/api/src/engine/registry.ts, 2026-10-31); `adapter` carries the
  * census' verified selectors and simulations for the rest.
+ *
+ * Hand edits of 2026-11-01: the `hyperswap-v3` row (HyperEVM testnet +
+ * mainnet, every address re-checked by eth_getCode that day) and `signal`
+ * executable (the engine's launch-router buys), so the executable rows equal
+ * the engine adapters' protocol ids (the API test pins it).
  */
 import type { ProtocolDescriptor } from "./protocols.js";
 
@@ -1462,6 +1467,59 @@ export const PROTOCOL_DATA: readonly ProtocolDescriptor[] = [
     notes: "7 ProxyCreation logs total (onchain-scan).",
   },
   {
+    id: "hyperswap-v3",
+    name: "HyperSwap V3",
+    category: "dex",
+    kind: "dex",
+    status: "live-mainnet",
+    description: "Uniswap V3 style AMM on HyperEVM (SwapRouter02 without a deadline in the struct, QuoterV2). Elyia swaps through its HyperEVM testnet deployment, whose wrapped native is HyperSwap's own WETH, not WHYPE 0x5555.",
+    url: "https://hyperswap.exchange",
+    docs: "https://docs.hyperswap.exchange/docs/amm/contracts/hyper-evm/v3",
+    deployments: [
+      {
+        network: "hyperevm-testnet",
+        status: "testnet-live",
+        contracts: {
+          swapRouter02: "0x51c5958FFb3e326F8d7AA945948159f1FF27e14A",
+          quoterV2: "0x7FEd8993828A61A5985F384Cee8bDD42177Aa263",
+          factory: "0x22B0768972bB7f1F5ea7a8740BB8f94b32483826",
+          positionManager: "0x09Aca834543b5790DB7a52803d5F9d48c5b87e80",
+          wrappedNative: "0xADcb2f358Eae6492F61A5F87eb8893d09391d160",
+        },
+        evidence: "HyperSwap docs (testnet/v3); every contract re-checked by eth_getCode on 2026-11-01 via rpc.hyperliquid-testnet.xyz/evm; router, quoter and position manager factory() = 0x22B0…3826 and WETH9() = 0xADcb…d160; engine smoke eth_call of HYPE -> USDC via exactInputSingle succeeded (2026-10-31).",
+        contractInfo: [
+          { key: "swapRouter02", role: "SwapRouter02 (no deadline in the struct)", address: "0x51c5958FFb3e326F8d7AA945948159f1FF27e14A", codeBytes: 21792, checkedAt: "2026-11-01", evidence: "factory() = 0x22B0…3826, WETH9() = 0xADcb…d160; bytecode selectors exactInputSingle 0x04e45aaf, multicall(uint256,bytes[]) 0x5ae401dc, unwrapWETH9 0x49404b7c, refundETH 0x12210e8a", labelSource: "HyperSwap docs" },
+          { key: "quoterV2", role: "QuoterV2", address: "0x7FEd8993828A61A5985F384Cee8bDD42177Aa263", codeBytes: 8365, checkedAt: "2026-11-01", evidence: "factory() = 0x22B0…3826, WETH9() = 0xADcb…d160; bytecode selector quoteExactInputSingle 0xc6a5026a", labelSource: "HyperSwap docs" },
+          { key: "factory", role: "UniswapV3Factory", address: "0x22B0768972bB7f1F5ea7a8740BB8f94b32483826", codeBytes: 24351, checkedAt: "2026-11-01", evidence: "feeAmountTickSpacing(3000) = 60; owner() = 0x2db6…0df8", labelSource: "HyperSwap docs" },
+          { key: "positionManager", role: "NonfungiblePositionManager", address: "0x09Aca834543b5790DB7a52803d5F9d48c5b87e80", codeBytes: 24384, checkedAt: "2026-11-01", evidence: "factory() = 0x22B0…3826, WETH9() = 0xADcb…d160", labelSource: "HyperSwap docs" },
+          { key: "wrappedNative", role: "HyperSwap testnet WETH (its own wrapper, not WHYPE)", address: "0xADcb2f358Eae6492F61A5F87eb8893d09391d160", codeBytes: 1763, checkedAt: "2026-11-01", evidence: "symbol() = WETH; the router's WETH9()", labelSource: "router WETH9()" },
+        ],
+      },
+      {
+        network: "hyperevm-mainnet",
+        status: "live",
+        contracts: {
+          swapRouter02: "0x6D99e7f6747AF2cDbB5164b6DD50e40D4fDe1e77",
+          quoterV2: "0x03A918028f22D9E1473B7959C927AD7425A45C7C",
+          factory: "0xB1c0fa0B789320044A6F623cFe5eBda9562602E3",
+          positionManager: "0x6eDA206207c09e5428F281761DdC0D300851fBC8",
+        },
+        evidence: "HyperSwap docs (hyper-evm/v3); every contract re-checked by eth_getCode on 2026-11-01 via rpc.hyperliquid.xyz/evm; router, quoter and position manager factory() = 0xB1c0…02E3 and WETH9() = WHYPE 0x5555…5555. Elyia does not execute here yet (no mainnet venue pin).",
+        contractInfo: [
+          { key: "swapRouter02", role: "SwapRouter02 (no deadline in the struct)", address: "0x6D99e7f6747AF2cDbB5164b6DD50e40D4fDe1e77", codeBytes: 21792, checkedAt: "2026-11-01", evidence: "factory() = 0xB1c0…02E3, WETH9() = 0x5555…5555", labelSource: "HyperSwap docs" },
+          { key: "quoterV2", role: "QuoterV2", address: "0x03A918028f22D9E1473B7959C927AD7425A45C7C", codeBytes: 8365, checkedAt: "2026-11-01", evidence: "factory() = 0xB1c0…02E3, WETH9() = 0x5555…5555", labelSource: "HyperSwap docs" },
+          { key: "factory", role: "UniswapV3Factory", address: "0xB1c0fa0B789320044A6F623cFe5eBda9562602E3", codeBytes: 24351, checkedAt: "2026-11-01", evidence: "the router's and quoter's factory()", labelSource: "HyperSwap docs" },
+          { key: "positionManager", role: "NonfungiblePositionManager", address: "0x6eDA206207c09e5428F281761DdC0D300851fBC8", codeBytes: 24384, checkedAt: "2026-11-01", evidence: "factory() = 0xB1c0…02E3, WETH9() = 0x5555…5555", labelSource: "HyperSwap docs" },
+        ],
+      },
+    ],
+    capabilities: ["swap"],
+    executable: true,
+    tags: ["hyperevm", "uniswap-v3-fork"],
+    notes: "Elyia executes the HyperEVM testnet deployment only (engine venue hyperswap-v3, fee tiers 0.01/0.05/0.3/1%); native HYPE routes through HyperSwap's own testnet WETH 0xADcb…d160, so WHYPE 0x5555 pools do not serve native HYPE there. Testnet pool prices are fake: USD values use HyperCore mainnet reference mids.",
+    sources: ["https://docs.hyperswap.exchange/docs/amm/contracts/testnet/v3", "https://docs.hyperswap.exchange/docs/amm/contracts/hyper-evm/v3"],
+  },
+  {
     id: "kalos-v3",
     name: "Kalos V3 (UniV3 fork) + Kalos marketplace",
     category: "dex",
@@ -1932,8 +1990,8 @@ export const PROTOCOL_DATA: readonly ProtocolDescriptor[] = [
         ],
       },
     ],
-    capabilities: [],
-    executable: false,
+    capabilities: ["swap"],
+    executable: true,
     tags: ["community-tracker", "lookalike-tokens", "reported-concern", "unofficial-uniswap"],
     adapter: {
       candidate: true,
@@ -1953,7 +2011,7 @@ export const PROTOCOL_DATA: readonly ProtocolDescriptor[] = [
       caveat: "Not official Uniswap. Launch-token/WHYPE pools only; no new pools since 2026-10-29.",
     },
     researchId: "signal",
-    notes: "Not official Uniswap. Tile reportedly removed from official map (REPORTED). Launch-token pairs vs WHYPE only.",
+    notes: "Not official Uniswap. Tile reportedly removed from official map (REPORTED). Launch-token pairs vs WHYPE only. Elyia executes buys only (HYPE -> a launch token through the launch router, named explicitly with the token address); sells and the UniversalRouter path are not offered.",
     sources: ["https://elysiumeco.xyz/projects/signal/ (status 'On testnet', Launchpad: Curve launches)"],
   },
   {

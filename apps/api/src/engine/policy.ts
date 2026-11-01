@@ -55,6 +55,19 @@ function productMicros(a: string, b: string): bigint {
   return (micros(a) * micros(b)) / 1_000_000n;
 }
 
+function wholeTokens(units: bigint, decimals: number): string {
+  const scale = 10n ** BigInt(decimals);
+  const fraction = (units % scale).toString().padStart(decimals, "0").replace(/0+$/u, "");
+  return `${units / scale}${fraction ? `.${fraction}` : ""}`;
+}
+
+/** Plan / quote warnings for the unpriced tokens the Rule Book let through (testnet, within the cap). */
+export function unpricedWarnings(summary: PolicySummary): string[] {
+  return (summary.unpriced ?? [])
+    .filter((note) => note.status === "allowed")
+    .map((note) => `Unpriced: ${note.symbol} has no reference price${note.cap ? ` (testnet only, capped at ${note.cap} ${note.symbol} per intent)` : " (testnet only)"}; USD totals leave it out.`);
+}
+
 export interface GateResult {
   readonly evaluation: PolicyEvaluation;
   readonly summary: PolicySummary;
@@ -137,6 +150,7 @@ export class PolicyGate {
       stage: options.stage,
       stored: options.stored,
       priceUsdMicros: (asset) => ReferencePrices.assetMicros(snapshot, asset, symbols.get(asset.toLowerCase())),
+      hasReferencePrice: (asset) => ReferencePrices.hasReference(asset, symbols.get(asset.toLowerCase())),
       marketPriceUsdMicros: (market, kind) => {
         const base = kind === "spot" ? (displayNames.get(market) ?? market).split("/")[0] ?? market : market;
         return ReferencePrices.symbolMicros(snapshot, base);
@@ -162,6 +176,7 @@ export class PolicyGate {
       notionalUsd: evaluation.notionalUsdMicros === null ? null : formatUsdMicros(evaluation.notionalUsdMicros),
       priceSource: PRICE_SOURCE,
       evaluatedAt: new Date(now).toISOString(),
+      ...(evaluation.unpriced && evaluation.unpriced.length > 0 ? { unpriced: evaluation.unpriced.map((note) => ({ ...note, amountText: wholeTokens(BigInt(note.amount), note.decimals) })) } : {}),
     };
     return { evaluation, summary, decisionId, ruleBookHash: hash };
   }

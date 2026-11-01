@@ -20,7 +20,7 @@ import type { GoalItem } from "../goals.js";
 import type { IntentActionSpec, IntentConstraints, IntentGraph, IntentStatus, IntentStep, StepEvidence, StepExecutionPayload, StepStatus } from "../intent.js";
 import type { Journey } from "../journey.js";
 import type { NetworkEnvironment, NetworkKey } from "../networks.js";
-import type { PolicyDecision, PolicyRuleId } from "../policyEvaluate.js";
+import type { PolicyDecision, PolicyRuleId, UnpricedAssetNote } from "../policyEvaluate.js";
 
 export const INTENTS_API_VERSION = "elyia.api.intents/v1" as const;
 
@@ -71,6 +71,19 @@ export interface PolicySummary {
   readonly evaluatedAt: string;
   /** True when the Rule Book was not consulted because every step only reduces risk (reduce-only orders, cancels). */
   readonly derisking?: boolean;
+  /**
+   * Tokens without a reference price the intent touches (KALOS, stKALOS,
+   * launch tokens). `allowed` ones (testnet, within the Rule Book's token cap)
+   * count as $0 in `notionalUsd`: show them as "unpriced", never as worthless.
+   * Absent or empty when every asset is priced.
+   */
+  readonly unpriced?: readonly UnpricedAssetView[];
+}
+
+/** A token without a reference price (core `UnpricedAssetNote`, plus the amount in whole tokens). */
+export interface UnpricedAssetView extends UnpricedAssetNote {
+  /** `amount` in whole tokens ("10", "0.5"). */
+  readonly amountText: string;
 }
 
 /** One venue that quoted a step during planning (the winner first). */
@@ -134,6 +147,8 @@ export interface VenueView {
 export interface VenuesResponse {
   readonly venues: readonly VenueView[];
   readonly priceSource: "reference:hypercore-mainnet-mids";
+  /** Registry protocol ids the running engine executes (the `executable` rows of GET /v1/protocols). */
+  readonly executableProtocols?: readonly string[];
 }
 
 export interface CreateIntentResponse {

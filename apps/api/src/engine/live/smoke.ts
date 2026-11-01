@@ -114,6 +114,9 @@ const SCENARIOS: readonly Scenario[] = [
   { name: "hyperswap-hype-usdc", home: "hyperevm-testnet", actions: [{ kind: "swap", network: "hyperevm-testnet", from: "HYPE", to: "USDC", amount: "0.05", protocol: "hyperswap-v3" }] },
   { name: "link-hype-core", home: "hyperevm-testnet", actions: [{ kind: "link", network: "hyperevm-testnet", toNetwork: "hypercore-testnet", from: "HYPE", amount: "0.2" }] },
   { name: "link-usdc-core", home: "hyperevm-testnet", actions: [{ kind: "link", network: "hyperevm-testnet", toNetwork: "hypercore-testnet", from: "USDC", amount: "2" }], token: { network: "hyperevm-testnet", address: "0x2b3370ee501b4a559b57d449569354196457d8ab" } },
+  { name: "kalos-hype-kalos", home: "elysium-testnet", actions: [{ kind: "swap", network: "elysium-testnet", from: "HYPE", to: "KALOS", amount: "0.01", protocol: "kalos-v3" }] },
+  { name: "kalos-kalos-whype", home: "elysium-testnet", actions: [{ kind: "swap", network: "elysium-testnet", from: "KALOS", to: "WHYPE", amount: "10", protocol: "kalos-v3" }], token: { network: "elysium-testnet", address: "0x8a2201953af29e8be7700bcb53da3ce5cad18726" } },
+  { name: "kalos-over-unpriced-cap-refused", home: "elysium-testnet", actions: [{ kind: "swap", network: "elysium-testnet", from: "KALOS", to: "WHYPE", amount: "1500", protocol: "kalos-v3" }], expectError: "POLICY_DENIED" },
   { name: "stkalos-deposit", home: "elysium-testnet", actions: [{ kind: "deposit", network: "elysium-testnet", from: "KALOS", amount: "10", protocol: "kalos-stkalos" }], token: { network: "elysium-testnet", address: "0x8a2201953af29e8be7700bcb53da3ce5cad18726" } },
   { name: "cheshire-usdc-deposit", home: "elysium-testnet", actions: [{ kind: "deposit", network: "elysium-testnet", from: "USDC", amount: "1", protocol: "cheshire" }], token: { network: "elysium-testnet", address: "0x7d29d8047b905000459c0e80c34a26ceedcb47b2" } },
   { name: "elyra-lend-usdc", home: "elysium-testnet", actions: [{ kind: "deposit", network: "elysium-testnet", from: "USDC", amount: "0.02", protocol: "elyra-lending" }], token: { network: "elysium-testnet", address: "0x7d29d8047b905000459c0e80c34a26ceedcb47b2" } },
@@ -130,6 +133,7 @@ async function rpc(url: string, method: string, params: readonly unknown[]): Pro
 }
 
 const APPROVE = "0x095ea7b3";
+const BALANCE_OF_ABI = [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }] }] as const;
 /** ERC-20 Transfer(address indexed from, address indexed to, uint256 value). */
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" as Hex;
 const ALLOWANCE = "0xdd62ed3e";
@@ -196,8 +200,9 @@ async function main(): Promise<void> {
           continue;
         }
         if (!code.startsWith("POLICY")) throw error;
-        // The Rule Book refused at plan (fail closed: an unpriced test token): dry-run the plan and prepare through the adapter to still prove the calldata.
-        process.stdout.write(`plan: Rule Book refused (${code}: ${(error as Error).message}); proving the adapter payload directly\n`);
+        // The Rule Book refused at plan: count it as a failure, but dry-run the plan and prepare through the adapter to still prove the calldata.
+        failures += 1;
+        process.stdout.write(`plan: Rule Book refused (${code}: ${(error as Error).message}); FAILED — proving the adapter payload directly\n`);
         created = await create(true);
         viaService = false;
       }
@@ -206,6 +211,8 @@ async function main(): Promise<void> {
       if (!step) throw new Error("no step");
       process.stdout.write(`plan: ${created.intent.steps.map((entry) => `${entry.id} ${entry.kind}/${entry.protocol} on ${entry.network}: ${entry.title}`).join(" | ")}\n`);
       process.stdout.write(`policy: ${created.policy.decision} notional=${created.policy.notionalUsd} ${created.policy.reasons.map((reason) => reason.rule).join(",")}\n`);
+      for (const note of created.policy.unpriced ?? []) process.stdout.write(`unpriced: ${note.status} ${note.role} ${note.amountText} ${note.symbol} cap=${note.cap ?? "-"} — ${note.message}\n`);
+      for (const warning of created.intent.warnings.filter((text) => text.startsWith("Unpriced"))) process.stdout.write(`warning: ${warning}\n`);
       for (const quote of created.quotes) process.stdout.write(`quote: ${quote.protocol} expected=${quote.expected} min=${quote.minimum} ${quote.symbol} winner=${quote.winner}${quote.excluded ? ` excluded=${quote.excluded}` : ""}${quote.referenceDeviationBps !== undefined ? ` refDev=${quote.referenceDeviationBps}bps refUsd=${quote.referenceUsd}` : ""}\n`);
       let requests: readonly EvmTransactionRequest[];
       if (viaService) {
@@ -226,8 +233,16 @@ async function main(): Promise<void> {
           const head = (await base.getBlock(scenario.token.network, "latest"))?.number ?? 0n;
           for (let window = 0n; window < 10n && /^0x0{40}$/u.test(holder); window += 1n) {
             const logs = await base.getLogs(scenario.token.network, { address: scenario.token.address, topics: [TRANSFER_TOPIC], fromBlock: head - (window + 1n) * 1_500n, toBlock: head - window * 1_500n });
-            const owner = logs.map((log) => log.topics[2]).find((topic) => topic !== undefined && !/^0x0{64}$/u.test(topic));
-            if (owner) holder = `0x${owner.slice(26)}` as Address;
+            // The newest recipient that still holds shares (routers and redeemers end at zero).
+            const owners = [...new Set(logs.map((log) => log.topics[2]).filter((topic): topic is Hex => topic !== undefined && !/^0x0{64}$/u.test(topic)))].reverse().slice(0, 6);
+            for (const owner of owners) {
+              const candidate = `0x${owner.slice(26)}` as Address;
+              const held = await base.read(scenario.token.network, { address: scenario.token.address, abi: BALANCE_OF_ABI, functionName: "balanceOf", args: [candidate] });
+              if (held > 0n) {
+                holder = candidate;
+                break;
+              }
+            }
           }
         }
         const slot = await balanceMappingSlot(deps, scenario.token.network, scenario.token.address, holder);

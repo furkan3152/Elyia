@@ -19,6 +19,10 @@ import {
   scheduleState,
   usdMicros,
   validateRuleBook,
+  erc20AssetId,
+  effectiveUnpriced,
+  tokenAmountUnits,
+  UNPRICED_DEFAULT_MAX,
 } from "../dist/index.js";
 import { HYPE_ELY, OTHER, USER, USDC_ELY, accounts, sampleGraph } from "./fixtures.mjs";
 
@@ -128,7 +132,7 @@ test("validateRuleBook normalises and refuses malformed documents with paths", (
 test("rule book hash: canonical JSON + SHA-256, frozen for the default book", () => {
   const hash = ruleBookHash(DEFAULT_RULE_BOOK);
   assert.equal(hash, `sha256:${createHash("sha256").update(canonicalJson(DEFAULT_RULE_BOOK)).digest("hex")}`);
-  assert.equal(hash, "sha256:350c68af89410f3780ebdd2551c2cfa531b5a08916744e1a4fce56623948815a", "changing the default book changes every client pin: bump this deliberately");
+  assert.equal(hash, "sha256:005b17f6682a8670a1f22453bba6c4a6fd9b92d312c9c20f28470c1a6f5a5380", "changing the default book changes every client pin: bump this deliberately (2026-11-01: unpriced testnet cap)");
   const reordered = validateRuleBook({ ...DEFAULT_RULE_BOOK, confirm: { when: ["unlisted-asset", "external-recipient"], leverageAbove: 10, aboveUsd: "2500" } });
   assert.equal(ruleBookHash(reordered.value), hash, "key and list order never change the hash");
   for (const template of Object.values(RULE_BOOK_TEMPLATES)) assert.equal(validateRuleBook(template).ok, true);
@@ -342,4 +346,106 @@ test("buildPolicyFacts prices with the caller's oracle and fails closed on unkno
   assert.ok(rulesOf(refused).includes("facts.unavailable"));
   const automation = buildPolicyFacts({ ...graph, source: "automation" }, { stage: "sign", priceUsdMicros: (id) => prices.get(id) ?? null, trading: TRADING_FACTS, usage: { dayUsdMicros: 0n, weekUsdMicros: 0n } });
   assert.equal(automation.origin, "automation");
+});
+
+/* ------------------------------------------- unpriced tokens (2026-11-01) */
+
+const KALOS = { asset: erc20AssetId("elysium-testnet", "0x8a2201953AF29e8BE7700bcB53dA3ce5caD18726"), symbol: "KALOS", decimals: 18 };
+const LAUNCH = { asset: erc20AssetId("elysium-testnet", "0x8aa6F0835805Ca99f370634415d502ec5c603Baf"), symbol: "SIG", decimals: 18 };
+const MAINNET_TOKEN = { asset: erc20AssetId("hyperevm-mainnet", "0x1111111111111111111111111111111111111111"), symbol: "ODD", decimals: 18 };
+const HYPE_MAIN = { asset: "eip155:999/slip44:2457", symbol: "HYPE", decimals: 18 };
+const unpricedFact = (base, whole) => ({ ...asset(base, (BigInt(whole) * 10n ** 18n).toString(), null, base !== LAUNCH && base !== MAINNET_TOKEN), noReference: true });
+
+test("unpriced rules: default book caps test tokens at 1000, validation and normalisation", () => {
+  assert.equal(UNPRICED_DEFAULT_MAX, "1000");
+  assert.deepEqual(DEFAULT_RULE_BOOK.unpriced, { testnet: "cap", defaultMax: "1000" });
+  assert.deepEqual(effectiveUnpriced(book()), { testnet: "cap", defaultMax: "1000", tokens: [] }, "absent section: the documented default");
+  const ok = validateRuleBook({ schema: RULE_BOOK_SCHEMA, unpriced: { testnet: "cap", defaultMax: "250.500", tokens: [{ asset: "stKALOS", max: "50" }, { asset: "kalos", max: "5000" }, { asset: LAUNCH.asset, max: "100000" }] } });
+  assert.equal(ok.ok, true, JSON.stringify(ok.issues));
+  assert.equal(ok.value.unpriced.defaultMax, "250.5");
+  assert.deepEqual(ok.value.unpriced.tokens.map((cap) => cap.asset), ["KALOS", LAUNCH.asset.toLowerCase(), "stKALOS"], "normalised and sorted");
+  for (const bad of [
+    { testnet: "maybe" },
+    { defaultMax: 1000 },
+    { defaultMax: "-1" },
+    { tokens: [{ asset: "group:HYPE", max: "1" }] },
+    { tokens: [{ asset: "NOPE", max: "1" }] },
+    { tokens: [{ asset: "KALOS" }] },
+    { tokens: [{ asset: "KALOS", max: "1" }, { asset: "kalos", max: "2" }] },
+    { tokens: [{ asset: "KALOS", max: "1", extra: true }] },
+    { mainnet: "cap" },
+  ]) assert.equal(validateRuleBook({ schema: RULE_BOOK_SCHEMA, unpriced: bad }).ok, false, JSON.stringify(bad));
+  assert.equal(RULE_BOOK_TEMPLATES.careful.unpriced.testnet, "deny");
+  assert.equal(tokenAmountUnits("1.5", 6), 1_500_000n);
+  assert.equal(tokenAmountUnits("0.1234567", 6), 123_456n, "extra digits are cut: the cap only shrinks");
+});
+
+test("unpriced rules: loosening is flagged", () => {
+  const strict = book({ unpriced: { testnet: "deny", defaultMax: "10", tokens: [{ asset: "KALOS", max: "5" }] } });
+  assert.deepEqual(loosenedRules(strict, strict), []);
+  assert.deepEqual(loosenedRules(strict, book({ unpriced: { testnet: "cap", defaultMax: "10", tokens: [{ asset: "KALOS", max: "5" }] } })), ["unpriced.testnet"]);
+  assert.deepEqual(loosenedRules(strict, book({ unpriced: { testnet: "deny", defaultMax: "11", tokens: [{ asset: "KALOS", max: "5" }] } })), ["unpriced.defaultMax"]);
+  assert.deepEqual(loosenedRules(strict, book({ unpriced: { testnet: "deny", defaultMax: "10", tokens: [{ asset: "KALOS", max: "6" }] } })), ["unpriced.tokens"]);
+  assert.deepEqual(loosenedRules(strict, book({ unpriced: { testnet: "deny", defaultMax: "10" } })), ["unpriced.tokens"], "dropping a per-token cap falls back to a larger default");
+  assert.deepEqual(loosenedRules(book({ unpriced: { defaultMax: "10" } }), book()), ["unpriced.defaultMax"], "absent = the 1000-token default");
+  assert.deepEqual(loosenedRules(book(), book({ unpriced: { testnet: "deny", defaultMax: "1" } })), [], "tightening is never flagged");
+});
+
+test("unpriced on testnet: allowed within the cap, valued at $0, with a note", () => {
+  const evaluation = evaluatePolicy(DEFAULT_RULE_BOOK, facts([swapStep({ inputs: [unpricedFact(KALOS, 10)], outputs: [asset(USDC_ELY, "1000000", "1")] })]));
+  assert.equal(evaluation.decision, "allow", JSON.stringify(evaluation.reasons));
+  assert.equal(evaluation.notionalUsdMicros, 0n);
+  assert.equal(evaluation.unpriced.length, 1);
+  assert.deepEqual({ ...evaluation.unpriced[0], message: undefined }, { asset: KALOS.asset, symbol: "KALOS", network: "elysium-testnet", role: "input", amount: (10n * 10n ** 18n).toString(), decimals: 18, cap: "1000", status: "allowed", message: undefined, path: "steps[0].inputs[0]" });
+  assert.match(evaluation.unpriced[0].message, /no reference price: testnet only, capped at 1000 KALOS/u);
+  assert.ok(evaluation.rules.some((rule) => rule.rule === "assets.unpriced" && rule.status === "pass"));
+  // A launch-token buy: HYPE in (priced), the unpriced token out (noted, not capped).
+  const buy = evaluatePolicy(DEFAULT_RULE_BOOK, facts([swapStep({ outputs: [unpricedFact(LAUNCH, 5_000_000)] })]));
+  assert.equal(buy.decision, "confirm", "the launch token is unverified: the default book asks to confirm");
+  assert.deepEqual(rulesOf(buy), ["confirm.unlistedAsset"]);
+  assert.equal(buy.unpriced[0].role, "output");
+  assert.equal(buy.unpriced[0].status, "allowed");
+  assert.equal(buy.notionalUsdMicros, usd("40"));
+});
+
+test("unpriced on testnet: over the cap, per-token caps and deny mode refuse", () => {
+  const over = evaluatePolicy(DEFAULT_RULE_BOOK, facts([swapStep({ inputs: [unpricedFact(KALOS, 600)] }), swapStep({ id: "s2", index: 1, inputs: [unpricedFact(KALOS, 600)] })]));
+  assert.equal(over.decision, "deny");
+  assert.equal(rulesOf(over)[0], "assets.unpriced", "summed per intent: 1200 > 1000");
+  assert.ok(rulesOf(over).every((rule) => rule === "assets.unpriced" || rule === "facts.unavailable"), "a refused amount stays unpriced for the USD rules too");
+  assert.equal(over.code, "POLICY_DENIED");
+  assert.match(over.reasons[0].message, /1200 KALOS is above the 1000 KALOS cap/u);
+  const own = book({ unpriced: { tokens: [{ asset: "KALOS", max: "5000" }, { asset: "KALOS@elysium-testnet", max: "2000" }] } });
+  assert.equal(evaluatePolicy(own, facts([swapStep({ inputs: [unpricedFact(KALOS, 1500)] })])).decision, "allow", "the smallest matching per-token cap (2000) wins");
+  assert.equal(evaluatePolicy(own, facts([swapStep({ inputs: [unpricedFact(KALOS, 2500)] })])).decision, "deny");
+  const refusing = evaluatePolicy(book({ unpriced: { testnet: "deny" } }), facts([swapStep({ inputs: [unpricedFact(KALOS, 1)] })]));
+  assert.equal(refusing.decision, "deny");
+  assert.equal(refusing.reasons[0].rule, "assets.unpriced");
+  assert.equal(evaluatePolicy(RULE_BOOK_TEMPLATES.careful, facts([swapStep({ outputs: [unpricedFact(KALOS, 1)] })])).unpriced[0].status, "refused");
+});
+
+test("unpriced on mainnet: always refused, whatever the book says", () => {
+  const loose = book({ networks: { environments: ["mainnet", "testnet"] }, unpriced: { testnet: "cap", defaultMax: "1000000000", tokens: [{ asset: MAINNET_TOKEN.asset, max: "1000000000" }] } });
+  const mainnetSwap = (overrides) => swapStep({ network: "hyperevm-mainnet", inputs: [asset(HYPE_MAIN, "1000000000000000000", "40")], outputs: [unpricedFact(MAINNET_TOKEN, 1)], recipient: "eip155:999:" + USER, ...overrides });
+  const buy = evaluatePolicy(loose, facts([mainnetSwap()], { accounts: [...own, "eip155:999:" + USER] }));
+  assert.equal(buy.decision, "deny");
+  assert.deepEqual(rulesOf(buy), ["assets.unpriced"]);
+  assert.match(buy.reasons[0].message, /on mainnet Elyia never routes into a token it cannot value/u);
+  const sell = evaluatePolicy(loose, facts([mainnetSwap({ inputs: [unpricedFact(MAINNET_TOKEN, 1)], outputs: [asset(HYPE_MAIN, "1", "0.01")] })], { accounts: [...own, "eip155:999:" + USER] }));
+  assert.equal(sell.decision, "deny");
+  assert.ok(rulesOf(sell).includes("assets.unpriced"));
+  assert.ok(rulesOf(sell).includes("facts.unavailable") || sell.unpriced[0].status === "refused");
+});
+
+test("a price that could not be read is never treated as unpriced (oracle outage fails closed)", () => {
+  const outage = evaluatePolicy(DEFAULT_RULE_BOOK, facts([swapStep({ inputs: [asset(HYPE_ELY, "1000000000000000000", null)] })]));
+  assert.equal(outage.decision, "deny");
+  assert.deepEqual(rulesOf(outage), ["facts.unavailable"]);
+  assert.deepEqual(outage.unpriced, []);
+  const graph = sampleGraph();
+  const marked = buildPolicyFacts(graph, { stage: "plan", priceUsdMicros: () => null, hasReferencePrice: () => false });
+  assert.equal(marked.steps[0].inputs[0].noReference, true);
+  const unmarked = buildPolicyFacts(graph, { stage: "plan", priceUsdMicros: () => null, hasReferencePrice: () => true });
+  assert.equal(unmarked.steps[0].inputs[0].noReference, undefined);
+  assert.equal(buildPolicyFacts(graph, { stage: "plan", priceUsdMicros: () => null }).steps[0].inputs[0].noReference, undefined, "no source: fail closed");
 });

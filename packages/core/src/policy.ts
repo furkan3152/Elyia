@@ -35,7 +35,14 @@ export const RULE_BOOK_LIMITS = Object.freeze({
   maxLeverage: 100,
   maxOpenOrders: 1_000,
   windows: 14,
+  unpricedTokens: 50,
 });
+
+/**
+ * Token amounts in rule books (`unpriced` caps): whole-token decimal strings,
+ * at most 18 decimals, never floats ("1000", "0.5").
+ */
+export const RULE_TOKEN_AMOUNT_PATTERN = /^\d{1,30}(?:\.\d{1,18})?$/u;
 
 export type RuleBookMode = "live" | "dry-run" | "paused";
 /** How automations may execute: wallet proposals, the in-browser agent key, or the opt-in server Keeper. */
@@ -82,6 +89,30 @@ export interface TradingRules {
   readonly maxSlippageBps?: number;
 }
 
+/** A per-token cap for tokens without a reference price. */
+export interface UnpricedTokenCap {
+  /** `SYMBOL`, `SYMBOL@network` (verified tokens) or a CAIP-19 id (any token, e.g. a launch token). */
+  readonly asset: string;
+  /** Whole tokens per intent, decimal string. */
+  readonly max: string;
+}
+
+/**
+ * Tokens without a reference USD price (test tokens such as KALOS, vault
+ * shares such as stKALOS, launch tokens). On MAINNET they are always refused,
+ * whatever the book says (rule `assets.unpriced`, fail closed). On TESTNET
+ * they are allowed up to a cap in token units (`cap`, the default) or refused
+ * (`deny`). Allowed amounts count as $0 toward USD rules and every plan that
+ * touches one carries an "unpriced" note.
+ */
+export interface UnpricedRules {
+  readonly testnet?: "cap" | "deny";
+  /** Whole tokens per intent of any one unpriced token without its own cap (default UNPRICED_DEFAULT_MAX). */
+  readonly defaultMax?: string;
+  /** Own caps per token; the smallest matching cap wins. */
+  readonly tokens?: readonly UnpricedTokenCap[];
+}
+
 export interface RuleBook {
   readonly schema: typeof RULE_BOOK_SCHEMA;
   readonly label?: string;
@@ -101,6 +132,43 @@ export interface RuleBook {
   readonly agent?: { readonly actions?: readonly L1ActionType[]; readonly modes?: readonly AgentMode[] };
   readonly confirm?: { readonly aboveUsd?: string; readonly leverageAbove?: number; readonly when?: readonly ConfirmTrigger[] };
   readonly schedule?: { readonly timezone: string; readonly windows: readonly ScheduleWindow[] };
+  /** Tokens without a reference price (absent: the testnet default cap, `UNPRICED_DEFAULTS`). */
+  readonly unpriced?: UnpricedRules;
+}
+
+/** Whole-token default cap per unpriced token per intent, on testnet. Conservative: test tokens only. */
+export const UNPRICED_DEFAULT_MAX = "1000" as const;
+
+/** What a book that says nothing about unpriced tokens gets: testnet cap at UNPRICED_DEFAULT_MAX. */
+export const UNPRICED_DEFAULTS: Required<Pick<UnpricedRules, "testnet" | "defaultMax">> & { readonly tokens: readonly UnpricedTokenCap[] } = Object.freeze({
+  testnet: "cap",
+  defaultMax: UNPRICED_DEFAULT_MAX,
+  tokens: Object.freeze([]) as readonly UnpricedTokenCap[],
+});
+
+/** The unpriced-token rules a book really runs under (defaults filled in). */
+export function effectiveUnpriced(book: RuleBook): { readonly testnet: "cap" | "deny"; readonly defaultMax: string; readonly tokens: readonly UnpricedTokenCap[] } {
+  const rules = book.unpriced;
+  return {
+    testnet: rules?.testnet ?? UNPRICED_DEFAULTS.testnet,
+    defaultMax: rules?.defaultMax ?? UNPRICED_DEFAULTS.defaultMax,
+    tokens: rules?.tokens ?? UNPRICED_DEFAULTS.tokens,
+  };
+}
+
+/** Whole-token decimal -> base units (extra fraction digits are cut: the cap only gets smaller). */
+export function tokenAmountUnits(value: string, decimals: number): bigint {
+  if (!RULE_TOKEN_AMOUNT_PATTERN.test(value)) throw new Error(`Invalid token amount: ${value}`);
+  const [whole = "0", fraction = ""] = value.split(".");
+  return BigInt(whole) * 10n ** BigInt(decimals) + BigInt((fraction + "0".repeat(decimals)).slice(0, decimals) || "0");
+}
+
+/** Compares two whole-token decimal strings. */
+function compareTokenAmounts(a: string, b: string): number {
+  const units = (value: string) => tokenAmountUnits(value, 18);
+  const left = units(a);
+  const right = units(b);
+  return left === right ? 0 : left > right ? 1 : -1;
 }
 
 export interface RuleBookIssue {
@@ -267,6 +335,16 @@ class Collector {
     const trimmed = fraction.replace(/0+$/u, "");
     return `${BigInt(whole).toString()}${trimmed ? `.${trimmed}` : ""}`;
   }
+  tokenAmount(value: unknown, path: string): string | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== "string" || !RULE_TOKEN_AMOUNT_PATTERN.test(value)) {
+      this.add(path, "Must be a token amount as a decimal string, e.g. \"1000\" or \"0.5\".");
+      return undefined;
+    }
+    const [whole = "0", fraction = ""] = value.split(".");
+    const trimmed = fraction.replace(/0+$/u, "");
+    return `${BigInt(whole).toString()}${trimmed ? `.${trimmed}` : ""}`;
+  }
   bool(value: unknown, path: string): boolean | undefined {
     if (value === undefined) return undefined;
     if (typeof value !== "boolean") {
@@ -294,7 +372,7 @@ function compact<T extends Record<string, unknown>>(value: T): T | undefined {
 export function validateRuleBook(input: unknown): RuleBookValidation {
   const c = new Collector();
   if (!isRecord(input)) return { ok: false, value: null, issues: [{ path: "", message: "A rule book is a JSON object." }] };
-  c.keys(input, ["schema", "label", "mode", "networks", "kinds", "protocols", "assets", "recipients", "limits", "caps", "trading", "agent", "confirm", "schedule"], "");
+  c.keys(input, ["schema", "label", "mode", "networks", "kinds", "protocols", "assets", "recipients", "limits", "caps", "trading", "agent", "confirm", "schedule", "unpriced"], "");
   if (input.schema !== RULE_BOOK_SCHEMA) c.add("schema", `Must be "${RULE_BOOK_SCHEMA}".`);
   let label: string | undefined;
   if (input.label !== undefined) {
@@ -407,9 +485,41 @@ export function validateRuleBook(input: unknown): RuleBookValidation {
     if (typeof scheduleIn.timezone === "string") schedule = { timezone: scheduleIn.timezone, windows };
   }
 
+  const unpricedIn = c.section(input, "unpriced", ["testnet", "defaultMax", "tokens"]);
+  let unpriced: UnpricedRules | undefined;
+  if (unpricedIn) {
+    let tokens: UnpricedTokenCap[] | undefined;
+    if (unpricedIn.tokens !== undefined) {
+      if (!Array.isArray(unpricedIn.tokens) || unpricedIn.tokens.length > RULE_BOOK_LIMITS.unpricedTokens) {
+        c.add("unpriced.tokens", `Must be a list of at most ${RULE_BOOK_LIMITS.unpricedTokens} { asset, max } entries.`);
+      } else {
+        tokens = [];
+        unpricedIn.tokens.forEach((entry, index) => {
+          const path = `unpriced.tokens[${index}]`;
+          if (!isRecord(entry)) return c.add(path, "Must be an object { asset, max }.");
+          c.keys(entry, ["asset", "max"], path);
+          const asset = normalizeAssetEntry(entry.asset);
+          if (asset === null || asset.startsWith("group:")) c.add(`${path}.asset`, "Must be SYMBOL, SYMBOL@network or a CAIP-19 id.");
+          const max = c.tokenAmount(entry.max, `${path}.max`);
+          if (max === undefined && entry.max === undefined) c.add(`${path}.max`, "A cap is required.");
+          if (asset !== null && !asset.startsWith("group:") && max !== undefined) {
+            if (tokens?.some((other) => other.asset === asset)) c.add(`${path}.asset`, "Listed twice.");
+            else tokens?.push({ asset, max });
+          }
+        });
+        tokens.sort((a, b) => (a.asset < b.asset ? -1 : a.asset > b.asset ? 1 : 0));
+      }
+    }
+    unpriced = compact({
+      testnet: unpricedIn.testnet === undefined ? undefined : enumOf<"cap" | "deny">(["cap", "deny"])(unpricedIn.testnet) ?? (c.add("unpriced.testnet", "cap or deny."), undefined),
+      defaultMax: c.tokenAmount(unpricedIn.defaultMax, "unpriced.defaultMax"),
+      tokens,
+    });
+  }
+
   if (c.issues.length > 0) return { ok: false, value: null, issues: c.issues };
   const value = Object.fromEntries(
-    Object.entries({ schema: RULE_BOOK_SCHEMA, label, mode, networks, kinds, protocols, assets, recipients, limits, caps, trading, agent, confirm, schedule }).filter(([, entry]) => entry !== undefined),
+    Object.entries({ schema: RULE_BOOK_SCHEMA, label, mode, networks, kinds, protocols, assets, recipients, limits, caps, trading, agent, confirm, schedule, unpriced }).filter(([, entry]) => entry !== undefined),
   ) as unknown as RuleBook;
   if (new TextEncoder().encode(JSON.stringify(value)).length > RULE_BOOK_LIMITS.documentBytes) {
     return { ok: false, value: null, issues: [{ path: "", message: "The rule book is larger than 16 KB." }] };
@@ -477,6 +587,14 @@ export function loosenedRules(previous: RuleBook, next: RuleBook): string[] {
   flag(looserUsd(previous.confirm?.aboveUsd, next.confirm?.aboveUsd), "confirm.aboveUsd");
   flag(looserDeny(previous.confirm?.when, next.confirm?.when), "confirm.when");
   flag(previous.schedule !== undefined && JSON.stringify(previous.schedule) !== JSON.stringify(next.schedule), "schedule");
+  const was = effectiveUnpriced(previous);
+  const now = effectiveUnpriced(next);
+  flag(was.testnet === "deny" && now.testnet === "cap", "unpriced.testnet");
+  flag(compareTokenAmounts(now.defaultMax, was.defaultMax) > 0, "unpriced.defaultMax");
+  flag(now.tokens.some((cap) => {
+    const before = was.tokens.find((entry) => entry.asset === cap.asset);
+    return before === undefined ? compareTokenAmounts(cap.max, was.defaultMax) > 0 : compareTokenAmounts(cap.max, before.max) > 0;
+  }) || was.tokens.some((cap) => !now.tokens.some((entry) => entry.asset === cap.asset) && compareTokenAmounts(now.defaultMax, cap.max) > 0), "unpriced.tokens");
   return out;
 }
 
@@ -496,7 +614,9 @@ function frozen(book: RuleBook): RuleBook {
 /**
  * Sane testnet defaults: testnet only, sends to other people need a
  * confirmation, leverage capped at 20x with a confirmation above 10x,
- * per-order and daily caps, IOC slippage capped at 3%, Keeper mode off.
+ * per-order and daily caps, IOC slippage capped at 3%, Keeper mode off,
+ * tokens without a reference price (KALOS, stKALOS, launch tokens) allowed on
+ * testnet up to 1000 tokens each per intent (mainnet: always refused).
  */
 export const DEFAULT_RULE_BOOK: RuleBook = frozen({
   schema: RULE_BOOK_SCHEMA,
@@ -517,6 +637,7 @@ export const DEFAULT_RULE_BOOK: RuleBook = frozen({
   },
   agent: { modes: ["browser", "propose"] },
   confirm: { aboveUsd: "2500", leverageAbove: 10, when: ["external-recipient", "unlisted-asset"] },
+  unpriced: { testnet: "cap", defaultMax: UNPRICED_DEFAULT_MAX },
 });
 
 export const RULE_BOOK_TEMPLATES: Readonly<Record<"observer" | "careful" | "scalper", RuleBook>> = Object.freeze({
@@ -532,6 +653,7 @@ export const RULE_BOOK_TEMPLATES: Readonly<Record<"observer" | "careful" | "scal
     trading: { maxNotionalUsd: "500", maxLeverage: 3, maxOpenOrders: 10, dailyVolumeUsd: "5000", dailyLossUsd: "250", twap: true, triggers: true, maxSlippageBps: 100 },
     agent: { modes: ["propose"] },
     confirm: { aboveUsd: "250", leverageAbove: 2, when: ["agent-proposal", "cross-network"] },
+    unpriced: { testnet: "deny" },
   }),
   /** Fast trading on liquid perps through the agent key, bounded per order and per day. */
   scalper: frozen({

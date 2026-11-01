@@ -55,8 +55,12 @@ const KIND_OF_CATEGORY: Readonly<Record<string, VenueKind>> = Object.freeze({
   prediction: "launchpad",
 });
 
-/** Every venue, executable first. */
-export function venueCatalog(networks: Readonly<Record<NetworkKey, Network>>): VenueView[] {
+/**
+ * Every venue, executable first. `executable` (the registry ids the running
+ * adapters execute, from `activeProtocolIds` -> `withExecutable`) keeps an
+ * executed protocol from also being listed as read-only.
+ */
+export function venueCatalog(networks: Readonly<Record<NetworkKey, Network>>, executable: ReadonlySet<string> = new Set()): VenueView[] {
   const reachable = (key: NetworkKey) => networkReachable(networks, key);
   const out: VenueView[] = [];
   const executed = new Set<string>();
@@ -141,7 +145,7 @@ export function venueCatalog(networks: Readonly<Record<NetworkKey, Network>>): V
 
   // Everything else the registry lists on Elysium: read-only (launchpads, perps, aggregators) or unavailable.
   for (const protocol of PROTOCOLS) {
-    if (executed.has(protocol.id)) continue;
+    if (executed.has(protocol.id) || executable.has(protocol.id)) continue;
     const kind = KIND_OF_CATEGORY[protocol.category];
     if (!kind) continue;
     for (const deployment of protocol.deployments) {

@@ -6,7 +6,11 @@
  *
  * Fail closed: when a rule needs a fact that is missing (a price, the open
  * order count, the day's volume or losses, the leverage of an order) the
- * decision is `deny` with rule `facts.unavailable`, never `allow`.
+ * decision is `deny` with rule `facts.unavailable`, never `allow`. The one
+ * exception is a token that has no reference price at all (`noReference`:
+ * test tokens, vault shares, launch tokens): on testnet it is allowed up to
+ * the book's `unpriced` cap in token units and valued at $0, with a note; on
+ * mainnet it is always refused (`assets.unpriced`).
  *
  * Every rule runs (so the explanation is complete); the decision is the
  * worst of the lattice allow < confirm < deny.
@@ -22,6 +26,8 @@ import { NETWORKS, type NetworkKey } from "./networks.js";
 import { getProtocol } from "./protocols.js";
 import {
   accountMatchesPattern,
+  effectiveUnpriced,
+  tokenAmountUnits,
   DEFAULT_AGENT_ACTIONS,
   DEFAULT_AGENT_MODES,
   formatUsdMicros,
@@ -53,6 +59,13 @@ export interface AssetFact {
   readonly group?: string;
   /** Conservative USD, micro-dollars, rounded up; null = unpriced. */
   readonly usdMicros: bigint | null;
+  /**
+   * True when no reference price source exists for the asset at all (a test
+   * token, a vault share, a launch token), as opposed to a price that could
+   * not be read right now. Only such assets fall under the `unpriced` rules;
+   * a missing price of a priced asset always fails closed (`facts.unavailable`).
+   */
+  readonly noReference?: boolean;
 }
 
 export interface TradeFact {
@@ -137,6 +150,7 @@ export type PolicyRuleId =
   | "protocols.deny"
   | "assets.allow"
   | "assets.unlisted"
+  | "assets.unpriced"
   | "recipients.deny"
   | "recipients.own"
   | "recipients.allowlist"
@@ -192,6 +206,7 @@ export const POLICY_RULES: Readonly<Record<PolicyRuleId, PolicyRuleInfo>> = Obje
   "protocols.deny": deny("No protocol is denied"),
   "assets.allow": deny("Inputs and outputs are allowed assets"),
   "assets.unlisted": deny("No unverified tokens"),
+  "assets.unpriced": deny("Tokens without a reference price: testnet only, within the cap"),
   "recipients.deny": deny("No recipient is denied"),
   "recipients.own": deny("Funds only go to your own accounts"),
   "recipients.allowlist": deny("Funds only go to your accounts or allowed recipients"),
@@ -249,6 +264,27 @@ export interface PolicyRuleResult {
   readonly limit?: string;
 }
 
+/**
+ * A token without a reference price the intent touches. `allowed`: testnet,
+ * within the cap, valued at $0 by the USD rules (shown as an "unpriced"
+ * warning); `refused`: mainnet (always), testnet `deny` mode, or over the cap.
+ */
+export interface UnpricedAssetNote {
+  readonly asset: string;
+  readonly symbol: string;
+  readonly network: NetworkKey;
+  /** What the intent does with it: spends it (`input`, `cost`) or receives it (`output`). */
+  readonly role: "input" | "output" | "cost";
+  /** Base units the intent spends of it (inputs and costs summed per intent) or receives. */
+  readonly amount: string;
+  readonly decimals: number;
+  /** Whole-token cap that applied (spent amounts on testnet), null when none applies. */
+  readonly cap: string | null;
+  readonly status: "allowed" | "refused";
+  readonly message: string;
+  readonly path: string;
+}
+
 export interface PolicyEvaluation {
   readonly decision: PolicyDecision;
   /** Every deny and confirm, in evaluation order. */
@@ -261,6 +297,8 @@ export interface PolicyEvaluation {
   readonly code: PolicyRuleInfo["code"] | null;
   /** Schedule: seconds until the next opening when closed. */
   readonly retryAfterSeconds: number | null;
+  /** Tokens without a reference price (empty when every asset is priced). */
+  readonly unpriced?: readonly UnpricedAssetNote[];
 }
 
 /* ------------------------------------------------------------ schedule */
@@ -381,6 +419,103 @@ export function intentNotionalUsdMicros(steps: readonly StepFact[]): { readonly 
   return { value: unpriced.length > 0 ? null : total, unpriced };
 }
 
+interface UnpricedResolution {
+  /** The steps with allowed unpriced amounts valued at $0. */
+  readonly steps: readonly StepFact[];
+  readonly notes: readonly UnpricedAssetNote[];
+}
+
+function environmentOf(asset: string): "testnet" | "mainnet" | null {
+  const parsed = parseAssetId(asset);
+  return parsed ? parsed.network.environment : null;
+}
+
+function wholeTokens(units: bigint, decimals: number): string {
+  const scale = 10n ** BigInt(decimals);
+  const fraction = (units % scale).toString().padStart(decimals, "0").replace(/0+$/u, "");
+  return `${units / scale}${fraction ? `.${fraction}` : ""}`;
+}
+
+/**
+ * Applies the unpriced-token policy (owner decision 2026-11-01): mainnet
+ * always refuses a token without a reference price; testnet allows one up to
+ * a cap in token units (summed per intent over what the intent spends) unless
+ * the book says `deny`. Allowed amounts are valued at $0 for the USD rules;
+ * refused ones stay unpriced (null), so the USD rules fail closed as well.
+ */
+function resolveUnpriced(book: RuleBook, steps: readonly StepFact[]): UnpricedResolution {
+  const rules = effectiveUnpriced(book);
+  const notes: UnpricedAssetNote[] = [];
+  const allowed = new Set<string>();
+  // Spent amounts per asset: what intentNotionalUsdMicros counts (root inputs of non-trade steps, every extra cost).
+  const spent = new Map<string, { fact: AssetFact; units: bigint; role: "input" | "cost"; path: string }>();
+  const received = new Map<string, { fact: AssetFact; units: bigint; path: string }>();
+  for (const step of steps) {
+    if (derisking(step)) continue;
+    const counted = step.trade === undefined && step.root;
+    step.inputs.forEach((input, index) => {
+      if (input.usdMicros !== null || input.noReference !== true || !counted) return;
+      const key = normalizeAssetId(input.asset);
+      const entry = spent.get(key);
+      spent.set(key, { fact: input, units: (entry?.units ?? 0n) + BigInt(input.amount), role: entry?.role ?? "input", path: entry?.path ?? `steps[${step.index}].inputs[${index}]` });
+    });
+    (step.extraCosts ?? []).forEach((cost, index) => {
+      if (cost.usdMicros !== null || cost.noReference !== true) return;
+      const key = normalizeAssetId(cost.asset);
+      const entry = spent.get(key);
+      spent.set(key, { fact: cost, units: (entry?.units ?? 0n) + BigInt(cost.amount), role: entry?.role ?? "cost", path: entry?.path ?? `steps[${step.index}].extraCosts[${index}]` });
+    });
+    [...(counted ? [] : step.inputs.map((input, index) => ({ fact: input, path: `steps[${step.index}].inputs[${index}]` }))), ...step.outputs.map((output, index) => ({ fact: output, path: `steps[${step.index}].outputs[${index}]` }))].forEach(({ fact, path }) => {
+      if (fact.usdMicros !== null || fact.noReference !== true) return;
+      const key = normalizeAssetId(fact.asset);
+      if (!received.has(key)) received.set(key, { fact, units: BigInt(fact.amount), path });
+    });
+  }
+  const networkOf = (asset: string) => parseAssetId(asset)?.network.key ?? null;
+  for (const [key, entry] of spent) {
+    const network = networkOf(entry.fact.asset);
+    if (network === null) continue;
+    const environment = environmentOf(entry.fact.asset);
+    const base = { asset: entry.fact.asset, symbol: entry.fact.symbol, network, role: entry.role, amount: entry.units.toString(), decimals: entry.fact.decimals, path: entry.path } as const;
+    if (environment !== "testnet") {
+      notes.push({ ...base, cap: null, status: "refused", message: `${entry.fact.symbol} has no reference price: on mainnet Elyia never moves a token it cannot value.` });
+      continue;
+    }
+    if (rules.testnet === "deny") {
+      notes.push({ ...base, cap: null, status: "refused", message: `${entry.fact.symbol} has no reference price and your rules refuse unpriced tokens on testnet.` });
+      continue;
+    }
+    const caps = rules.tokens.filter((cap) => assetEntryMatches(entry.fact, cap.asset)).map((cap) => cap.max);
+    const capText = caps.length > 0 ? caps.reduce((low, cap) => (tokenAmountUnits(cap, 18) < tokenAmountUnits(low, 18) ? cap : low)) : rules.defaultMax;
+    const cap = tokenAmountUnits(capText, entry.fact.decimals);
+    if (entry.units > cap) {
+      notes.push({ ...base, cap: capText, status: "refused", message: `${wholeTokens(entry.units, entry.fact.decimals)} ${entry.fact.symbol} is above the ${capText} ${entry.fact.symbol} cap for tokens without a reference price.` });
+    } else {
+      allowed.add(key);
+      notes.push({ ...base, cap: capText, status: "allowed", message: `${entry.fact.symbol} has no reference price: testnet only, capped at ${capText} ${entry.fact.symbol} per intent; USD totals count it as $0.` });
+    }
+  }
+  for (const [key, entry] of received) {
+    if (spent.has(key)) continue;
+    const network = networkOf(entry.fact.asset);
+    if (network === null) continue;
+    const environment = environmentOf(entry.fact.asset);
+    const base = { asset: entry.fact.asset, symbol: entry.fact.symbol, network, role: "output", amount: entry.units.toString(), decimals: entry.fact.decimals, cap: null, path: entry.path } as const;
+    if (environment !== "testnet") notes.push({ ...base, status: "refused", message: `${entry.fact.symbol} has no reference price: on mainnet Elyia never routes into a token it cannot value.` });
+    else if (rules.testnet === "deny") notes.push({ ...base, status: "refused", message: `${entry.fact.symbol} has no reference price and your rules refuse unpriced tokens on testnet.` });
+    else {
+      allowed.add(key);
+      notes.push({ ...base, status: "allowed", message: `${entry.fact.symbol} has no reference price (testnet): its value is unknown and shown as unpriced.` });
+    }
+  }
+  if (allowed.size === 0) return { steps, notes };
+  const zero = (fact: AssetFact): AssetFact => (fact.usdMicros === null && allowed.has(normalizeAssetId(fact.asset)) ? { ...fact, usdMicros: 0n } : fact);
+  return {
+    steps: steps.map((step) => ({ ...step, inputs: step.inputs.map(zero), outputs: step.outputs.map(zero), ...(step.extraCosts ? { extraCosts: step.extraCosts.map(zero) } : {}) })),
+    notes,
+  };
+}
+
 /** Evaluates one rule book against facts (use DEFAULT_RULE_BOOK when the user has not written one). */
 export function evaluatePolicy(book: RuleBook, facts: PolicyFacts): PolicyEvaluation {
   const reasons: PolicyReason[] = [];
@@ -412,7 +547,8 @@ export function evaluatePolicy(book: RuleBook, facts: PolicyFacts): PolicyEvalua
   };
   const need = (path: string) => missing.push(path);
 
-  const steps = facts.steps;
+  const unpriced = resolveUnpriced(book, facts.steps);
+  const steps = unpriced.steps;
   const risky = steps.filter((step) => !derisking(step));
   const trades = steps.filter((step): step is StepFact & { readonly trade: TradeFact } => step.trade !== undefined);
   const riskyTrades = trades.filter((step) => !step.trade.reduceOnly);
@@ -465,6 +601,14 @@ export function evaluatePolicy(book: RuleBook, facts: PolicyFacts): PolicyEvalua
   }
   if (book.assets?.unlisted === "deny") {
     each("assets.unlisted", stepAssets, (entry) => (entry.asset.listed ? null : { path: entry.path, message: `${entry.asset.symbol} is not a verified token.`, observed: entry.asset.asset }), "verified tokens only");
+  }
+  if (unpriced.notes.length > 0) {
+    each(
+      "assets.unpriced",
+      unpriced.notes,
+      (note) => (note.status === "refused" ? { path: note.path, message: note.message, observed: `${wholeTokens(BigInt(note.amount), note.decimals)} ${note.symbol} on ${note.network}` } : null),
+      `testnet only; ${effectiveUnpriced(book).testnet === "deny" ? "refused" : `cap ${effectiveUnpriced(book).defaultMax} tokens unless set per token`}`,
+    );
   }
 
   /* who */
@@ -772,6 +916,7 @@ export function evaluatePolicy(book: RuleBook, facts: PolicyFacts): PolicyEvalua
     notionalUsdMicros: notional.value,
     code,
     retryAfterSeconds: denied.some((reason) => reason.rule === "schedule.window") ? retryAfterSeconds : null,
+    unpriced: unpriced.notes,
   };
 }
 
@@ -783,6 +928,12 @@ export interface FactSources {
   readonly stored?: boolean;
   /** Conservative price of one whole unit of `asset` in micro-dollars, or null when unpriced. */
   readonly priceUsdMicros: (asset: string) => bigint | null;
+  /**
+   * Whether a reference price source exists for `asset` at all. False marks a
+   * null price as "this token has no reference price" (the `unpriced` rules
+   * apply); absent or true keeps a null price fail-closed.
+   */
+  readonly hasReferencePrice?: (asset: string) => boolean;
   /** USD price of one unit of a market's base asset (spot pairs, TWAPs), micro-dollars; null = unpriced. */
   readonly marketPriceUsdMicros?: (market: string, kind: "perp" | "spot") => bigint | null;
   /** Current leverage on a perp market when the intent does not set it; null = unknown. */
@@ -797,7 +948,7 @@ function ceilDiv(a: bigint, b: bigint): bigint {
   return (a + b - 1n) / b;
 }
 
-function assetFact(amount: StepAmount, price: (asset: string) => bigint | null): AssetFact {
+function assetFact(amount: StepAmount, price: (asset: string) => bigint | null, hasReference?: (asset: string) => boolean): AssetFact {
   const parsed = parseAssetId(amount.asset);
   const hypercoreNative = parsed !== null && parsed.network.vm === "hypercore";
   const token = getToken(amount.asset);
@@ -811,6 +962,7 @@ function assetFact(amount: StepAmount, price: (asset: string) => bigint | null):
     listed: token !== null || hypercoreNative,
     ...(token?.group ? { group: token.group } : {}),
     usdMicros: unitPrice === null ? null : ceilDiv(units * unitPrice, 10n ** BigInt(amount.decimals)),
+    ...(unitPrice === null && hasReference !== undefined && !hasReference(amount.asset) ? { noReference: true } : {}),
   };
 }
 
@@ -907,10 +1059,10 @@ export function buildPolicyFacts(graph: IntentGraph, sources: FactSources): Poli
       network: step.network,
       ...(step.settlement?.destinationNetwork ? { destinationNetwork: step.settlement.destinationNetwork } : {}),
       root: !funded.has(step.id) && step.funding === undefined,
-      inputs: step.inputs.map((amount) => assetFact(amount, sources.priceUsdMicros)),
-      outputs: step.outputs.map((amount) => assetFact(amount, sources.priceUsdMicros)),
+      inputs: step.inputs.map((amount) => assetFact(amount, sources.priceUsdMicros, sources.hasReferencePrice)),
+      outputs: step.outputs.map((amount) => assetFact(amount, sources.priceUsdMicros, sources.hasReferencePrice)),
       recipient: step.recipient ?? step.account,
-      ...(step.extraCosts ? { extraCosts: step.extraCosts.map((amount) => assetFact(amount, sources.priceUsdMicros)) } : {}),
+      ...(step.extraCosts ? { extraCosts: step.extraCosts.map((amount) => assetFact(amount, sources.priceUsdMicros, sources.hasReferencePrice)) } : {}),
       ...(step.settlement?.expectedSeconds !== undefined ? { estimatedSeconds: step.settlement.expectedSeconds } : step.estimatedSeconds !== undefined ? { estimatedSeconds: step.estimatedSeconds } : {}),
       ...(trade ? { trade } : {}),
       signer,

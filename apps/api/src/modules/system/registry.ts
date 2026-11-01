@@ -1,18 +1,17 @@
 /**
- * GET /v1/protocols and GET /v1/tokens: the core protocol and token
- * registries (`PROTOCOLS`, `TOKENS` from @elyia/core), filtered by network
- * or environment. Rows are returned exactly as core defines them; nothing is
- * added or invented here.
+ * GET /v1/tokens: the core token registry (`TOKENS` from @elyia/core),
+ * filtered by network or mode. GET /v1/protocols moved to the discovery
+ * module (registry rows with `executable` from the running engine); the
+ * protocol filter helper stays here for callers that filter core rows.
  */
-import { NETWORKS, PROTOCOLS, TOKENS, type NetworkEnvironment, type NetworkKey, type ProtocolDescriptor, type TokenDescriptor } from "@elyia/core";
+import { NETWORKS, TOKENS, type NetworkEnvironment, type NetworkKey, type ProtocolDescriptor, type TokenDescriptor } from "@elyia/core";
 import type { Router } from "express";
 import { z } from "zod";
 import type { AppContext } from "../../context.js";
 import { cachePublicly } from "../../http/request.js";
 import { parseQuery } from "../../http/validate.js";
-import { environment, networkKey } from "./query.js";
+import { networkKey } from "./query.js";
 
-const ProtocolsQuery = z.object({ network: networkKey.optional(), environment: environment.optional() });
 const TokensQuery = z.object({ network: networkKey.optional() });
 
 export interface ProtocolFilter {
@@ -35,16 +34,6 @@ export function filterTokens(rows: readonly TokenDescriptor[], network: NetworkK
 }
 
 export function registerRegistry(router: Router, ctx: AppContext): void {
-  router.get("/protocols", (req, res) => {
-    const query = parseQuery(req, ProtocolsQuery);
-    const protocols = filterProtocols(PROTOCOLS, {
-      ...(query.network ? { network: query.network } : {}),
-      ...(query.environment ? { environment: query.environment } : {}),
-    });
-    cachePublicly(res, 60);
-    res.json({ count: protocols.length, protocols });
-  });
-
   router.get("/tokens", (req, res) => {
     const query = parseQuery(req, TokensQuery);
     const tokens = filterTokens(TOKENS, query.network, ctx.config.mode);

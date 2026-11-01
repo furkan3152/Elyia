@@ -26,6 +26,7 @@ import { cachePublicly } from "../../http/request.js";
 import { createBodySchema, createQuerySchema, intentParamsSchema, prepareBodySchema, stepParamsSchema, submitBodySchema, venuesQuerySchema } from "./schemas.js";
 import { registerLanguageRoutes } from "./language.js";
 import { actionsFromText } from "./text.js";
+import { liveRegistry } from "../discovery/registry.js";
 
 /** Background poll of in-flight intents (settlements, resting orders, late receipts). */
 export const POLL_INTERVAL_MS = 15_000;
@@ -73,7 +74,8 @@ export const intentsModule: ApiModule = {
 
     router.get("/venues", (req, res) => {
       const query = parseQuery(req, venuesQuerySchema);
-      const venues = venueCatalog(ctx.config.networks).filter(
+      const executable = liveRegistry(ctx).executableIds;
+      const venues = venueCatalog(ctx.config.networks, new Set(executable)).filter(
         (venue) =>
           (!query.network || venue.network === query.network) &&
           (!query.environment || venue.environment === query.environment) &&
@@ -81,7 +83,7 @@ export const intentsModule: ApiModule = {
           (!query.status || venue.status === query.status),
       );
       cachePublicly(res, 60);
-      const body: VenuesResponse = { venues, priceSource: PRICE_SOURCE };
+      const body: VenuesResponse = { venues, priceSource: PRICE_SOURCE, executableProtocols: executable };
       res.json(body);
     });
 

@@ -39,7 +39,7 @@ import {
   type StepExecutionPayload,
   type TransactionRequest,
 } from "@elyia/core";
-import type { CreateIntentResponse, IntentSigner, PrepareStepBody, PrepareStepResponse, StopIntentResponse, SubmitStepResponse } from "@elyia/core/api/intents";
+import type { CreateIntentResponse, IntentSigner, PolicySummary, PrepareStepBody, PrepareStepResponse, StopIntentResponse, SubmitStepResponse, VenueQuoteView } from "@elyia/core/api/intents";
 import type { Logger } from "../log.js";
 import type { EngineDeps } from "./deps.js";
 import { engineError } from "./errors.js";
@@ -48,7 +48,7 @@ import { addEvidence, appendFollowUp, failureOf, moveStep, replaceStep, started,
 import { L1_EXPIRY_MS } from "./hypercore/requests.js";
 import { ownerAddress } from "./planner/normalize.js";
 import type { Planner } from "./planner/build.js";
-import { isDerisking, PolicyGate } from "./policy.js";
+import { isDerisking, PolicyGate, unpricedWarnings } from "./policy.js";
 import type { AdapterRegistry } from "./registry.js";
 import type { IntentStore, StoredIntent } from "./store.js";
 import type { PreparedPayload, VerificationResult } from "./types.js";
@@ -141,6 +141,18 @@ export function validatePayload(step: IntentStep, requests: readonly Transaction
   return null;
 }
 
+/** Quotes whose output token has no reference price say so (the amounts are real, the USD value is unknown). */
+function labelUnpricedQuotes(quotes: readonly VenueQuoteView[], graph: IntentGraph, summary: PolicySummary): VenueQuoteView[] {
+  const unpriced = new Set((summary.unpriced ?? []).map((note) => note.asset.toLowerCase()));
+  if (unpriced.size === 0) return [...quotes];
+  return quotes.map((quote) => {
+    const output = graph.steps.find((step) => step.id === quote.stepId)?.outputs[0]?.asset.toLowerCase();
+    if (!output || !unpriced.has(output)) return quote;
+    const note = `unpriced: ${quote.symbol} has no reference price; this amount has no USD value here.`;
+    return { ...quote, note: quote.note ? `${quote.note} ${note}` : note };
+  });
+}
+
 export class IntentService {
   private readonly lastProgress = new Map<string, number>();
 
@@ -156,7 +168,7 @@ export class IntentService {
     const { deps, planner, gate, store, events } = this.parts;
     const owner = ownerAddress(input.accounts);
     const id = newIntentId(deps.random);
-    const { graph, quotes } = await planner.plan({
+    const planned = await planner.plan({
       id,
       environment: input.environment,
       owner,
@@ -169,6 +181,7 @@ export class IntentService {
       source: input.source,
       ...(input.metadata ? { metadata: input.metadata } : {}),
     });
+    const graph = planned.graph;
     for (const step of graph.steps) {
       for (const network of [step.network, step.settlement?.destinationNetwork]) {
         if (network && NETWORKS[network].status !== "live") throw engineError("ENVIRONMENT_UNAVAILABLE", `${NETWORKS[network].name} is not live yet.`);
@@ -176,8 +189,14 @@ export class IntentService {
     }
     const result = await gate.evaluate(graph, { stage: "plan", stored: !input.dryRun, owner });
     if (!input.dryRun) PolicyGate.enforce(result);
-    const stamped: IntentGraph = { ...graph, ...(result.evaluation.decision !== "deny" ? { policy: PolicyGate.stamp(result) } : {}) };
+    const unpriced = unpricedWarnings(result.summary);
+    const stamped: IntentGraph = {
+      ...graph,
+      ...(unpriced.length > 0 ? { warnings: [...new Set([...graph.warnings, ...unpriced])] } : {}),
+      ...(result.evaluation.decision !== "deny" ? { policy: PolicyGate.stamp(result) } : {}),
+    };
     const now = this.now;
+    const quotes = labelUnpricedQuotes(planned.quotes, graph, result.summary);
     if (input.dryRun) {
       return { intent: stamped, journey: buildJourney(stamped, now), policy: result.summary, quotes, dryRun: true, replayed: false };
     }
@@ -317,7 +336,7 @@ export class IntentService {
       quoteBinding: binding,
       policy: { decisionId: policy.decisionId, notionalUsd: policy.summary.notionalUsd, ruleBookHash: policy.ruleBookHash as StepExecutionPayload["quoteBinding"] },
     };
-    return { intent: saved.graph, payload: executionPayload, policy: policy.summary, warnings: payload.warnings };
+    return { intent: saved.graph, payload: executionPayload, policy: policy.summary, warnings: [...new Set([...payload.warnings, ...unpricedWarnings(policy.summary)])] };
   }
 
   /* ---------------------------------------------------------------- submit */

@@ -8,6 +8,7 @@ import type { NetworkKey } from "@elyia/core";
 import type { Router } from "express";
 import type { AppContext } from "../../context.js";
 import type { DependencyMonitor, NetworkProbe } from "../../health/dependencies.js";
+import { liveRegistry } from "../discovery/registry.js";
 
 export type HealthStatus = "ok" | "degraded" | "down";
 
@@ -37,6 +38,8 @@ export function registerHealth(router: Router, ctx: AppContext, monitor: Depende
       checkedAt: new Date(report.checkedAt).toISOString(),
       dependencies: { store: report.store, networks },
       pulse: ctx.pulse.status(),
+      // What the running engine executes (adapters -> withExecutable), not what the registry hoped for.
+      registry: { protocols: liveRegistry(ctx).rows.length, executable: liveRegistry(ctx).executableIds.length, executableIds: liveRegistry(ctx).executableIds },
       hyperliquidWs: ctx.hyperliquid.wsStatus(),
       features: {
         database: ctx.store.kind,
