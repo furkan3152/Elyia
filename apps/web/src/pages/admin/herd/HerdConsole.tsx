@@ -61,7 +61,7 @@ function Overview({ overview, owner }: { readonly overview: HerdOverview | undef
       {config?.testnet ? (
         <p className="mb-6 text-center">
           <Pill tone="warn" dot>
-            Testnet · test HYPE, fixed 1 HYPE price
+            Testnet · test HYPE, fixed 3 HYPE price
           </Pill>
         </p>
       ) : null}
@@ -168,7 +168,7 @@ function DeployHerd({ owner }: { readonly owner: string }) {
         <ContractCard contract="ElyHerd" network={network} config={config.data} record={undefined} flow={deploy.state} selected={!recordedAt} onDeploy={() => document.getElementById("herd-deploy")?.scrollIntoView({ block: "start" })} />
         <Card className="flex flex-col gap-3">
           <CardHead glyph="docs" title="Constructor (manifest · collections.herd)" right={<Pill tone="mute">you confirm</Pill>} />
-          <p className="text-[12px] text-ink-2">Name The Herd, symbol HERD, testnet price 1 HYPE (WL and public), allocations team 111 · WL 1611 · collab 0 · public 1611. The owner and treasury are yours to enter; nothing is guessed.</p>
+          <p className="text-[12px] text-ink-2">Name The Herd, symbol HERD, testnet price 3 HYPE (WL and public), allocations team 111 · WL 1611 · collab 0 · public 1611. The owner and treasury are yours to enter; nothing is guessed.</p>
           <KV rows={[["WHYPE", "canonical, from the manifest"], ["USDC", "canonical, from the manifest"], ["After deploy", "provenance, placeholder URI, contract URI, roots, windows (below)"]]} />
         </Card>
       </div>
@@ -239,7 +239,7 @@ function WindowCard({ phase, config, blocked }: { readonly phase: "wl" | "public
   const startValue = start ?? toLocalInput(window?.start ?? null);
   const endValue = end ?? toLocalInput(window?.end ?? null);
   const modeValue = mode ?? (window?.priceMode === "usd" ? "1" : "0");
-  const priceValue = price ?? (window ? String(Number(window.priceWei) / 1e18) : "1");
+  const priceValue = price ?? (window ? String(Number(window.priceWei) / 1e18) : "3");
   const usdValue = usd ?? (window && window.priceUsd6 !== "0" ? String(Number(window.priceUsd6) / 1e6) : "2");
   const s = unixSeconds(startValue);
   const e = unixSeconds(endValue);
@@ -253,7 +253,7 @@ function WindowCard({ phase, config, blocked }: { readonly phase: "wl" | "public
         <TextField label="Start (UTC)" type="datetime-local" value={startValue} onChange={setStart} />
         <TextField label="End (UTC)" type="datetime-local" value={endValue} onChange={setEnd} />
         <SelectField label="Price mode" value={modeValue} onChange={setMode} options={[["0", "Fixed HYPE"], ["1", "USD-pegged"]]} />
-        {modeValue === "1" ? <TextField label="USD price" value={usdValue} onChange={setUsd} hint="Mainnet: $2" /> : <TextField label="Price (HYPE)" value={priceValue} onChange={setPrice} hint="Testnet: 1 HYPE; WL may be 0" />}
+        {modeValue === "1" ? <TextField label="USD price" value={usdValue} onChange={setUsd} hint="Mainnet: $2" /> : <TextField label="Price (HYPE)" value={priceValue} onChange={setPrice} hint="Testnet: 3 HYPE; WL may be 0" />}
       </div>
       <HerdTx label="Prepare setPhaseConfig" functionName="setPhaseConfig" args={args} disabled={blocked} />
     </Card>
@@ -273,7 +273,7 @@ function Price({ config }: { readonly config: HerdConfigResponse | undefined }) 
   const [staleness, setStaleness] = useState("86400");
   const fallback6 = /^\d{1,9}(?:\.\d{1,6})?$/u.test(usdPerHype) ? String(Math.round(Number(usdPerHype) * 1e6)) : null;
   return (
-    <Section id="herd-price" tag="Price oracle" title="USD peg, failing closed." lede="Mainnet prices $2 in HYPE from a Kalos V3 WHYPE/USDC TWAP, with your fallback price inside a staleness window. A bad or missing price reverts the mint. Testnet uses the fixed 1 HYPE.">
+    <Section id="herd-price" tag="Price oracle" title="USD peg, failing closed." lede="Mainnet prices $2 in HYPE from a Kalos V3 WHYPE/USDC TWAP, with your fallback price inside a staleness window. A bad or missing price reverts the mint. Testnet uses the fixed 3 HYPE.">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <Card className="flex flex-col gap-3">
           <CardHead glyph="pulse" title="State" right={config?.quotes.some((quote) => quote.source === "unavailable") ? <Pill tone="dn" dot>oracle down</Pill> : <Pill tone="up" dot>quoting</Pill>} />

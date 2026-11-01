@@ -39,7 +39,7 @@ describe("Exported artifacts (packages/core/src/contracts)", function () {
     expect(arg.treasury_).to.equal("$PARAM.treasury");
     expect(arg.wrappedNative).to.equal(v.tokens.WHYPE.address);
     expect(arg.usdToken).to.equal(v.tokens.USDC.address);
-    expect(arg.priceWei).to.equal("1000000000000000000");
+    expect(arg.priceWei).to.equal("3000000000000000000");
     expect([arg.teamAllocation, arg.wlAllocation, arg.collabAllocation, arg.publicAllocation]).to.deep.equal([111, 1611, 0, 1611]);
     expect(h.params.treasury.suggest).to.equal(null);
     expect(m.order.map((s) => s.contract)).to.not.include("ElyHerd");

@@ -209,8 +209,8 @@ export const elysiumTestnetDeployManifest = {
         {
           "name": "priceWei",
           "type": "uint96",
-          "value": "1000000000000000000",
-          "note": "Testnet: 1 HYPE fixed (WL and public)."
+          "value": "3000000000000000000",
+          "note": "Testnet: 3 HYPE fixed (WL and public)."
         },
         {
           "name": "teamAllocation",
@@ -270,7 +270,7 @@ export const elysiumTestnetDeployManifest = {
             "$PARAM.wlStart",
             "$PARAM.wlEnd",
             0,
-            "1000000000000000000",
+            "3000000000000000000",
             0
           ],
           "note": "phase 1 = WL, 2 = PUBLIC; priceMode 0 = FIXED, 1 = USD."
@@ -282,7 +282,7 @@ export const elysiumTestnetDeployManifest = {
             "$PARAM.publicStart",
             "$PARAM.publicEnd",
             0,
-            "1000000000000000000",
+            "3000000000000000000",
             0
           ]
         }

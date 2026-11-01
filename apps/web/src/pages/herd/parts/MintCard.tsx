@@ -66,7 +66,7 @@ export function MintCard({ config }: { readonly config: HerdConfigResponse | nul
         <p className="mt-1.5 text-[13px] leading-snug text-ink-2">{state.detail}</p>
       </div>
       <div className="grid grid-cols-2 gap-x-5">
-        <Fact label="Price now">{state.quote?.wei ? formatHype(state.quote.wei) : config?.timeline.find((window) => window.phase === "public") ? formatHype(config.timeline.find((window) => window.phase === "public")!.priceWei) : config?.testnet ? "1 HYPE (planned)" : "—"}</Fact>
+        <Fact label="Price now">{state.quote?.wei ? formatHype(state.quote.wei) : config?.timeline.find((window) => window.phase === "public") ? formatHype(config.timeline.find((window) => window.phase === "public")!.priceWei) : config?.testnet ? "3 HYPE (planned)" : "—"}</Fact>
         <Fact label="Source">{state.quote ? (state.quote.source === "fixed" ? "fixed" : state.quote.source === "unavailable" ? "oracle down" : `${state.quote.source} · USD-pegged`) : "—"}</Fact>
         <Fact label="Your wallet">{mint.address ? short(mint.address) : "not connected"}</Fact>
         <Fact label="Balance">{mint.balanceWei !== null ? formatHype(mint.balanceWei) : "—"}</Fact>
