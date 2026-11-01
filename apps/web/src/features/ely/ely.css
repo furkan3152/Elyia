@@ -1165,43 +1165,6 @@
     width: 10px;
   }
 }
-.ely2 .icard {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 120px;
-  gap: 14px;
-  align-items: center;
-  padding: 14px 16px;
-  flex: 1;
-}
-.ely2 .icard .ic {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  background: rgb(var(--paper));
-}
-.ely2 .icard b {
-  display: block;
-  font: 700 16px/1.2 var(--e-display);
-}
-.ely2 .icard p {
-  font-size: 12px;
-  color: rgb(var(--ink-2));
-  margin: 4px 0 0;
-  line-height: 1.45;
-}
-.ely2 .icard .meta {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-}
-.ely2 .icard .act {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-}
 .ely2 .why {
   font: 400 10px var(--e-tag);
   text-transform: uppercase;
@@ -1209,67 +1172,6 @@
   color: rgb(var(--ink-2));
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-@media (max-width: 640px) {
-  .ely2 .icard {
-    grid-template-columns: 36px minmax(0, 1fr);
-    padding: 12px;
-  }
-  .ely2 .icard .ic {
-    width: 36px;
-    height: 36px;
-  }
-  .ely2 .icard .act {
-    grid-column: 1 / -1;
-    flex-direction: row;
-  }
-  .ely2 .icard .act > :first-child {
-    flex: 1;
-  }
-}
-.ely2 .auto {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.ely2 .auto .vis {
-  height: 80px;
-  background: rgb(var(--paper));
-  display: grid;
-  place-items: center;
-}
-.ely2 .auto .row1 {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.ely2 .auto .row1 b {
-  font: 700 15px var(--e-display);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ely2 .auto p {
-  font-size: 11.5px;
-  color: rgb(var(--ink-2));
-  line-height: 1.45;
-  min-height: 50px;
-  margin: 0;
-}
-.ely2 .auto .cap {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font: 400 9px var(--e-tag);
-  text-transform: uppercase;
-  color: rgb(var(--ink-3));
-  letter-spacing: 0.05em;
-  padding-top: 8px;
-  box-shadow: inset 0 2px 0 0 rgb(var(--paper-2));
-  margin-top: auto;
 }
 .ely2 .pnl-leg {
   display: grid;
@@ -1290,6 +1192,650 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+}
+
+/* ---------- portfolio workspace (account bar | tabs | Ely panel) ---------- */
+.ely2.ws {
+  display: grid;
+  min-height: 0;
+}
+.ely2 .ws-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 20px 18px;
+}
+.ely2 .ws-main.is-ely {
+  padding: 0;
+  gap: 0;
+}
+/* the account bar */
+.ely2 .ws-bar {
+  flex: none;
+}
+.ely2 .ws-bar-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  box-shadow: inset 0 -2px 0 0 rgb(var(--paper-2));
+}
+.ely2 .ws-labels {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ely2 .ws-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+.ely2 .ws-bar-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 0.8fr);
+  align-items: stretch;
+}
+.ely2 .ws-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px 12px;
+  min-width: 0;
+}
+.ely2 .ws-cell + .ws-cell {
+  box-shadow: inset 2px 0 0 0 rgb(var(--paper-2));
+}
+.ely2 .ws-k {
+  font: 400 9px var(--e-tag);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgb(var(--ink-3));
+}
+.ely2 .ws-chg {
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.ely2 .ws-risk-line {
+  font: 600 13px var(--e-body);
+}
+.ely2 .digits.sm {
+  justify-content: flex-start;
+  gap: 3px;
+}
+.ely2 .digits.sm > span {
+  font-size: 24px;
+  width: 22px;
+  padding: 4px 0 6px;
+  box-shadow:
+    0 -2px 0 0 rgb(var(--rule)),
+    0 2px 0 0 rgb(var(--rule)),
+    -2px 0 0 0 rgb(var(--rule)),
+    2px 0 0 0 rgb(var(--rule)),
+    inset 0 -3px 0 0 var(--depth);
+  background: rgb(var(--paper));
+}
+.ely2 .digits.sm > span.sep {
+  width: 9px;
+  background: transparent;
+  box-shadow: none;
+}
+.ely2 .digits.sm > span.hi {
+  background: rgb(var(--signal));
+}
+/* Floor / Ridge / Summit (summit wears a snow line so it never reads as floor) */
+.ely2 .alloc {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+  padding: 2px;
+  background: rgb(var(--paper-2));
+  box-shadow: inset 0 2px 0 0 var(--depth);
+}
+.ely2 .alloc i,
+.ely2 .sq {
+  display: block;
+  min-width: 4px;
+}
+.ely2 .sq {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex: none;
+}
+.ely2 .alloc i.floor,
+.ely2 .sq.floor {
+  background: rgb(var(--floor));
+}
+.ely2 .alloc i.ridge,
+.ely2 .sq.ridge {
+  background: rgb(var(--ridge));
+}
+/* Summit: glacier aqua, lighter than the Floor's lake, with a snow line on top */
+.ely2 .alloc i.summit,
+.ely2 .sq.summit {
+  background: rgb(var(--summit) / 0.5);
+  box-shadow: inset 0 3px 0 0 rgb(var(--card));
+}
+.ely2 .alloc i.empty {
+  background: rgb(var(--rule));
+}
+.ely2 .alloc-leg {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font: 400 9px var(--e-tag);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(var(--ink-2));
+}
+.ely2 .alloc-leg > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ely2 .alloc-leg .num {
+  color: rgb(var(--ink));
+  font: 600 11px var(--e-body);
+}
+/* tabs */
+.ely2 .ws-tabs {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.ely2 .ws-tabs.is-ely {
+  background: transparent;
+}
+.ely2 .ws-tabbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  box-shadow: inset 0 -2px 0 0 rgb(var(--rule));
+  flex: none;
+  overflow-x: auto;
+}
+.ely2 .ws-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 11px;
+  font: 400 11px var(--e-tag);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--ink-2));
+  white-space: nowrap;
+}
+.ely2 .ws-tab:hover {
+  color: rgb(var(--ink));
+}
+.ely2 .ws-tab[aria-selected="true"] {
+  color: rgb(var(--ink));
+}
+.ely2 .ws-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 4px;
+  background: rgb(var(--ink));
+}
+.ely2 .ws-tab .kbd {
+  padding: 1px 4px;
+  font-size: 9px;
+}
+.ely2 .ws-tab .badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font: 700 10px var(--e-body);
+  background: rgb(var(--signal));
+  color: #16201b;
+}
+.ely2 .ws-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px 16px;
+}
+.ely2 .ws-body.is-ely {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+}
+.ely2 .ws-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 200px;
+  text-align: center;
+}
+/* map tab */
+.ely2 .ws-map {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ely2 .ws-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+.ely2 .ws-whatif {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ely2 .ws-map .presets {
+  gap: 8px;
+}
+.ely2 .ws-readouts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.ely2 .ws-readouts .ro {
+  padding: 8px 10px;
+}
+.ely2 .ws-readouts .ro span {
+  font-size: 18px;
+}
+/* tables */
+.ely2 .tbl {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+}
+.ely2 .tbl thead th {
+  position: sticky;
+  top: -14px;
+  z-index: 1;
+  background: rgb(var(--card));
+  font: 400 9px var(--e-tag);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgb(var(--ink-3));
+  text-align: left;
+  padding: 6px 10px 8px;
+  box-shadow: inset 0 -2px 0 0 rgb(var(--rule));
+  white-space: nowrap;
+}
+.ely2 .tbl td,
+.ely2 .tbl tbody th {
+  padding: 9px 10px;
+  text-align: left;
+  font-weight: 400;
+  vertical-align: middle;
+  box-shadow: inset 0 -2px 0 0 rgb(var(--paper-2));
+}
+.ely2 .tbl tbody tr:hover td,
+.ely2 .tbl tbody tr:hover th {
+  background: rgb(var(--paper-2) / 0.55);
+}
+.ely2 .tbl .r {
+  text-align: right;
+  white-space: nowrap;
+}
+.ely2 .tbl tfoot th,
+.ely2 .tbl tfoot td {
+  padding: 10px 10px 4px;
+  text-align: left;
+  font: 600 12px var(--e-body);
+}
+.ely2 .tbl tfoot th {
+  font: 400 9px var(--e-tag);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--ink-2));
+}
+.ely2 .tbl tfoot .r {
+  text-align: right;
+}
+.ely2 .tbl .num {
+  font-variant-numeric: tabular-nums;
+}
+.ely2 .tbl .sub {
+  display: block;
+  font-size: 10.5px;
+  color: rgb(var(--ink-3));
+}
+.ely2 .tbl .asset {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.ely2 .tbl .asset b {
+  font: 700 14px var(--e-display);
+}
+.ely2 a.asset:hover b {
+  color: rgb(var(--accent));
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.ely2 .tbl .asset span {
+  font-size: 10.5px;
+}
+.ely2 .tbl tr.grp th {
+  padding: 12px 10px 6px;
+  font: 400 10px var(--e-tag);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--ink-2));
+  box-shadow: inset 0 -2px 0 0 rgb(var(--rule));
+  background: transparent !important;
+}
+.ely2 .tbl tr.grp .num {
+  font: 600 12px var(--e-body);
+  color: rgb(var(--ink));
+}
+.ely2 .ws-totals {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+}
+.ely2 .ws-totals div {
+  text-align: right;
+}
+.ely2 .ws-totals dt {
+  font: 400 9px var(--e-tag);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--ink-3));
+}
+.ely2 .ws-totals dd {
+  margin: 0;
+  font: 600 13px var(--e-body);
+}
+@media (max-width: 767px) {
+  .ely2 .ws-main {
+    padding: 10px 12px 10px;
+    gap: 10px;
+  }
+  .ely2 .ws-bar-top {
+    padding: 8px 10px;
+  }
+  .ely2 .ws-bar-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ely2 .ws-cell {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+  .ely2 .ws-cell + .ws-cell {
+    box-shadow: inset 0 2px 0 0 rgb(var(--paper-2));
+  }
+  .ely2 .ws-cell.ws-risk {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+  .ely2 .ws-cell .ws-k {
+    min-width: 0;
+  }
+  .ely2 .ws-cell.ws-alloc .alloc {
+    height: 12px;
+  }
+  .ely2 .digits.sm > span {
+    font-size: 20px;
+    width: 19px;
+    padding: 3px 0 5px;
+  }
+  .ely2 .ws-actions {
+    gap: 6px;
+  }
+  .ely2 .ws-tabbar {
+    padding: 0 4px;
+    gap: 0;
+  }
+  .ely2 .ws-tab {
+    padding: 11px 8px 10px;
+    font-size: 10px;
+  }
+  .ely2 .ws-body {
+    padding: 10px 10px 12px;
+  }
+  .ely2 .ws-dock {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .ely2 .ws-map .presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ely2 .tbl .hide-sm {
+    display: none;
+  }
+  .ely2 .tbl td,
+  .ely2 .tbl tbody th {
+    padding: 8px 5px;
+  }
+  .ely2 .tbl .rope-dot,
+  .ely2 .tbl .rope-word,
+  .ely2 .tbl .sub {
+    display: none;
+  }
+  .ely2 .tbl .asset b {
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .ely2 .tbl {
+    font-size: 12px;
+  }
+  .ely2 .ws-totals {
+    gap: 12px;
+  }
+}
+
+/* the Ely panel (docked right; a tab on phones) */
+.ely2 .ely-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+  background: rgb(var(--card));
+  box-shadow: inset 2px 0 0 0 rgb(var(--rule));
+}
+.ely2 .ws-body.is-ely .ely-panel {
+  box-shadow: none;
+}
+.ely2 .ep-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  box-shadow: inset 0 -2px 0 0 rgb(var(--rule));
+  flex: none;
+}
+.ely2 .ep-auto {
+  flex: none;
+  box-shadow: inset 0 -2px 0 0 rgb(var(--rule));
+}
+.ely2 .ep-auto-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 16px;
+  text-align: left;
+}
+.ely2 .ep-auto-h:hover {
+  background: rgb(var(--paper-2));
+}
+.ely2 .ep-auto-b {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 12px 10px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.ely2 .ep-arow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  font-size: 12.5px;
+  box-shadow: inset 0 -2px 0 0 rgb(var(--paper-2));
+}
+.ely2 .ep-arow b {
+  display: block;
+  font: 600 12.5px var(--e-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ely2 .ep-keeper {
+  box-shadow: none;
+  margin-top: 4px;
+  padding: 8px;
+  background: rgb(var(--paper));
+}
+.ely2 .ep-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.ely2 .ep-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px 12px;
+  min-height: 100%;
+}
+.ely2 .ep-thread .msg-e {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+}
+.ely2 .ep-thread .msg-e .bd {
+  font-size: 13px;
+}
+.ely2 .ep-thread .msg-u {
+  max-width: 92%;
+  font-size: 13px;
+  padding: 10px 14px;
+}
+.ely2 .ep-art {
+  margin-left: 50px;
+}
+.ely2 .ep-chips {
+  margin-top: auto;
+  padding-top: 4px;
+}
+.ely2 .ep-chips .choice {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.ely2 .ep-compose {
+  flex: none;
+  padding: 10px 14px 10px;
+  box-shadow: inset 0 2px 0 0 rgb(var(--rule));
+}
+.ely2 .ep-compose .composer {
+  padding: 10px 10px 8px;
+}
+.ely2 .ep-compose .composer textarea {
+  font-size: 14px;
+}
+.ely2 .ep-compose .cnote {
+  margin-top: 8px;
+}
+/* "Ely noticed" rows */
+.ely2 .notice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ely2 .nrow {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 9px 10px;
+  background: rgb(var(--paper));
+  box-shadow:
+    0 -2px 0 0 rgb(var(--rule)),
+    0 2px 0 0 rgb(var(--rule)),
+    -2px 0 0 0 rgb(var(--rule)),
+    2px 0 0 0 rgb(var(--rule));
+}
+.ely2 .nrow.act {
+  box-shadow:
+    0 -2px 0 0 rgb(var(--down)),
+    0 2px 0 0 rgb(var(--down)),
+    -2px 0 0 0 rgb(var(--down)),
+    2px 0 0 0 rgb(var(--down));
+}
+.ely2 .nrow .ic {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  background: rgb(var(--card));
+}
+.ely2 .nrow .tx {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.ely2 .nrow .tx > b {
+  font: 600 12.5px/1.3 var(--e-body);
+}
+.ely2 .nrow .body {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: rgb(var(--ink-2));
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ely2 .nrow .body.open {
+  -webkit-line-clamp: unset;
+  display: block;
+}
+.ely2 .nrow .meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.ely2 .nrow .meta .pill {
+  padding: 2px 6px;
+  font-size: 9px;
+}
+.ely2 .nrow .figs {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1px 10px;
+  margin: 4px 0 0;
+  font-size: 11px;
+}
+.ely2 .nrow .figs dt {
+  font: 400 9px var(--e-tag);
+  text-transform: uppercase;
+  color: rgb(var(--ink-3));
+  align-self: center;
+}
+.ely2 .nrow .figs dd {
+  margin: 0;
 }
 
 /* ---------- reduced motion: end states ---------- */

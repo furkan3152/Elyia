@@ -1,6 +1,6 @@
 import "../../features/ely/ely.css";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAccount } from "wagmi";
 
 import { navigate } from "../../app/routes/history";
@@ -12,14 +12,14 @@ import { useWalletSession } from "../../features/session/useWalletSession";
 import { activeThread, answerClarify, sendMessage, stopThread, useChatStore } from "../../features/ely/store";
 import { planning, primaryCard, type ElyTurn, type Turn } from "../../features/ely/turn";
 import { signSourceOf } from "../../features/ely/signSource";
-import { useMediaQuery } from "../../features/ely/hooks";
+import { useMediaQuery, useShellHeight, useStickToBottom } from "../../features/ely/hooks";
 import { Sheet } from "../../ui/Sheet";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { EXAMPLE_ADDRESS } from "../portfolio/range/sample";
 import { useRange } from "../portfolio/range/useRange";
-import { Composer } from "./parts/Composer";
+import { Composer } from "../../features/ely/Composer";
 import { EmptyState } from "./parts/EmptyState";
-import { ElyMessage, UserMessage } from "./parts/Messages";
+import { ElyMessage, UserMessage } from "../../features/ely/Messages";
 import { Rail } from "./parts/Rail";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u;
@@ -28,22 +28,6 @@ const handledIntents = new Set<number>();
 
 type Panel = { readonly kind: "turn"; readonly turnId: string } | { readonly kind: "recipe"; readonly recipe: Recipe } | null;
 
-
-/** Top of the viewport below the sticky app header (and the phone tab bar), so the conversation fills the screen. */
-function useShellHeight(phone: boolean): string {
-  const [top, setTop] = useState(112);
-  useLayoutEffect(() => {
-    const header = document.querySelector("header");
-    if (!header) return undefined;
-    const measure = () => setTop(Math.round(header.getBoundingClientRect().height));
-    measure();
-    if (typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(measure);
-    observer.observe(header);
-    return () => observer.disconnect();
-  }, []);
-  return `calc(100dvh - ${top + (phone ? 64 : 0)}px)`;
-}
 
 /**
  * "/app": Ask Ely, the chat-first home. A rail of threads beside the
@@ -267,33 +251,7 @@ interface ThreadColumnProps {
 }
 
 function ThreadColumn({ title, turns, phone, split, onThreads, onNew, openTurnId, onOpenCard, onAnswer, signInHint, composer }: ThreadColumnProps) {
-  const scroller = useRef<HTMLDivElement>(null);
-  const content = useRef<HTMLDivElement>(null);
-  const stick = useRef(true);
-  useLayoutEffect(() => {
-    const box = scroller.current;
-    const inner = content.current;
-    if (!box || !inner) return undefined;
-    const onScroll = () => {
-      stick.current = box.scrollHeight - box.scrollTop - box.clientHeight < 96;
-    };
-    box.addEventListener("scroll", onScroll, { passive: true });
-    box.scrollTop = box.scrollHeight;
-    if (typeof ResizeObserver === "undefined") return () => box.removeEventListener("scroll", onScroll);
-    const observer = new ResizeObserver(() => {
-      if (stick.current) box.scrollTop = box.scrollHeight;
-    });
-    observer.observe(inner);
-    return () => {
-      observer.disconnect();
-      box.removeEventListener("scroll", onScroll);
-    };
-  }, []);
-  useEffect(() => {
-    stick.current = true;
-    const box = scroller.current;
-    if (box) box.scrollTop = box.scrollHeight;
-  }, [turns.length]);
+  const { scroller, content } = useStickToBottom(turns.length);
 
   return (
     <section className={cx("flex min-h-0 flex-col", split && "shadow-[inset_-2px_0_0_0_rgb(var(--rule))]")} aria-label={`Conversation: ${title}`}>

@@ -1,14 +1,14 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Link } from "../../../app/routes/Link";
-import { routeHref } from "../../../app/routes/routeTable";
-import { useUiStore } from "../../../app/state/uiStore";
-import { drawWalker, paletteOf } from "../../../features/ely/draw";
-import { Glyph } from "../../../features/ely/ui";
-import { PixelCanvas } from "../../../pixel/PixelCanvas";
-import { Popover } from "../../../ui/Popover";
-import { cx, FOCUS_RING } from "../../../ui/cx";
+import { Link } from "../../app/routes/Link";
+import { routeHref } from "../../app/routes/routeTable";
+import { useUiStore } from "../../app/state/uiStore";
+import { drawWalker, paletteOf } from "./draw";
+import { Glyph } from "./ui";
+import { PixelCanvas } from "../../pixel/PixelCanvas";
+import { Popover } from "../../ui/Popover";
+import { cx, FOCUS_RING } from "../../ui/cx";
 
 const TOKENS = ["HYPE", "USDC", "kHYPE", "ETH", "SOL", "BTC"] as const;
 
@@ -25,6 +25,14 @@ export interface ComposerProps {
   readonly autoFocus?: boolean;
   /** Half-width column (conversation beside the artifact): shorter chips. */
   readonly compact?: boolean;
+  /** The textarea id (`/` focuses it). */
+  readonly id?: string;
+  /** The line under the composer (defaults to the drafts / signs note). */
+  readonly note?: string;
+  /** Where "Set caps" goes: a callback on the page that holds the caps (Portfolio), else a link to Portfolio. */
+  readonly onAutopilot?: () => void;
+  /** A narrow docked panel: no account chip (the panel names the account). */
+  readonly minimal?: boolean;
 }
 
 function Walker() {
@@ -42,7 +50,7 @@ function Walker() {
  * button. Enter sends, Shift+Enter breaks the line. Autopilot never signs on
  * its own: it only runs inside caps the person signs once (Portfolio).
  */
-export function Composer({ placeholder, thinking, onSend, onStop, account, sample, phone = false, autoFocus = false, compact = false }: ComposerProps) {
+export function Composer({ placeholder, thinking, onSend, onStop, account, sample, phone = false, autoFocus = false, compact = false, id = "ely-composer", note, onAutopilot, minimal = false }: ComposerProps) {
   const tight = phone || compact;
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -85,11 +93,11 @@ export function Composer({ placeholder, thinking, onSend, onStop, account, sampl
         }}
       >
         {thinking ? <Walker /> : null}
-        <label htmlFor="ely-composer" className="sr-only">
+        <label htmlFor={id} className="sr-only">
           Message Ely
         </label>
         <textarea
-          id="ely-composer"
+          id={id}
           ref={ref}
           rows={2}
           value={text}
@@ -154,7 +162,7 @@ export function Composer({ placeholder, thinking, onSend, onStop, account, sampl
             <span className="dotc acc" />
             {tight ? "Elysium" : network}
           </span>
-          {phone ? null : sample ? (
+          {phone || minimal ? null : sample ? (
             <ConnectButton.Custom>
               {({ openConnectModal, mounted }) => (
                 <button type="button" className={cx("chip", FOCUS_RING)} onClick={openConnectModal} disabled={!mounted}>
@@ -169,7 +177,7 @@ export function Composer({ placeholder, thinking, onSend, onStop, account, sampl
             </span>
           )}
           </div>
-          <ModeSegment phone={phone} />
+          <ModeSegment phone={phone} onAutopilot={onAutopilot} />
           {thinking && onStop ? (
             <button type="button" onClick={onStop} className={cx("b dn", FOCUS_RING)} style={{ width: 40, height: 40, padding: 0 }} aria-label="Stop Ely">
               ■
@@ -181,13 +189,13 @@ export function Composer({ placeholder, thinking, onSend, onStop, account, sampl
           )}
         </div>
       </form>
-      <p className="cnote">{phone ? "Ely drafts · you sign" : "Ely drafts · your wallet signs · Autopilot stays inside the caps you set"}</p>
+      <p className="cnote">{note ?? (phone ? "Ely drafts · you sign" : "Ely drafts · your wallet signs · Autopilot stays inside the caps you set")}</p>
     </div>
   );
 }
 
 /** Propose (default) | Autopilot: Autopilot explains its caps and points to where they are signed; it never switches on silently. */
-function ModeSegment({ phone }: { readonly phone: boolean }) {
+function ModeSegment({ phone, onAutopilot }: { readonly phone: boolean; readonly onAutopilot?: () => void }) {
   return (
     <Popover
       label="Autopilot"
@@ -211,9 +219,22 @@ function ModeSegment({ phone }: { readonly phone: boolean }) {
           <span className="t-tag t-acc">Autopilot · bounded</span>
           <p>Autopilot acts only inside a policy you sign once in your wallet: an allowlist, a per-order and a daily cap, reduce-only orders and an expiry. Revoke it in one tap. Ely can never withdraw to anyone but you.</p>
           <p className="t-mute">Here, Ely proposes and you sign every route.</p>
-          <Link to={`${routeHref("portfolio")}#automations`} onClick={close} className={cx("b sm acc self-start", FOCUS_RING)}>
-            Set caps in Portfolio ▸
-          </Link>
+          {onAutopilot ? (
+            <button
+              type="button"
+              onClick={() => {
+                close();
+                onAutopilot();
+              }}
+              className={cx("b sm acc self-start", FOCUS_RING)}
+            >
+              Set caps below ▸
+            </button>
+          ) : (
+            <Link to={`${routeHref("portfolio")}#automations`} onClick={close} className={cx("b sm acc self-start", FOCUS_RING)}>
+              Set caps in Portfolio ▸
+            </Link>
+          )}
         </div>
       )}
     </Popover>

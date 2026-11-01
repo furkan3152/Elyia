@@ -1,15 +1,15 @@
 import type { LanguageQuestion } from "@elyia/core/api/language";
 import { useMemo, useState, type ReactNode } from "react";
 
-import { pickedLabel } from "../../../features/ely/clarify";
-import { venueLabel, compactAmount } from "../../../features/ely/cardModel";
-import { readingLabel, phaseLabel } from "../../../features/ely/labels";
-import { RouteCardInline } from "../../../features/ely/RouteArtifact";
-import { AVATAR_FOR_PHASE, turnPhase, turnTimeline, visibleChars } from "../../../features/ely/timeline";
-import { planning, primaryCard, PLANNING_TOOLS, type ElyTurn, type Reading } from "../../../features/ely/turn";
-import { useTurnClock } from "../../../features/ely/hooks";
-import { ElyAvatar, ReadingMark } from "../../../features/ely/ui";
-import { cx, FOCUS_RING } from "../../../ui/cx";
+import { pickedLabel } from "./clarify";
+import { venueLabel, compactAmount } from "./cardModel";
+import { readingLabel, phaseLabel } from "./labels";
+import { RouteCardInline } from "./RouteArtifact";
+import { AVATAR_FOR_PHASE, turnPhase, turnTimeline, visibleChars } from "./timeline";
+import { planning, primaryCard, PLANNING_TOOLS, type ElyTurn, type Reading } from "./turn";
+import { useTurnClock } from "./hooks";
+import { ElyAvatar, ReadingMark } from "./ui";
+import { cx, FOCUS_RING } from "../../ui/cx";
 
 export function UserMessage({ text }: { readonly text: string }) {
   return <div className="msg-u stepin">{text}</div>;
