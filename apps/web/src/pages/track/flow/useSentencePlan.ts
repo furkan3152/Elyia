@@ -2,14 +2,14 @@
  * A sentence, read and planned: the language reader for live chips and
  * questions (POST /v1/intents/parse, answers and the signed thread sent back
  * each turn), then the planner's dry run of the reading (POST /v1/intents
- * with `text`). One hook for the deck, ⌘K, the landing route card, the
+ * with the reader's `plan`: the words + the signed thread of the answers). One hook for the deck, ⌘K, the landing route card, the
  * Guide and the send ticket. Nothing here signs.
  */
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError, apiPost } from "../../../lib/api";
-import { plannerText, readingOf, sentenceGradeOf, withAnswer, type LanguageAnswer, type LanguageQuestion, type SentenceReading } from "./sentence";
+import { plannerInput, readingOf, sentenceGradeOf, withAnswer, type LanguageAnswer, type LanguageQuestion, type SentenceReading } from "./sentence";
 import { useFlowPlan, type FlowAsk } from "./useFlowPlan";
 
 export interface SentencePlan {
@@ -84,12 +84,15 @@ export function useSentencePlan(text: string, options: SentencePlanOptions = {})
   const fresh = read.data && read.data.text === settled && !read.isPlaceholderData ? read.data.reading : null;
   const reading = settled.length >= 3 ? fresh : null;
   const chips = trimmed.length >= 3 ? (read.data?.reading.chips ?? NO_CHIPS) : NO_CHIPS;
-  const sendText = reading ? plannerText(settled, reading, answers.length) : offline && settled.length >= 3 ? settled : null;
+  const input = reading ? plannerInput(settled, reading, answers.length) : offline && settled.length >= 3 ? { text: settled } : null;
+  const sendText = input?.text ?? null;
+  const sendThread = input?.thread ?? null;
   const goalKinds = reading?.goalKinds;
   const ask: FlowAsk | null = useMemo(() => {
     if (!planner || !sendText) return null;
-    return { key: `text:${sendText}`, sentence: settled, grade: sentenceGradeOf(settled, goalKinds ?? []), actions: [], text: sendText };
-  }, [planner, sendText, settled, goalKinds]);
+    // The key carries the answers (not the token, which is re-signed every turn) so a new answer re-plans.
+    return { key: `text:${sendText}|${JSON.stringify(answers)}`, sentence: settled, grade: sentenceGradeOf(settled, goalKinds ?? []), actions: [], text: sendText, ...(sendThread ? { thread: sendThread } : {}) };
+  }, [planner, sendText, sendThread, settled, goalKinds, answers]);
   const plan = useFlowPlan(ask, account);
 
   return {

@@ -8,6 +8,7 @@ import { ARB_SYS_ABI, CORE_DEPOSIT_WALLET_ABI, ERC20_ABI } from "../flow/abis";
 import { addLeg, parseJourneys, parseWatched, upsertJourney, upsertWatched, type JourneyRecord } from "../flow/journeyStore";
 import { CORE_DEX, planOffline } from "../flow/localPlanner";
 import { childIdOf, ethDepositTxId, ticketState, TICKET_LIFETIME_SEC, withdrawalSeconds } from "../flow/orbit";
+import { DEFAULT_RULE_BOOK_HASH, ruleBookLine } from "../../../topo/ruleBook";
 import { direction, formatBase, formatEta, phaseState, routeFromPlanner, shortRouteId } from "../flow/routeModel";
 import { parseTrackQuery, traceMoving, type Trace } from "../flow/trace";
 import { traceRoute } from "../traceRoute";
@@ -97,6 +98,41 @@ test("routeModel: a planner dry run becomes a route card without invented lines"
   assert.deepEqual(route.rules, ["Rule Book: allowed", "$47.98 at reference price", "to your own address"]);
   assert.equal(route.minimum, null);
   assert.equal(route.quotes[0]!.label, "canonical bridge");
+  assert.deepEqual(route.unpriced, []);
+});
+
+test("routeModel: the Rule Book's unpriced-token outcome (cap, testnet only) and its marks", () => {
+  // Shapes of a live dry run (2026-11-01): 10 KALOS allowed under the cap, 5,000 KALOS refused.
+  const note = (amountText: string, status: "allowed" | "refused") => ({ asset: "eip155:99801/erc20:0x8a2201953AF29e8BE7700bcB53dA3ce5caD18726", symbol: "KALOS", network: "elysium-testnet", role: "input", amount: "0", decimals: 18, path: "steps[0].inputs[0]", cap: "1000", status, message: "m", amountText });
+  const base = {
+    intent: { id: "int_00000000000000000000000000000001", accounts: ["eip155:99801:0x00000000000000000000000000000000000e1a1a"], warnings: [], summary: { totalFeesUsd: null }, steps: [] },
+    journey: { stops: [] },
+    quotes: [],
+  };
+  const allowed = routeFromPlanner({ ...base, policy: { decision: "allow", ruleBookHash: DEFAULT_RULE_BOOK_HASH, reasons: [], notionalUsd: "0.00", unpriced: [note("10", "allowed")] } } as unknown as CreateIntentResponse, "swap 10 KALOS to WHYPE on kalos", 1);
+  assert.deepEqual(allowed.unpriced, [{ symbol: "KALOS", role: "input", amountText: "10", cap: "1000", status: "allowed", message: "m" }]);
+  assert.equal(ruleBookLine(allowed.binding!), `default Rule Book · ${DEFAULT_RULE_BOOK_HASH.slice(0, 15)}…`);
+  assert.match(ruleBookLine("sha256:" + "a".repeat(64)), /^your Rule Book · sha256:aaaaaaaa…$/u);
+  const refused = routeFromPlanner(
+    {
+      ...base,
+      policy: {
+        decision: "deny",
+        ruleBookHash: DEFAULT_RULE_BOOK_HASH,
+        reasons: [
+          { rule: "assets.unpriced", outcome: "deny", message: "5000 KALOS is above the 1000 KALOS cap for tokens without a reference price.", path: "steps[0].inputs[0]" },
+          { rule: "facts.unavailable", outcome: "deny", message: "A fact your rules need is unknown.", path: "x" },
+        ],
+        notionalUsd: null,
+        unpriced: [note("5000", "refused")],
+      },
+    } as unknown as CreateIntentResponse,
+    "swap 5000 KALOS to WHYPE on kalos",
+    1,
+  );
+  assert.equal(refused.unpriced[0]!.status, "refused");
+  // The unpriced reason lives in its own block; a denial is never drawn with a tick.
+  assert.deepEqual(refused.rules.filter((rule) => typeof rule !== "string"), [{ text: "A fact your rules need is unknown.", mark: "fail" }]);
 });
 
 test("offline planner: the moves it builds are the pinned transactions", () => {

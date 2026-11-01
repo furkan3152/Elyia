@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import { ApiError } from "../../../lib/apiErrors";
 import { deviationLabel, isFakePrice } from "../flow/routeModel";
-import { clarifyOf, examplesOf, plannerText, readingOf, sentenceGradeOf, tagWarnings, withAnswer } from "../flow/sentence";
+import { clarifyOf, examplesOf, plannerInput, readingOf, sentenceGradeOf, tagWarnings, withAnswer } from "../flow/sentence";
 
 const NEEDS = {
   spec: "elyia.language/v1",
@@ -35,11 +35,25 @@ describe("sentences: the reader's answer", () => {
     assert.equal(readingOf(null), null);
     assert.equal(readingOf({ status: "maybe" }), null);
   });
-  it("plans the typed words when nothing was asked, the canonical sentence after answers", () => {
-    const ready = readingOf({ ...NEEDS, status: "ready", questions: [], canonical: "swap 1 HYPE to USDC on elysium", thread: null })!;
-    assert.equal(plannerText(" swap 1 HYPE to USDC ", ready, 0), "swap 1 HYPE to USDC");
-    assert.equal(plannerText("swap 1 HYPE to USDC", ready, 1), "swap 1 HYPE to USDC on elysium");
-    assert.equal(plannerText("x", readingOf(NEEDS)!, 0), null);
+  it("plans what the reader's plan says: the words and the signed thread, never the canonical sentence", () => {
+    const goals = [{ t: "value", goal: { kind: "convert", op: "swap" } }];
+    const ready = readingOf({ ...NEEDS, status: "ready", questions: [], goals, canonical: "swap 1 HYPE to USDC on elysium", thread: "t.ready", plan: { text: "swap 1 HYPE to USDC", thread: "t.ready", goals } })!;
+    assert.deepEqual(ready.plan, { text: "swap 1 HYPE to USDC", thread: "t.ready" });
+    assert.deepEqual(plannerInput("swap 1 HYPE to USDC", ready, 1), { text: "swap 1 HYPE to USDC", thread: "t.ready" });
+    const plain = readingOf({ ...NEEDS, status: "ready", questions: [], canonical: "swap 1 HYPE to USDC on elysium", thread: null, plan: { text: "swap 1 HYPE to USDC", thread: null, goals } })!;
+    assert.deepEqual(plannerInput(" swap 1 HYPE to USDC ", plain, 0), { text: "swap 1 HYPE to USDC" });
+    // A rule or a question (plan null): the words go so the planner says where they belong.
+    const rule = readingOf({ ...NEEDS, status: "ready", questions: [], canonical: "alert me when ETH price above 4000", thread: null, plan: null })!;
+    assert.equal(rule.plan, null);
+    assert.deepEqual(plannerInput("alert me when ETH price above 4000", rule, 0), { text: "alert me when ETH price above 4000" });
+    assert.equal(plannerInput("x", readingOf(NEEDS)!, 0), null);
+  });
+  it("falls back for a server without plan: ready thread, else the canonical sentence", () => {
+    const threaded = readingOf({ ...NEEDS, status: "ready", questions: [], canonical: "swap 1 HYPE to USDC on elysium", thread: "t.ready" })!;
+    assert.equal(threaded.plan, undefined);
+    assert.deepEqual(plannerInput("swap 1 HYPE to USDC", threaded, 1), { text: "swap 1 HYPE to USDC", thread: "t.ready" });
+    const old = readingOf({ ...NEEDS, status: "ready", questions: [], canonical: "swap 1 HYPE to USDC on elysium", thread: null })!;
+    assert.deepEqual(plannerInput("swap 1 HYPE to USDC", old, 1), { text: "swap 1 HYPE to USDC on elysium" });
   });
   it("keeps one answer per question", () => {
     const answers = withAnswer(withAnswer([], { question: "g0.network", option: "hyperevm" }), { question: "g0.network", option: "elysium" });

@@ -114,6 +114,7 @@ function route(ctx: Context, steps: readonly LocalStep[], arrives: string, warni
       fees: "gas only",
       signatures: { done: 0, needed: signers.length },
       rules: ["planned in your browser", "to your own address", "verified addresses only"],
+      unpriced: [],
       warnings: ["The Elyia planner is offline: this plan was built in your browser from the pinned address book. The Rule Book's caps are not checked until the planner is back.", ...warnings],
       quotes: [],
       arrives,

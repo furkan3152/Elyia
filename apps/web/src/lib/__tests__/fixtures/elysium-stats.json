@@ -1,0 +1,111 @@
+{
+ "network": "elysium-testnet",
+ "at": "2026-11-01T07:58:16.391Z",
+ "chain": {
+  "head": {
+   "value": 20489395,
+   "basis": "measured",
+   "source": "block pulse, 4 blocks sampled"
+  },
+  "blockTimeMs": {
+   "value": 196.3,
+   "basis": "measured",
+   "source": "block pulse, 4 blocks sampled"
+  },
+  "tps": {
+   "value": 8.91,
+   "basis": "measured",
+   "source": "block pulse, 4 blocks sampled"
+  },
+  "gasPriceGwei": {
+   "value": 0.1,
+   "basis": "measured",
+   "source": "block pulse, 4 blocks sampled"
+  },
+  "blocksPerDay": {
+   "value": 440143,
+   "basis": "estimate",
+   "source": "86,400 s / measured block time"
+  },
+  "txPerDay": {
+   "value": 769824,
+   "basis": "estimate",
+   "source": "measured tx/s x 86,400"
+  }
+ },
+ "ecosystem": {
+  "protocols": {
+   "value": 98,
+   "basis": "registry",
+   "source": "protocols with a deployment on Elysium Testnet"
+  },
+  "liveProtocols": {
+   "value": 92,
+   "basis": "registry",
+   "source": "deployments seen working (live / testnet-live)"
+  },
+  "announcedProtocols": {
+   "value": 0,
+   "basis": "registry",
+   "source": "announced or coming deployments"
+  },
+  "verifiedContracts": {
+   "value": 467,
+   "basis": "registry",
+   "source": "contracts re-checked by eth_getCode when added"
+  },
+  "executableProtocols": {
+   "value": 12,
+   "basis": "registry",
+   "source": "protocols Elyia's engine executes here"
+  },
+  "byKind": {
+   "bridge": 3,
+   "liquid-staking": 3,
+   "aggregator": 2,
+   "launchpad": 15,
+   "infra": 17,
+   "indexer": 1,
+   "dex": 11,
+   "vault": 7,
+   "rwa": 2,
+   "game": 11,
+   "perps": 4,
+   "prediction": 3,
+   "lending": 2,
+   "stablecoin": 1,
+   "names": 1,
+   "otc": 1,
+   "nft": 4,
+   "tools": 9,
+   "oracle": 1
+  }
+ },
+ "activity": {
+  "activeProtocols": {
+   "value": 32,
+   "basis": "measured",
+   "source": "logs in blocks 20487362-20489361, checked 2026-11-01T07:58:11.001Z"
+  },
+  "presentContracts": {
+   "value": 457,
+   "basis": "measured",
+   "source": "bytecode present at 2026-11-01T07:58:11.001Z"
+  },
+  "launchesSeen": {
+   "value": 20,
+   "basis": "measured",
+   "source": "launch radar, 58 registry sources, through block 20489390"
+  },
+  "launchWindowBlocks": {
+   "value": 2000,
+   "basis": "measured",
+   "source": "blocks per eth_getLogs request"
+  }
+ },
+ "notes": [
+  "Per-day figures extrapolate the pulse's short sample window: estimates, not counts.",
+  "Ecosystem figures count Elyia's registry (verified contracts only), not every contract deployed on the chain.",
+  "Testnet activity includes bots and test traffic."
+ ]
+}

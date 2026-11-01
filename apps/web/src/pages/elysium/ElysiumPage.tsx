@@ -6,7 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFloorStatus, useRidgeHead, type HeadStatus } from "../../app/shell/useLayerHeads";
 import { useResolvedTheme } from "../../app/state/useTheme";
 import { usePulse, usePulseFeed } from "../../hooks/usePulse";
+import { useElysiumStats } from "../../lib/discovery";
+import { BASIS_WORD, statLines, type StatLine } from "../../lib/discoveryModel";
 import { formatBlockNumber, formatGas, formatGwei, formatTps } from "../../lib/format";
+import { ElyEmpty } from "../../pixel/ElyEmpty";
+import { ElyLoader } from "../../pixel/ElyLoader";
 import type { PulseStatus } from "../../lib/pulse/pulseHub";
 import { Cards, Page, Section, Split } from "../../pixel/layout";
 import { PixelAltimeter } from "../../pixel/PixelAltimeter";
@@ -245,6 +249,65 @@ function Registry() {
   );
 }
 
+/* Ecosystem stats (GET /v1/elysium/stats) -------------------------------------- */
+
+const BASIS_CLASS: Readonly<Record<StatLine["basis"], string>> = {
+  measured: "bg-up text-paper px-frame-thin",
+  estimate: "border-2 border-dashed border-rule text-ink-2",
+  registry: "bg-paper-2 text-ink-2 px-frame-thin",
+};
+
+function StatCard({ title, lines }: { readonly title: string; readonly lines: readonly StatLine[] }) {
+  return (
+    <section className="flex h-full flex-col bg-card px-frame px-drop" aria-label={title}>
+      <h3 className="border-b-2 border-rule px-5 py-4 text-center font-tag text-[12px] uppercase text-ink">{title}</h3>
+      <dl className="flex flex-1 flex-col">
+        {lines.map((line) => (
+          <div key={line.id} className="flex flex-col gap-1 border-b-2 border-dashed border-rule px-5 py-3 last:border-b-0">
+            <dt className="flex items-center justify-between gap-3">
+              <span className="font-tag text-[11px] uppercase text-ink-2">{line.label}</span>
+              <span className={cx("shrink-0 px-1.5 py-px font-tag text-[9px] uppercase", BASIS_CLASS[line.basis])}>{BASIS_WORD[line.basis]}</span>
+            </dt>
+            <dd className="flex flex-col">
+              <span className={cx("tnum font-display text-[24px] font-bold leading-none", line.value === "—" ? "text-ink-3" : "text-ink")}>{line.value}</span>
+              <span className="mt-1 font-mono text-[11px] leading-snug text-ink-3 text-pretty">{line.source}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function EcosystemStats() {
+  const stats = useElysiumStats("elysium-testnet");
+  if (stats.isPending) {
+    return (
+      <div className="flex justify-center bg-card p-8 px-frame px-drop">
+        <ElyLoader label="Reading the ecosystem figures…" />
+      </div>
+    );
+  }
+  if (!stats.data) {
+    return <ElyEmpty className="bg-card px-5 py-8 px-frame px-drop" title="Figures not reached" description="The Elyia API's /v1/elysium/stats did not answer. Nothing is filled in; the drum above still reads the chain from your browser." />;
+  }
+  const lines = statLines(stats.data);
+  return (
+    <div className="flex flex-col gap-6">
+      <Cards n={3}>
+        <StatCard title="Chain · from the block pulse" lines={lines.chain} />
+        <StatCard title="Registry · verified rows" lines={lines.ecosystem} />
+        <StatCard title="Activity · the live check" lines={lines.activity} />
+      </Cards>
+      <p className="mx-auto max-w-[760px] text-center font-mono text-[11px] leading-relaxed text-ink-2 text-pretty">
+        <span className="font-tag text-[10px] uppercase text-ink">measured</span> = read from the chain now ·{" "}
+        <span className="font-tag text-[10px] uppercase text-ink">estimate</span> = extrapolated from a short sample ·{" "}
+        <span className="font-tag text-[10px] uppercase text-ink">registry</span> = counted from Elyia's verified registry. {stats.data.notes.join(" ")}
+      </p>
+    </div>
+  );
+}
+
 /* The page ------------------------------------------------------------------- */
 
 /** "/elysium": the pixel weather station on the summit. Elysium's blocks, heads, cadence, gas and ecosystem, live. */
@@ -331,6 +394,10 @@ export default function ElysiumPage() {
             <BridgeContracts />
           </div>
         </Split>
+      </Section>
+
+      <Section id="figures" tag="Ecosystem figures · GET /v1/elysium/stats" title="The summit in figures." lede="What the Elyia API measured on Elysium, what it extrapolated, and what its registry counts. Every figure wears its basis.">
+        <EcosystemStats />
       </Section>
 
       <Section

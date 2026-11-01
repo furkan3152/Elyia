@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Link } from "../../app/routes/Link";
 import { routeHref } from "../../app/routes/routeTable";
 import { endpointState, useLaunches } from "../../lib/discovery";
+import { launchKindWord } from "../../lib/discoveryModel";
 import { infoClient } from "../../lib/hypercore/runtime";
 import { useAutoPause } from "../../motion/useAutoPause";
 import { useReducedMotion } from "../../motion/useReducedMotion";
@@ -146,17 +147,17 @@ export function AscentsRadar({ mode: appMode }: { readonly mode: NetworkEnvironm
             </ol>
           )}
           <p className="mt-auto border-t-2 border-dashed border-rule px-5 py-4 text-center font-mono text-[11px] leading-relaxed text-ink-2 text-pretty">
-            {tradable ? "" : "Mainnet, read only: the practice wall trades testnet, so these rows do not open the terminal. "}Fresh launches read CAUTION until Shield has checked them. New Elysium pools are listed below{launches.data ? ", from the discovery API's launch indexer" : " when the discovery API's launch indexer answers"}.
+            {tradable ? "" : "Mainnet, read only: the practice wall trades testnet, so these rows do not open the terminal. "}Fresh launches read CAUTION until Shield has checked them. New Elysium pools are listed below{launches.query.data ? ", from the discovery API's launch indexer" : " when the discovery API's launch indexer answers"}.
           </p>
         </section>
       </Split>
-      <SummitLaunches query={launches} />
+      <SummitLaunches query={launches.query} stream={launches.stream} />
     </div>
   );
 }
 
 /** New pools and launchpad events on Elysium, from the discovery API's indexer (absent: said so, nothing drawn). */
-function SummitLaunches({ query }: { readonly query: ReturnType<typeof useLaunches> }) {
+function SummitLaunches({ query, stream }: ReturnType<typeof useLaunches>) {
   const state = endpointState(query);
   const data = query.data;
   return (
@@ -166,13 +167,18 @@ function SummitLaunches({ query }: { readonly query: ReturnType<typeof useLaunch
         <h3 id="summit-launches" className="font-display text-[24px] font-bold leading-none text-ink">
           Newest on the Summit
         </h3>
+        {state === "live" ? (
+          <p className="font-mono text-[11px] text-ink-3" aria-live="polite">
+            {stream === "open" ? "● following the stream" : stream === "connecting" || stream === "reconnecting" ? "○ joining the stream…" : "○ refreshed every minute"}
+          </p>
+        ) : null}
       </header>
       {state === "loading" ? (
         <div className="flex justify-center p-6">
           <ElyLoader label="Reading the launch indexer…" />
         </div>
       ) : state === "absent" || !data ? (
-        <ElyEmpty compact className="px-5 py-6" title="Launch indexer not served" description="This API does not serve /v1/discovery/launches yet, so no Summit launches are drawn. Nothing here is a sample." />
+        <ElyEmpty compact className="px-5 py-6" title="Launch indexer not reached" description="The discovery API's /v1/discovery/launches did not answer, so no Summit launches are drawn. Nothing here is a sample." />
       ) : data.launches.length === 0 ? (
         <ElyEmpty compact className="px-5 py-6" title="No launches in the window" description={data.notes[0] ?? "The indexer is watching; new pools land here as they are seen."} />
       ) : (
@@ -185,7 +191,7 @@ function SummitLaunches({ query }: { readonly query: ReturnType<typeof useLaunch
                 <span className="min-w-0">
                   <span className="block truncate font-display text-[16px] font-bold text-ink">{names || "unnamed pool"}</span>
                   <span className="tnum block truncate font-mono text-[11px] text-ink-2">
-                    {launch.protocolName} · {launch.kind} · block {launch.blockNumber.toLocaleString("en-US")}
+                    {launch.protocolName} · {launchKindWord(launch.kind)} · block {launch.blockNumber.toLocaleString("en-US")}
                   </span>
                 </span>
                 {flagged ? <span className="bg-down px-2 py-0.5 font-tag text-[10px] uppercase text-paper">look-alike</span> : <ConditionSign condition="caution" size="sm" />}
@@ -194,6 +200,7 @@ function SummitLaunches({ query }: { readonly query: ReturnType<typeof useLaunch
           })}
         </ol>
       )}
+      {state === "live" && data && data.notes.length > 0 ? <p className="mt-auto border-t-2 border-dashed border-rule px-5 py-3 text-center font-mono text-[11px] leading-relaxed text-ink-2 text-pretty">{data.notes.slice(0, 2).join(" ")}</p> : null}
     </section>
   );
 }

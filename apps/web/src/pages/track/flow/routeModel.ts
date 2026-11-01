@@ -5,14 +5,14 @@
  * lines and the bound quote. Every line is read from the plan; nothing is
  * invented to fill the card.
  */
-import type { CreateIntentResponse, VenueQuoteView } from "@elyia/core/api/intents";
+import type { CreateIntentResponse, PolicySummary, VenueQuoteView } from "@elyia/core/api/intents";
 import type { IntentGraph, IntentStep, StepAmount } from "@elyia/core/intent";
 import type { Journey, JourneyStop } from "@elyia/core/journey";
 import { NETWORKS, type NetworkKey } from "@elyia/core/networks";
 
 import type { Grade } from "../../../topo/geometry/conditions";
 import type { Layer } from "../../../topo/geometry/relief";
-import type { RouteStep, RouteStepState } from "../../../topo/RouteCard";
+import type { RouteRule, RouteStep, RouteStepState, RouteUnpriced } from "../../../topo/RouteCard";
 
 export const LAYER_OF_FAMILY: Readonly<Record<string, Layer>> = { hypercore: "floor", hyperevm: "ridge", elysium: "summit" };
 
@@ -161,8 +161,10 @@ export interface FlowRoute {
   readonly steps: readonly FlowStepView[];
   readonly fees: string;
   readonly signatures: { readonly done: number; readonly needed: number; readonly note?: string };
-  readonly rules: readonly string[];
+  readonly rules: readonly (string | RouteRule)[];
   readonly binding?: string;
+  /** Tokens without a reference price and the Rule Book's outcome (cap, testnet only). */
+  readonly unpriced: readonly RouteUnpriced[];
   readonly warnings: readonly string[];
   readonly quotes: readonly FlowQuote[];
   /** What arrives at the end ("1,964.05 USDC"). */
@@ -210,9 +212,9 @@ function stepView(step: IntentStep, stop: JourneyStop | undefined, index: number
   };
 }
 
-function rulesFrom(response: CreateIntentResponse): string[] {
+function rulesFrom(response: CreateIntentResponse): (string | RouteRule)[] {
   const policy = response.policy;
-  const lines: string[] = [];
+  const lines: (string | RouteRule)[] = [];
   lines.push(policy.decision === "allow" ? "Rule Book: allowed" : policy.decision === "confirm" ? "Rule Book: asks you to confirm" : "Rule Book: refused");
   if (policy.notionalUsd) lines.push(`$${policy.notionalUsd} at reference price`);
   // Only swaps carry their floor on chain (ERC-4626 and lending calls do not: the planner verifies them after).
@@ -223,8 +225,14 @@ function rulesFrom(response: CreateIntentResponse): string[] {
   const others = [...new Set(response.intent.steps.flatMap((step) => (step.recipient && !owned.has(step.recipient.split(":").at(-1)?.toLowerCase()) ? [step.recipient.split(":").at(-1)!] : [])))];
   if (others.length === 0) lines.push("to your own address");
   for (const other of others) lines.push(`pays ${other.slice(0, 6)}…${other.slice(-4)}, not your address`);
-  for (const reason of policy.reasons) lines.push(reason.message);
+  // Unpriced-token outcomes have their own block on the card (cap, testnet only).
+  for (const reason of policy.reasons) if (reason.rule !== "assets.unpriced") lines.push({ text: reason.message, mark: reason.outcome === "deny" ? "fail" : reason.outcome === "confirm" ? "warn" : "ok" });
   return lines;
+}
+
+/** The planner's unpriced-token notes, as the route card shows them. */
+export function unpricedFrom(policy: Pick<PolicySummary, "unpriced">): RouteUnpriced[] {
+  return (policy.unpriced ?? []).map((note) => ({ symbol: note.symbol, role: note.role, amountText: note.amountText, cap: note.cap, status: note.status, message: note.message }));
 }
 
 /** The planner's dry run as a route card. */
@@ -255,6 +263,7 @@ export function routeFromPlanner(response: CreateIntentResponse, sentence: strin
     signatures: { done: signers.filter((step) => step.state === "settled").length, needed: signers.length, note: signers.length > 1 ? "one per step" : undefined },
     rules: rulesFrom(response),
     binding: response.policy.ruleBookHash,
+    unpriced: unpricedFrom(response.policy),
     warnings: [...new Set([...response.intent.warnings, ...response.intent.steps.flatMap((step) => step.warnings ?? [])])],
     quotes,
     arrives: last ? amountLabel(last) : null,
@@ -287,6 +296,7 @@ export function routeFromIntent(intent: IntentGraph, journey: Journey, grade: Gr
     signatures: { done: signers.filter((step) => step.state === "settled").length, needed: signers.length },
     rules: intent.policy ? [intent.policy.decision === "allow" ? "Rule Book: allowed" : "Rule Book: confirmed by you", ...(intent.policy.notionalUsd ? [`$${intent.policy.notionalUsd} at reference price`] : []), "evidence read from chain"] : ["evidence read from chain"],
     binding: intent.policy?.ruleBookHash,
+    unpriced: [],
     warnings: [...new Set([...intent.warnings, ...intent.steps.flatMap((step) => [...(step.warnings ?? []), ...(step.failure ? [step.failure.message] : [])])])],
     quotes: [],
     arrives: output ? amountLabel(output) : null,

@@ -1,0 +1,95 @@
+{
+ "network": "elysium-testnet",
+ "scannedThrough": 20489150,
+ "sources": 58,
+ "windowBlocks": 2000,
+ "running": true,
+ "notes": [
+  "launchpad-event: the first time the radar saw this token in an event of a registry launchpad; it may have launched earlier.",
+  "Launch tokens are unverified. Run Shield (GET /v1/discovery/shield/:token) before trading one.",
+  "Testnet pool prices are fake: Elyia values tokens at HyperCore mainnet reference prices only."
+ ],
+ "launches": [
+  {
+   "id": "elysium-testnet:0xb19fdda5a33e6c69d5dc6a57b57ff15953c135b71ad4291df588301ef2135b41:2",
+   "network": "elysium-testnet",
+   "kind": "launchpad-event",
+   "protocolId": "bunnypad",
+   "protocolName": "BunnyPad",
+   "source": {
+    "address": "0x3c4f47959101557eed9bc4ae8d8d986ae8d3e5b1",
+    "role": "BunnyLaunchpad"
+   },
+   "pool": null,
+   "tokens": [
+    {
+     "address": "0x538cee886c7f64686847b1b34722d4ab4f9a9a36",
+     "symbol": "baba",
+     "name": "Black Mamba",
+     "decimals": 18,
+     "verified": false,
+     "flagged": null
+    }
+   ],
+   "topic": "0x21511d9837e902f4b6dcc59c0d99c4984f6f0c9290af3903f28f28684f9fa930",
+   "blockNumber": 20489150,
+   "txHash": "0xb19fdda5a33e6c69d5dc6a57b57ff15953c135b71ad4291df588301ef2135b41",
+   "logIndex": 2,
+   "seenAt": "2026-11-01T07:57:47.075Z"
+  },
+  {
+   "id": "elysium-testnet:0x3aa645dd38fe5330f9d6bae188c212cca27a3521d255a4663c64346a2f597baa:0",
+   "network": "elysium-testnet",
+   "kind": "launchpad-event",
+   "protocolId": "bunnypad",
+   "protocolName": "BunnyPad",
+   "source": {
+    "address": "0x3c4f47959101557eed9bc4ae8d8d986ae8d3e5b1",
+    "role": "BunnyLaunchpad"
+   },
+   "pool": null,
+   "tokens": [
+    {
+     "address": "0xe5b3b2a20a64509bdb30d3ef1b83aa6afd51a79d",
+     "symbol": "BTC",
+     "name": "Big Titty Coin",
+     "decimals": 18,
+     "verified": false,
+     "flagged": null
+    }
+   ],
+   "topic": "0x21511d9837e902f4b6dcc59c0d99c4984f6f0c9290af3903f28f28684f9fa930",
+   "blockNumber": 20488984,
+   "txHash": "0x3aa645dd38fe5330f9d6bae188c212cca27a3521d255a4663c64346a2f597baa",
+   "logIndex": 0,
+   "seenAt": "2026-11-01T07:57:46.395Z"
+  },
+  {
+   "id": "elysium-testnet:0x59d5fb5b64d33967e1465ec0de4881f5535a8fe06a80ee164fd8c33ba63c1f05:0",
+   "network": "elysium-testnet",
+   "kind": "launchpad-event",
+   "protocolId": "bunnypad",
+   "protocolName": "BunnyPad",
+   "source": {
+    "address": "0x3c4f47959101557eed9bc4ae8d8d986ae8d3e5b1",
+    "role": "BunnyLaunchpad"
+   },
+   "pool": null,
+   "tokens": [
+    {
+     "address": "0xd4a3b414dfa1744c8ebfbac775f2f3c89692aea2",
+     "symbol": "BUNNY",
+     "name": "Bunny Test",
+     "decimals": 18,
+     "verified": false,
+     "flagged": null
+    }
+   ],
+   "topic": "0x21511d9837e902f4b6dcc59c0d99c4984f6f0c9290af3903f28f28684f9fa930",
+   "blockNumber": 20488725,
+   "txHash": "0x59d5fb5b64d33967e1465ec0de4881f5535a8fe06a80ee164fd8c33ba63c1f05",
+   "logIndex": 0,
+   "seenAt": "2026-11-01T07:57:16.341Z"
+  }
+ ]
+}

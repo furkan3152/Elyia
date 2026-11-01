@@ -131,6 +131,19 @@ describe("HTTP surface", () => {
     assert.equal((await fetch(`${served.url}/v1/venues?kind=bogus`)).status, 400);
   });
 
+  it("GET /v1/venues gives every swap venue a pair it holds liquidity for (not HYPE/USDC for all)", async () => {
+    const all = (await (await fetch(`${served.url}/v1/venues?kind=dex`)).json()) as VenuesResponse;
+    const probe = (id: string) => all.venues.find((venue) => venue.id === id)?.probe;
+    for (const id of ["kalos-v3", "dex-da-costa", "perpme", "hexswap", "hyperswap-v3"]) assert.ok(probe(id), id);
+    assert.equal(probe("perpme")?.pair, "HYPE/PERPME");
+    assert.equal(probe("perpme")?.verified, false);
+    assert.match(probe("perpme")?.to ?? "", /^0x[0-9a-f]{40}$/u);
+    assert.equal(probe("hexswap")?.toSymbol, "HEX");
+    assert.equal(probe("kalos-v3")?.pair, "HYPE/USDC");
+    assert.equal(probe("hyperswap-v3")?.liquid, false, "HyperSwap testnet pools read empty");
+    for (const venue of all.venues.filter((entry) => entry.probe)) assert.match(venue.probe!.checked, /^\d{4}-\d{2}-\d{2}$/u, venue.id);
+  });
+
   it("POST /v1/intents (structured, dry run and stored), GET the graph and journey, and the SSE snapshot", async () => {
     f.evm.balances.set(OWNER, 10n ** 20n);
     const body = { accounts: [`eip155:99801:${OWNER}`], actions: [{ kind: "swap", network: "elysium-testnet", from: "HYPE", to: "WHYPE", amount: "0.5" }] };

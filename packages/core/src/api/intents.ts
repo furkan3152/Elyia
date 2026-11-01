@@ -124,6 +124,32 @@ export interface VenueContractView {
   readonly network: NetworkKey;
 }
 
+/**
+ * A pair a swap venue actually holds liquidity for (from its pins and the
+ * engine's own probes), so a client quotes each venue with something it can
+ * fill instead of one pair for all. `liquid: false` records a pair whose
+ * pools were read empty: a probe is expected to refuse.
+ */
+export interface VenueProbe {
+  /** Token symbol paid (always one the engine resolves on the venue's network). */
+  readonly from: string;
+  /** Token symbol or address received (an address for venue-specific tokens). */
+  readonly to: string;
+  readonly toSymbol: string;
+  /** Decimal amount of `from` to quote. */
+  readonly amount: string;
+  /** "HYPE/USDC", "HYPE/PERPME" ... */
+  readonly pair: string;
+  /** `to` is in Elyia's verified token list (else a venue-specific, unpriced token). */
+  readonly verified: boolean;
+  /** Pools were read with liquidity (false: read empty on `checked`). */
+  readonly liquid: boolean;
+  /** What is known about the pool, in one line. */
+  readonly note: string;
+  /** When the pool was last read (ISO date). */
+  readonly checked: string;
+}
+
 export interface VenueView {
   /** Protocol id intents name (`protocol` / `constraints.preferProtocols`). */
   readonly id: string;
@@ -141,6 +167,8 @@ export interface VenueView {
   readonly contracts: readonly VenueContractView[];
   readonly notes: readonly string[];
   readonly evidence?: string;
+  /** Swap venues: a pair it holds liquidity for (what to quote it with). */
+  readonly probe?: VenueProbe;
 }
 
 /** GET /v1/venues (`?network=`, `?kind=`, `?status=`). */

@@ -1,0 +1,80 @@
+{
+ "network": "elysium-testnet",
+ "checkedAt": "2026-11-01T07:58:11.001Z",
+ "cacheSeconds": 600,
+ "head": 20489361,
+ "window": {
+  "fromBlock": 20487362,
+  "toBlock": 20489361,
+  "blocks": 2000,
+  "approxSeconds": 230
+ },
+ "protocols": [
+  {
+   "protocolId": "kalos-v3",
+   "name": "Kalos V3 (UniV3 fork) + Kalos marketplace",
+   "kind": "dex",
+   "status": "live-testnet",
+   "deploymentStatus": "testnet-live",
+   "contracts": 28,
+   "present": 28,
+   "missing": [],
+   "unknown": 0,
+   "recentLogs": 1088,
+   "active": true,
+   "lastActivityBlock": 20489361
+  },
+  {
+   "protocolId": "elysium-canonical-bridge",
+   "name": "Elysium canonical bridge",
+   "kind": "bridge",
+   "status": "live-testnet",
+   "deploymentStatus": "testnet-live",
+   "contracts": 6,
+   "present": 6,
+   "missing": [],
+   "unknown": 0,
+   "recentLogs": 358,
+   "active": true,
+   "lastActivityBlock": 20489333
+  },
+  {
+   "protocolId": "cheshire",
+   "name": "Cheshire (Morpho-Blue clone + MetaMorpho-style vaults)",
+   "kind": "lending",
+   "status": "live-testnet",
+   "deploymentStatus": "testnet-live",
+   "contracts": 4,
+   "present": 4,
+   "missing": [],
+   "unknown": 0,
+   "recentLogs": 0,
+   "active": false,
+   "lastActivityBlock": null
+  },
+  {
+   "protocolId": "perpme",
+   "name": "PerpMe (UniV3 launchpad, v1+v2 + V4)",
+   "kind": "launchpad",
+   "status": "live-testnet",
+   "deploymentStatus": "testnet-live",
+   "contracts": 16,
+   "present": 16,
+   "missing": [],
+   "unknown": 0,
+   "recentLogs": 0,
+   "active": false,
+   "lastActivityBlock": null
+  }
+ ],
+ "totals": {
+  "protocols": 78,
+  "contracts": 457,
+  "present": 457,
+  "missing": 0,
+  "active": 32
+ },
+ "notes": [
+  "Activity counts logs over the last 2000 blocks only (the RPC's eth_getLogs limit): a quiet protocol may simply be idle."
+ ]
+}

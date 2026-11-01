@@ -13,7 +13,10 @@
 import type { NetworkEnvironment } from "@elyia/core";
 import { EXAMPLE_CATEGORIES, type ExampleCategory, type LanguageAnswer, type LanguageChip, type LanguageExamplesResponse, type LanguageLocale } from "@elyia/core/api/language";
 import { LANGUAGE_SPEC } from "@elyia/core/api/language";
+import type { GoalItem } from "@elyia/core";
+import type { LanguagePlanInput } from "@elyia/core/api/language";
 import type { AppContext } from "../context.js";
+import { liveRegistry } from "../modules/discovery/registry.js";
 import { chipsOf } from "./chips.js";
 import { staticMarkets } from "./entities.js";
 import { resolveElyName } from "./facts.js";
@@ -36,10 +39,24 @@ export interface ReadIntentOptions {
   readonly now?: number;
   /** When given (the engine's text path), names resolve through Elysium Names and the mode picks the environment. */
   readonly ctx?: AppContext;
+  /** Registry ids the engine executes; default: the ctx's running engine (`liveRegistry`), else REGISTRY_EXECUTABLE. */
+  readonly executable?: ReadonlySet<string>;
 }
 
 export interface ReadResult extends Reading {
   readonly thread: string | null;
+  readonly plan: LanguagePlanInput | null;
+}
+
+/** POST /v1/intents input for a ready reading of one-off moves (value / trade goals); null otherwise. */
+export function planInputOf(text: string, reading: Pick<Reading, "status" | "goals">, thread: string | null): LanguagePlanInput | null {
+  if (reading.status !== "ready" || reading.goals.length === 0) return null;
+  const items: GoalItem[] = [];
+  for (const goal of reading.goals) {
+    if (goal.t !== "value" && goal.t !== "trade") return null;
+    items.push(goal as GoalItem);
+  }
+  return { text: text.trim(), thread, goals: items };
 }
 
 const MAX_NAMES = 3;
@@ -52,7 +69,8 @@ export async function readIntent(text: string, options: ReadIntentOptions = {}):
   const earlier = options.thread && signer ? (signer.verify(options.thread, text, now) ?? []) : [];
   const answers = mergeAnswers(earlier, options.answers ?? []);
   const facts: Partial<ReaderFacts> = { ...options.facts, now: options.facts?.now ?? now };
-  const base = { environment, answers, facts, ...(options.locale ? { locale: options.locale } : {}) };
+  const executable = options.executable ?? (options.ctx ? executableOf(options.ctx) : undefined);
+  const base = { environment, answers, facts, ...(executable ? { executable } : {}), ...(options.locale ? { locale: options.locale } : {}) };
   let reading = readText(text, base);
   const resolve = options.resolveName ?? (options.ctx ? (name: string) => resolveElyName(options.ctx as AppContext, environment, name) : undefined);
   if (resolve && reading.names.length > 0) {
@@ -66,8 +84,21 @@ export async function readIntent(text: string, options: ReadIntentOptions = {}):
   }
   // Earlier answers that still match a question stay in the thread with this turn's.
   const kept = mergeAnswers(earlier.filter((answer) => reading.usedAnswers.some((used) => used.question === answer.question)), reading.usedAnswers);
-  const thread = signer && reading.status === "needs_input" ? signer.sign(text, kept, now) : null;
-  return { ...reading, thread };
+  // Signed while questions are open and once ready (the answers that made it ready travel to the planner with the words).
+  const thread = signer && (reading.status === "needs_input" || reading.status === "ready") ? signer.sign(text, kept, now) : null;
+  return { ...reading, thread, plan: planInputOf(text, reading, thread) };
+}
+
+const executables = new WeakMap<AppContext, ReadonlySet<string>>();
+
+/** The running engine's executable registry ids (the same set GET /v1/protocols and /v1/venues report). */
+export function executableOf(ctx: AppContext): ReadonlySet<string> {
+  let set = executables.get(ctx);
+  if (!set) {
+    set = new Set(liveRegistry(ctx).executableIds);
+    executables.set(ctx, set);
+  }
+  return set;
 }
 
 const signers = new WeakMap<AppContext, ThreadSigner>();

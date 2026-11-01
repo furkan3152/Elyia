@@ -24,7 +24,7 @@ import { detectLocale, Lexer } from "./lexer.js";
 import type { Locale } from "./numbers.js";
 import { fold } from "./text.js";
 import type { Tok, Verb } from "./types.js";
-import { venueById } from "./venues.js";
+import { REGISTRY_EXECUTABLE, venueById } from "./venues.js";
 
 export interface ReadOptions {
   readonly locale?: Locale;
@@ -33,6 +33,8 @@ export interface ReadOptions {
   readonly facts?: Partial<ReaderFacts>;
   /** .ely name -> resolved address; `!name` marks a name known to be unregistered. */
   readonly resolvedNames?: ReadonlyMap<string, string>;
+  /** Registry ids the engine executes (default REGISTRY_EXECUTABLE, the core registry's copy of the engine's set). */
+  readonly executable?: ReadonlySet<string>;
 }
 
 export interface Reading extends Omit<ParseIntentResponse, "thread"> {
@@ -401,7 +403,7 @@ export function readText(text: string, options: ReadOptions = {}): Reading {
       if (typed.replace(/[$%+-]/gu, "") !== tok.value) clar.assume(-1, `number.${tok.span[0]}`, t(`read "${typed}" as ${tok.value}`, `"${typed}" ${tok.value} olarak okundu`), true);
     }
   }
-  const goals = readGoals(working, { environment, facts, locale, clar, resolved: options.resolvedNames ?? new Map() });
+  const goals = readGoals(working, { environment, facts, executable: options.executable ?? REGISTRY_EXECUTABLE, locale, clar, resolved: options.resolvedNames ?? new Map() });
   return finish(text, locale, clar, goals.goals, chips, names, facts, goals.unreadable);
 }
 
@@ -410,9 +412,9 @@ interface GoalsRead {
   readonly unreadable?: { en: string; tr: string };
 }
 
-function readGoals(tokens: readonly Tok[], input: { environment: NetworkEnvironment; facts: ReaderFacts; locale: Locale; clar: Clarifier; resolved: ReadonlyMap<string, string> }): GoalsRead {
+function readGoals(tokens: readonly Tok[], input: { environment: NetworkEnvironment; facts: ReaderFacts; executable: ReadonlySet<string>; locale: Locale; clar: Clarifier; resolved: ReadonlyMap<string, string> }): GoalsRead {
   const ctxFor = (goal: number, qid: string, prev: Previous | undefined, inRule: boolean, link: Clause["link"]): FrameCtx => ({
-    locale: input.locale, environment: input.environment, facts: input.facts, clar: input.clar, goal, qid, ...(prev ? { prev } : {}), inRule, link,
+    locale: input.locale, environment: input.environment, facts: input.facts, executable: input.executable, clar: input.clar, goal, qid, ...(prev ? { prev } : {}), inRule, link,
   });
   const hasSchedule = tokens.some((tok) => tok.k === "sched");
   const conditionSplit = splitCondition(tokens);

@@ -73,7 +73,7 @@ export function PriceAltitude({ marks, reference, loading = false, className }: 
           animate={ordered.some((mark) => mark.kind === "reference")}
           fps={12}
           redrawKey={`${key}|${night}|${compact}`}
-          label={ordered.length ? `Implied price of 1 HYPE by venue, log scale: ${ordered.map((mark) => (mark.kind === "none" ? `${mark.label} no HYPE/USDC pool` : `${mark.label} ${priceText(mark.price)} USDC`)).join("; ")}` : "Price altitude: waiting for quotes"}
+          label={ordered.length ? `Implied price of 1 HYPE by venue, log scale: ${ordered.map((mark) => (mark.kind === "none" ? `${mark.label} ${mark.none ?? "no pool"} for HYPE/USDC` : `${mark.label} ${priceText(mark.price)} USDC`)).join("; ")}` : "Price altitude: waiting for quotes"}
         />
         {ordered.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center bg-card/70">
@@ -101,15 +101,15 @@ export function PriceAltitude({ marks, reference, loading = false, className }: 
             ) : (
               <span className="w-full truncate font-tag text-[10px] uppercase sm:text-[11px]">{mark.label}</span>
             )}
-            <span className={cx("tnum font-display font-bold leading-none", mark.kind === "none" ? "text-[12px] text-ink-3 sm:text-[14px]" : "text-[15px] sm:text-[20px]")}>{mark.kind === "none" ? "no pool" : priceText(mark.price)}</span>
+            <span className={cx("tnum font-display font-bold leading-none", mark.kind === "none" ? "text-[12px] text-ink-3 sm:text-[14px]" : "text-[15px] sm:text-[20px]")}>{mark.kind === "none" ? (mark.none ?? "no pool") : priceText(mark.price)}</span>
             <span className={cx("hidden w-full truncate font-mono text-[11px] sm:block", mark.kind === "reference" ? "opacity-80" : "text-ink-3")}>{mark.detail}</span>
           </li>
         ))}
       </ol>
       {compact && stakes.length > 0 ? (
         <p className="border-t-2 border-dashed border-rule px-3 py-2 text-center font-mono text-[11px] text-ink-2">
-          <span className="font-tag text-[10px] uppercase text-down">no HYPE/USDC pool · </span>
-          {stakes.map((mark) => mark.label).join(" · ")}
+          <span className="font-tag text-[10px] uppercase text-down">no HYPE/USDC liquidity · </span>
+          {stakes.map((mark) => `${mark.label}${mark.none ? ` (${mark.none})` : ""}`).join(" · ")}
         </p>
       ) : null}
     </PixelFigure>

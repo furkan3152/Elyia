@@ -1,4 +1,3 @@
-import { PROTOCOLS } from "@elyia/core/protocols";
 import { useId, useMemo, useState } from "react";
 
 import { intentHref } from "../../oracle/preview";
@@ -10,7 +9,7 @@ import { ButtonLink } from "../../ui/Button";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { Toggle } from "../../ui/Toggle";
-import { BOARD_NETWORKS, BOARD_STATUSES, boardKinds, boardSigns, countBy, EMPTY_FILTER, filterBoard, networkShort, signNetworks, statusShort, type BoardFilter, type BoardNetwork, type BoardSign, type BoardStatus } from "./board";
+import { BOARD_NETWORKS, BOARD_STATUSES, boardKinds, countBy, EMPTY_FILTER, filterBoard, networkShort, signNetworks, statusShort, type BoardFilter, type BoardNetwork, type BoardSign, type BoardStatus } from "./board";
 import type { ProtocolLiveRow } from "@elyia/core/api/discovery";
 
 const NETWORK_WORD: Readonly<Record<BoardNetwork, string>> = { "elysium-testnet": "Elysium testnet", "elysium-mainnet": "Elysium mainnet", hyperevm: "HyperEVM", hypercore: "HyperCore" };
@@ -50,7 +49,7 @@ function LiveBadge({ row }: { readonly row: ProtocolLiveRow | undefined }) {
   const gone = row.missing.length > 0;
   const text = row.active ? `● active · ${(row.recentLogs ?? 0).toLocaleString("en-US")} log${row.recentLogs === 1 ? "" : "s"}` : gone ? `✕ ${row.missing.length} contract${row.missing.length === 1 ? "" : "s"} gone` : row.present > 0 ? `○ deployed · quiet` : "? unread";
   return (
-    <span title={`${row.present}/${row.contracts} contracts have bytecode now; ${row.recentLogs} logs in the window`} className={cx("px-2 py-0.5 font-tag text-[10px] uppercase px-frame-thin", row.active ? "bg-up text-paper" : gone ? "bg-down text-paper" : "bg-paper-2 text-ink-2")}>
+    <span title={`${row.present}/${row.contracts} contracts have bytecode now; ${row.recentLogs === null ? "logs not read" : `${row.recentLogs} logs in the window`}`} className={cx("px-2 py-0.5 font-tag text-[10px] uppercase px-frame-thin", row.active ? "bg-up text-paper" : gone ? "bg-down text-paper" : "bg-paper-2 text-ink-2")}>
       {text}
     </span>
   );
@@ -101,9 +100,8 @@ function Sign({ sign, live }: { readonly sign: BoardSign; readonly live?: Protoc
 }
 
 /** The protocol registry as a trail board: filter by altitude, category and "Elyia routes here". */
-export function TrailBoard({ live }: { readonly live: ReadonlyMap<string, ProtocolLiveRow> }) {
+export function TrailBoard({ signs, live }: { readonly signs: readonly BoardSign[]; readonly live: ReadonlyMap<string, ProtocolLiveRow> }) {
   const searchId = useId();
-  const signs = useMemo(() => boardSigns(PROTOCOLS), []);
   const kinds = useMemo(() => boardKinds(signs), [signs]);
   const statusCounts = useMemo(() => countBy(signs, (sign) => sign.status), [signs]);
   const networkCounts = useMemo(() => countBy(signs, signNetworks), [signs]);

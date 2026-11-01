@@ -13,7 +13,7 @@
  * signed `thread` token of the previous turn, which carries earlier answers
  * but never the user's words).
  */
-import type { LanguageGoal } from "../goals.js";
+import type { GoalItem, LanguageGoal } from "../goals.js";
 
 export const LANGUAGE_API_VERSION = "elyia.api.language/v1" as const;
 export const LANGUAGE_SPEC = "elyia.language/v1" as const;
@@ -194,6 +194,21 @@ export interface ParseIntentBody {
   readonly context?: LanguageContext;
 }
 
+/**
+ * What a client sends to POST /v1/intents to plan a `ready` reading, so it
+ * never re-plans the canonical sentence: either `text` + `thread` (the
+ * planner re-reads the same words with the same signed answers and gets the
+ * same goals) or `goals` (the reading itself, nothing re-read).
+ */
+export interface LanguagePlanInput {
+  /** The sentence as the person typed it (send as `text`). */
+  readonly text: string;
+  /** The signed answers of this conversation (send as `thread` with `text`); null when nothing was asked. */
+  readonly thread: string | null;
+  /** The same reading as intent goals (send as `goals` instead of `text`). */
+  readonly goals: readonly GoalItem[];
+}
+
 export interface ParseIntentResponse {
   readonly spec: typeof LANGUAGE_SPEC;
   readonly status: LanguageStatus;
@@ -209,8 +224,14 @@ export interface ParseIntentResponse {
   /** The reading as one English sentence in Elyia's grammar (re-reads to the same goals); null unless ready. */
   readonly canonical: string | null;
   readonly warnings: readonly LanguageWarning[];
-  /** Signed token holding the answers so far; send it back with the next turn. Null when nothing was answered or asked. */
+  /** Signed token holding the answers so far; send it back with the next turn (and with `text` to POST /v1/intents once ready). Null when nothing was answered or asked. */
   readonly thread: string | null;
+  /**
+   * Set when status is ready and every goal is a one-off move (value / trade):
+   * what POST /v1/intents takes to plan it. Null when the reading is not
+   * plannable as an intent (not ready, a rule for the Agent, a question).
+   */
+  readonly plan?: LanguagePlanInput | null;
   readonly control?: "cancel";
   /** Example sentences, when nothing could be read. */
   readonly examples?: readonly string[];

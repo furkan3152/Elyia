@@ -81,12 +81,14 @@ export function venueCatalog(networks: Readonly<Record<NetworkKey, Network>>, ex
         ...(NETWORKS[venue.network].environment === "testnet" ? [TESTNET_PRICE_NOTE] : []),
       ],
       evidence: venue.evidence,
+      ...(venue.probe ? { probe: venue.probe } : {}),
     }, reachable));
   }
   for (const venue of V2_VENUES) {
     add(row({
       id: venue.id, label: venue.label, kind: "dex", network: venue.network, status: "live", actions: ["swap"], explicitOnly: venue.explicitOnly ?? false, census: venue.census,
       contracts: [contract("router", venue.router, venue.network), contract("factory", venue.factory, venue.network), contract("wrappedNative", venue.wrappedNative, venue.network)],
+      ...(venue.probe ? { probe: venue.probe } : {}),
       notes: [`Uniswap V2 style, ${venue.feeBps / 100}% LP fee, direct pairs.`, `Native HYPE routes through its own wrapped token ${venue.wrappedNative}, not canonical WHYPE.`, ...(venue.explicitOnly ? ["Its pairs hold its own test tokens: name the venue and the token address to use it."] : []), TESTNET_PRICE_NOTE],
       evidence: venue.evidence,
     }, reachable));

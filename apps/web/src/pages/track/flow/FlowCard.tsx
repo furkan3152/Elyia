@@ -206,6 +206,7 @@ export function FlowCard({ ask, plan, planning, updatedAt, run, empty, fineprint
         quote={route.source === "planner" ? { expiresAt: updatedAt + 30_000, boundTo: route.minimum ? `min ${route.minimum}` : "re-quoted at signing" } : undefined}
         rules={route.rules}
         binding={route.binding}
+        unpriced={route.unpriced}
         evidence={evidence}
         action={action}
         note={

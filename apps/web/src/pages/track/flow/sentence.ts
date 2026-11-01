@@ -8,9 +8,10 @@
  *    (questions with options), `unreadable` or `control`;
  * 2. answers go back to parse with the signed `thread` of the previous turn;
  *    the reader re-reads the same words with the answers;
- * 3. once `ready`, the planner gets the sentence (the user's own words when
- *    nothing was asked, otherwise the reader's canonical sentence, which
- *    re-reads to the same goals) for a dry run: nothing stored, nothing signed.
+ * 3. once `ready`, the reader's `plan` says what the planner takes: the
+ *    typed words with the signed thread of the answers (the planner re-reads
+ *    them to the same goals), never a re-planned canonical sentence; a dry
+ *    run: nothing stored, nothing signed.
  *
  * A planner `422 INTENT_CLARIFY` (it re-reads everything) becomes questions
  * too, so the panel never shows a dead end.
@@ -36,6 +37,12 @@ export interface SentenceReading {
   readonly examples: readonly string[];
   /** Goal kinds ("convert", "relocate", "trade" …), for the first grade. */
   readonly goalKinds: readonly string[];
+  /**
+   * What POST /v1/intents takes for a ready reading (`ParseIntentResponse.plan`):
+   * the words and the signed answers. null: not plannable as an intent;
+   * undefined: the server predates `plan`.
+   */
+  readonly plan?: { readonly text: string; readonly thread: string | null } | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -94,6 +101,7 @@ export function readingOf(body: unknown): SentenceReading | null {
     thread: typeof body.thread === "string" ? body.thread : null,
     examples: Array.isArray(body.examples) ? body.examples.filter((item): item is string => typeof item === "string").slice(0, 5) : [],
     goalKinds,
+    ...(body.plan === null ? { plan: null } : isRecord(body.plan) && typeof body.plan.text === "string" ? { plan: { text: body.plan.text, thread: typeof body.plan.thread === "string" ? body.plan.thread : null } } : {}),
   };
 }
 
@@ -111,15 +119,28 @@ export function examplesOf(error: unknown): string[] {
   return (error.details.examples as unknown[]).filter((item): item is string => typeof item === "string").slice(0, 4);
 }
 
+/** What the planner is sent for a sentence: its words and, when questions were answered, the signed thread. */
+export interface PlannerInput {
+  readonly text: string;
+  readonly thread?: string;
+}
+
 /**
- * What the planner should read once the reader says `ready`: the typed words
- * when nothing was asked (the planner re-reads them the same way), else the
- * canonical sentence (answers folded in; it re-reads to the same goals).
+ * What the planner should read once the reader says `ready`: the reader's
+ * `plan` (the typed words + the signed thread of the answers: the planner
+ * re-reads them to the same goals). Readings that are not one-off moves
+ * (`plan: null`: rules, questions) still go as words so the planner explains
+ * where they belong. A server without `plan` gets the words with the ready
+ * thread, or, without one, the canonical sentence (answers folded in).
  */
-export function plannerText(text: string, reading: SentenceReading, answered: number): string | null {
+export function plannerInput(text: string, reading: SentenceReading, answered: number): PlannerInput | null {
   if (reading.status !== "ready") return null;
-  if (answered === 0) return text.trim();
-  return reading.canonical ?? null;
+  const words = text.trim();
+  if (reading.plan) return { text: reading.plan.text, ...(reading.plan.thread ? { thread: reading.plan.thread } : {}) };
+  if (answered === 0) return { text: words };
+  if (reading.thread) return { text: words, thread: reading.thread };
+  if (reading.plan === null) return null;
+  return reading.canonical ? { text: reading.canonical } : null;
 }
 
 /** Answers keep one entry per question (a new answer replaces the old one). */

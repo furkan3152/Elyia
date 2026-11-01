@@ -14,7 +14,7 @@ import { z } from "zod";
 import type { AppContext } from "../../context.js";
 import { cachePublicly } from "../../http/request.js";
 import { evmAddress, parseBody, parseQuery } from "../../http/validate.js";
-import { chipsFor, examplesFor, readIntent, signerFor, type ReaderFacts } from "../../language/index.js";
+import { chipsFor, examplesFor, executableOf, readIntent, signerFor, type ReaderFacts } from "../../language/index.js";
 import { marketFacts, referencePrices, resolveElyName } from "../../language/facts.js";
 
 const decimal = z.string().regex(/^(?:0|[1-9]\d{0,29})(?:\.\d{1,30})?$/u, "Expected a decimal string.");
@@ -123,6 +123,7 @@ export function registerLanguage(router: Router, ctx: AppContext): void {
       ...(body.locale ? { locale: body.locale } : {}),
       ...(body.thread ? { thread: body.thread } : {}),
       signer: signerFor(ctx),
+      executable: executableOf(ctx),
       resolveName: (name) => within(resolveElyName(ctx, environment, name), undefined),
       now: ctx.clock.now(),
     });

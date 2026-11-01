@@ -9,6 +9,7 @@
  * are stable engine ids and requests can name them with `params.venue`.
  */
 import type { NetworkKey } from "@elyia/core";
+import type { VenueProbe } from "@elyia/core/api/intents";
 import type { Address, Hex } from "viem";
 
 /** Live state of a venue as Elyia executes it. */
@@ -24,6 +25,8 @@ export interface VenueFacts {
    * naming them is what allows those tokens to resolve (unverified).
    */
   readonly explicitOnly?: boolean;
+  /** Swap venues: a pair it holds liquidity for (GET /v1/venues `probe`; the swap page quotes each venue with it). */
+  readonly probe?: VenueProbe;
 }
 
 export interface V3Venue extends VenueFacts {
@@ -69,6 +72,7 @@ export const KALOS_V3: V3Venue = {
   wrappedNative: "0xcd57f65c2b0e5881cfc2e609f7cd53b746e1f234",
   canonicalWrapped: true,
   feeTiers: [100, 500, 3000, 10000, 20000],
+  probe: { from: "HYPE", to: "USDC", toSymbol: "USDC", amount: "1", pair: "HYPE/USDC", verified: true, liquid: true, note: "canonical WHYPE/USDC 2% pool 0x591a…b05c", checked: "2026-11-01" },
   evidence: "router factory() = 0x520b…7893 and WETH9() = canonical WHYPE 0xCD57…F234; WHYPE/USDC 2% pool 0x591a…b05c factory() = 0x520b…; QuoterV2 0x2b55…9149 factory() = 0x520b…, WETH9() = WHYPE; eth_simulateV1 1 HYPE -> 20,412 USDC (2026-10-29)",
 };
 
@@ -85,6 +89,8 @@ export const HYPERSWAP_V3: V3Venue = {
   wrappedNative: "0xadcb2f358eae6492f61a5f87eb8893d09391d160",
   canonicalWrapped: false,
   feeTiers: [100, 500, 3000, 10000],
+  // Pools WETH/USDC 0.05% and 1% read liquidity() = 0 on 2026-11-01 (engine smoke: ROUTE_UNAVAILABLE).
+  probe: { from: "HYPE", to: "USDC", toSymbol: "USDC", amount: "0.05", pair: "HYPE/USDC", verified: true, liquid: false, note: "WETH/USDC 0.05% and 1% pools exist but read liquidity() = 0", checked: "2026-11-01" },
   evidence: "router factory() = 0x22B0…3826, WETH9() = 0xADcb…d160 (\"Wrapped Ether\", not WHYPE 0x5555); quoter factory() = 0x22B0…; selectors exactInputSingle(SwapRouter02), multicall(uint256,bytes[]), unwrapWETH9, QuoterV2 quoteExactInputSingle present (2026-10-29)",
 };
 
@@ -99,6 +105,7 @@ export const DEX_DA_COSTA: V2Venue = {
   wrappedNative: "0xff5681eb95bbacfbb334f80fcdbc31fb59f22332",
   canonicalWrapped: false,
   feeBps: 30,
+  probe: { from: "HYPE", to: "USDC", toSymbol: "USDC", amount: "1", pair: "HYPE/USDC", verified: true, liquid: true, note: "WETH/USDC pair 0xfb3a…746a (its own wrapped HYPE)", checked: "2026-11-01" },
   evidence: "router WETH() = 0xfF56…2332 (\"Wrapped Ether\"), factory() = 0xFa45…b3f9; getPair(WETH, USDC) = 0xfb3a…746a; eth_simulateV1 1 HYPE -> 19,507 USDC (2026-10-29)",
 };
 
@@ -122,6 +129,8 @@ export const PERPME_V3: V3Venue = {
   // feeAmountTickSpacing: 500 -> 10, 3000 -> 60, 10000 -> 200, 20000 -> 400 (100 not enabled).
   feeTiers: [500, 3000, 10000, 20000],
   explicitOnly: true,
+  // PERPME 0xD089…25E1: the launch token of PerpMe's own WHYPE pool (engine smoke perpme-hype-perpme).
+  probe: { from: "HYPE", to: "0xd089ff84573e35626aae2cc92d1acfc4b3e225e1", toSymbol: "PERPME", amount: "0.01", pair: "HYPE/PERPME", verified: false, liquid: true, note: "PerpMe's own WHYPE / PERPME launch pool (no HYPE/USDC pool)", checked: "2026-11-01" },
   evidence: "router factory() = 0x1186…e792, WETH9() = 0x757a…f9b0 (symbol WHYPE, not canonical); QuoterV2 0x2A2b…793C factory() = 0x1186…, WETH9() = 0x757a…; census sim 0.01 HYPE -> 53,112 PERPME (2026-10-31)",
 };
 
@@ -143,6 +152,8 @@ export const HEXSWAP: V2Venue = {
   canonicalWrapped: false,
   feeBps: 30,
   explicitOnly: true,
+  // HEX 0x26aA…C1c2: HexSwap's own test token (allPairs HEX/WNATIVE; engine smoke hexswap-hype-hex).
+  probe: { from: "HYPE", to: "0x26aa352bd4324aa507c924af9edd65b2c7bdc1c2", toSymbol: "HEX", amount: "0.01", pair: "HYPE/HEX", verified: false, liquid: true, note: "HEX/WNATIVE pair, HexSwap's own test token (no HYPE/USDC pool)", checked: "2026-11-01" },
   evidence: "router factory() = 0xf526…2c92, wrappedNative() = 0x8FEd…2d64 (WNATIVE); allPairs: HEX/WNATIVE, WNATIVE/USDT(test), LMOCK/WHYPE (2026-10-31); census sim swapExactETHForTokens HYPE -> tUSDT ok",
 };
 

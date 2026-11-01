@@ -4,15 +4,21 @@
  * implied HYPE price next to the HyperCore mainnet reference.
  *
  * Venues (the same list the API engine uses):
- * - Summit (Elysium testnet): Kalos V3 (canonical WHYPE/USDC, 2% tier) and
- *   Dex Da Costa (Uniswap V2; wraps HYPE into its own WETH);
- * - Ridge (HyperEVM testnet): HyperSwap V3;
+ * - Summit (Elysium testnet): Kalos V3 (canonical WHYPE/USDC, 2% tier),
+ *   Dex Da Costa (Uniswap V2; wraps HYPE into its own WETH), PerpMe V3
+ *   (its own WHYPE / PERPME launch pool) and HexSwap (its own HEX pair);
+ * - Ridge (HyperEVM testnet): HyperSwap V3 (pools exist, empty today);
  * - Floor (HyperCore): the spot order book, traded in the terminal.
+ *
+ * Each venue is probed with a pair it actually holds (`VenueProbe`, from
+ * GET /v1/venues, pinned below when the catalog is down): only HYPE/USDC
+ * probes give a USD-comparable price; the others report what they fill.
  *
  * Testnet pool prices are not market prices: test USDC is unbacked
  * (Kalos ≈ 20,850 test-USDC per HYPE). USD values always come from the
  * HyperCore mainnet mids, labelled "reference price".
  */
+import type { VenueProbe } from "@elyia/core/api/intents";
 import type { IntentActionSpec } from "@elyia/core/intent";
 import { layersFor, type NetworkEnvironment, type NetworkKey } from "@elyia/core/networks";
 
@@ -25,17 +31,81 @@ export interface SwapVenue {
   readonly id: string;
   readonly label: string;
   readonly note: string;
+  readonly explicitOnly?: boolean;
+  readonly probe?: VenueProbe;
 }
 
-/** Pinned fallback when the venue catalog (GET /v1/venues) cannot be read. */
+/** Pinned fallback when the venue catalog (GET /v1/venues) cannot be read (the API's pins, apps/api/src/engine/venues.ts). */
 export const VENUES: Readonly<Record<SwapLayer, readonly SwapVenue[]>> = {
   summit: [
-    { id: "kalos-v3", label: "Kalos V3", note: "canonical WHYPE/USDC · 2% pool" },
-    { id: "dex-da-costa", label: "Dex Da Costa", note: "Uniswap V2 · own wrapped HYPE" },
+    { id: "kalos-v3", label: "Kalos V3", note: "canonical WHYPE/USDC · 2% pool", probe: { from: "HYPE", to: "USDC", toSymbol: "USDC", amount: "1", pair: "HYPE/USDC", verified: true, liquid: true, note: "canonical WHYPE/USDC 2% pool 0x591a…b05c", checked: "2026-11-01" } },
+    { id: "dex-da-costa", label: "Dex Da Costa", note: "Uniswap V2 · own wrapped HYPE", probe: { from: "HYPE", to: "USDC", toSymbol: "USDC", amount: "1", pair: "HYPE/USDC", verified: true, liquid: true, note: "WETH/USDC pair 0xfb3a…746a (its own wrapped HYPE)", checked: "2026-11-01" } },
+    { id: "perpme", label: "PerpMe V3", note: "launch pools · own WHYPE", explicitOnly: true, probe: { from: "HYPE", to: "0xd089ff84573e35626aae2cc92d1acfc4b3e225e1", toSymbol: "PERPME", amount: "0.01", pair: "HYPE/PERPME", verified: false, liquid: true, note: "PerpMe's own WHYPE / PERPME launch pool (no HYPE/USDC pool)", checked: "2026-11-01" } },
+    { id: "hexswap", label: "HexSwap", note: "Uniswap V2 · own test tokens", explicitOnly: true, probe: { from: "HYPE", to: "0x26aa352bd4324aa507c924af9edd65b2c7bdc1c2", toSymbol: "HEX", amount: "0.01", pair: "HYPE/HEX", verified: false, liquid: true, note: "HEX/WNATIVE pair, HexSwap's own test token (no HYPE/USDC pool)", checked: "2026-11-01" } },
   ],
-  ridge: [{ id: "hyperswap-v3", label: "HyperSwap V3", note: "SwapRouter02 + QuoterV2" }],
+  ridge: [{ id: "hyperswap-v3", label: "HyperSwap V3", note: "SwapRouter02 + QuoterV2", probe: { from: "HYPE", to: "USDC", toSymbol: "USDC", amount: "0.05", pair: "HYPE/USDC", verified: true, liquid: false, note: "WETH/USDC 0.05% and 1% pools exist but read liquidity() = 0", checked: "2026-11-01" } }],
   floor: [{ id: "hypercore-spot", label: "HyperCore book", note: "HYPE/USDC spot, in the terminal" }],
 };
+
+/** The probe of a venue: its own pair, else 1 HYPE -> USDC (a catalog row without one). */
+export function probeOf(venue: Pick<SwapVenue, "id" | "probe">): VenueProbe {
+  return venue.probe ?? { from: "HYPE", to: "USDC", toSymbol: "USDC", amount: "1", pair: "HYPE/USDC", verified: true, liquid: true, note: "HYPE/USDC", checked: "" };
+}
+
+/** The dry-run action that quotes a venue with its probe pair (named venue, so venue-specific tokens resolve). */
+export function probeAction(venue: Pick<SwapVenue, "id" | "probe">, layer: SwapLayer, mode: NetworkEnvironment): IntentActionSpec {
+  const probe = probeOf(venue);
+  return { kind: "swap", network: swapNetwork(layer, mode), from: probe.from, to: probe.to, amount: probe.amount, protocol: venue.id };
+}
+
+/** Whether a probe's price reads as HYPE in USDC (the price altitude plots only those). */
+export function probeIsUsd(probe: VenueProbe): boolean {
+  return probe.from === "HYPE" && probe.toSymbol === "USDC";
+}
+
+/** What a probe dry run said, reduced to what the page shows. */
+export type ProbeResult =
+  | { readonly kind: "quoted"; readonly out: number; readonly fake: boolean }
+  | { readonly kind: "refused"; readonly message: string }
+  | { readonly kind: "pending" }
+  | { readonly kind: "offline" };
+
+function amountText(value: number): string {
+  if (!(value > 0)) return "0";
+  if (value >= 1000) return Math.round(value).toLocaleString("en-US");
+  if (value >= 1) return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  return value.toLocaleString("en-US", { maximumSignificantDigits: 3 });
+}
+
+export interface ProbeView {
+  readonly pair: string;
+  /** Short, for the signpost: "0.01 HYPE → 46,797 PERPME", "no liquidity". */
+  readonly result: string;
+  /** One line: what the pair is and why it was picked. */
+  readonly note: string;
+  /** The venue filled its probe. */
+  readonly ok: boolean;
+  /** No answer yet. */
+  readonly pending: boolean;
+  /** The pins already said the pools were empty (HyperSwap testnet today). */
+  readonly knownEmpty: boolean;
+}
+
+export function probeView(venue: Pick<SwapVenue, "id" | "probe">, result: ProbeResult): ProbeView {
+  const probe = probeOf(venue);
+  const base = { pair: probe.pair, knownEmpty: !probe.liquid, pending: result.kind === "pending" };
+  const note = `${probe.note}${probe.verified ? "" : ` · ${probe.toSymbol} is unverified and unpriced`}${probe.checked ? ` · read ${probe.checked}` : ""}`;
+  switch (result.kind) {
+    case "quoted":
+      return { ...base, ok: true, note, result: `${probe.amount} ${probe.from} → ${amountText(result.out)} ${probe.toSymbol}${result.fake ? " · fake price" : ""}` };
+    case "refused":
+      return { ...base, ok: false, note: `${note} · ${result.message}`, result: probe.liquid ? `no ${probe.pair} liquidity now` : "no liquidity today" };
+    case "pending":
+      return { ...base, ok: false, note, result: "quoting…" };
+    case "offline":
+      return { ...base, ok: false, note, result: "planner offline" };
+  }
+}
 
 export function swapNetwork(layer: SwapLayer, mode: NetworkEnvironment): NetworkKey {
   const layers = layersFor(mode);
@@ -102,6 +172,8 @@ export interface AltitudeMark {
   /** `none`: a venue that quoted nothing for this pair (drawn as a survey stake, never a price). */
   readonly kind: "reference" | "pool" | "book" | "none";
   readonly detail: string;
+  /** Slot text of a `none` stake (default "no pool"). */
+  readonly none?: string;
 }
 
 /**

@@ -9,7 +9,7 @@ import { t, type AskSpec, type Clarifier } from "../clarify.js";
 import type { MarketFact } from "../entities.js";
 import type { Locale } from "../numbers.js";
 import type { QtyWord, Role, Span, Tok, TokOf } from "../types.js";
-import { venueById, type VenueWord } from "../venues.js";
+import { venueById, venueExecutable, type VenueWord } from "../venues.js";
 
 export interface ReaderFacts {
   readonly markets: readonly MarketFact[];
@@ -40,6 +40,8 @@ export interface FrameCtx {
   readonly locale: Locale;
   readonly environment: NetworkEnvironment;
   readonly facts: ReaderFacts;
+  /** Registry ids the engine executes (the running engine's set, or REGISTRY_EXECUTABLE). */
+  readonly executable: ReadonlySet<string>;
   readonly clar: Clarifier;
   /** Index of the goal this clause becomes (questions point at it). */
   readonly goal: number;
@@ -274,13 +276,15 @@ function venueByAssetName(symbol: string): VenueWord | null {
   const lowered = symbol.toLowerCase();
   if (lowered === "kalos") return venueById("kalos-v3");
   if (lowered === "perpme") return venueById("perpme");
+  // "signal" alone is also a flagged look-alike token symbol; after "on" it names the launchpad.
+  if (lowered === "signal") return venueById("signal");
   return null;
 }
 
 export function venueWarning(ctx: FrameCtx, venue: VenueWord, at?: Span): void {
   if (venue.mainnetOnly && ctx.environment === "testnet") {
     ctx.clar.warn("VENUE_MAINNET_ONLY", t(`${venue.label} is announced for Elysium mainnet; it has no testnet deployment.`, `${venue.label} Elysium mainnet için duyuruldu; testnet'te yok.`), at);
-  } else if (!venue.engine) {
+  } else if (!venueExecutable(venue, ctx.executable)) {
     ctx.clar.warn("VENUE_NOT_EXECUTABLE", t(`Elyia reads ${venue.label} but cannot execute through it yet; the plan will say so.`, `Elyia ${venue.label} adını okuyor ama henüz onun üzerinden işlem yapamıyor; plan bunu belirtecek.`), at);
   }
 }

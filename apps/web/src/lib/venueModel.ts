@@ -1,5 +1,5 @@
 /** The venue catalog (GET /v1/venues), pure: which live venues swap on each layer. */
-import type { VenueView } from "@elyia/core/api/intents";
+import type { VenueProbe, VenueView } from "@elyia/core/api/intents";
 import { layersFor, NETWORKS, type NetworkEnvironment } from "@elyia/core/networks";
 
 export type VenueLayer = "floor" | "ridge" | "summit";
@@ -11,6 +11,8 @@ export interface SwapVenueView {
   /** The engine only routes here when the request names it (venue-specific tokens). */
   readonly explicitOnly: boolean;
   readonly network: string;
+  /** A pair the venue holds liquidity for (GET /v1/venues `probe`): what the swap page quotes it with. */
+  readonly probe?: VenueProbe;
 }
 
 const LAYER_OF_FAMILY: Readonly<Record<string, VenueLayer>> = { hypercore: "floor", hyperevm: "ridge", elysium: "summit" };
@@ -36,7 +38,7 @@ export function swapVenues(venues: readonly VenueView[], mode: NetworkEnvironmen
     const dex = venue.kind === "dex" && venue.actions.includes("swap");
     const book = venue.id === "hypercore-spot";
     if (!dex && !book) continue;
-    out[venueLayer(venue)].push({ id: venue.id, label: venue.label, note: noteOf(venue), explicitOnly: venue.explicitOnly, network: venue.network });
+    out[venueLayer(venue)].push({ id: venue.id, label: venue.label, note: noteOf(venue), explicitOnly: venue.explicitOnly, network: venue.network, ...(venue.probe ? { probe: venue.probe } : {}) });
   }
   return out;
 }

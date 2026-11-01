@@ -1,8 +1,8 @@
 import { PROTOCOLS } from "@elyia/core/protocols";
-import type { ProtocolLiveRow } from "@elyia/core/api/discovery";
 import { useMemo } from "react";
 
-import { endpointState, useProtocolsLive } from "../../lib/discovery";
+import { endpointState, useProtocols, useProtocolsLive } from "../../lib/discovery";
+import { liveSummary, mergeLive } from "../../lib/discoveryModel";
 
 import { useUiStore } from "../../app/state/uiStore";
 import { Page, Section } from "../../pixel/layout";
@@ -21,26 +21,23 @@ import { TrailBoard } from "./TrailBoard";
  */
 export default function DiscoverPage() {
   const mode = useUiStore((state) => state.mode);
-  const signs = useMemo(() => boardSigns(PROTOCOLS), []);
+  // The registry as the API runs it (`executable` from its engine), else the core copy.
+  const registry = useProtocols();
+  const rows = registry.data?.protocols ?? PROTOCOLS;
+  const signs = useMemo(() => boardSigns(rows), [rows]);
   const open = signs.filter((sign) => sign.condition === "open").length;
   const routable = signs.filter((sign) => sign.executable).length;
   const liveTest = useProtocolsLive("elysium-testnet");
   const liveMain = useProtocolsLive("elysium-mainnet");
-  const live = useMemo(() => {
-    const rows = new Map<string, ProtocolLiveRow>();
-    for (const response of [liveMain.data, liveTest.data]) for (const row of response?.protocols ?? []) {
-      const known = rows.get(row.protocolId);
-      if (!known || (row.active && !known.active)) rows.set(row.protocolId, row);
-    }
-    return rows;
-  }, [liveTest.data, liveMain.data]);
+  const live = useMemo(() => mergeLive([liveTest.data, liveMain.data]), [liveTest.data, liveMain.data]);
   const liveState = endpointState(liveTest);
   const liveNote =
     liveState === "live"
-      ? `live check · ${[liveTest.data, liveMain.data].filter(Boolean).map((response) => `${response!.network}: ${response!.totals.present}/${response!.totals.contracts} contracts present, ${response!.totals.active} active`).join(" · ")}`
+      ? `live check · ${[liveTest.data, liveMain.data].flatMap((response) => (response ? [liveSummary(response)] : [])).join(" · ")}`
       : liveState === "loading"
         ? "live check · reading bytecode and recent logs…"
         : "live check offline · statuses are the registry's (census re-checked 2026-10-31)";
+  const registryNote = registry.data ? `registry · GET /v1/protocols · ${registry.data.total} rows · the API's engine executes ${registry.data.executableIds.length}` : registry.isPending ? "registry · reading the API…" : "registry · API offline, the built-in copy";
 
   return (
     <Page className="!pt-0">
@@ -52,9 +49,11 @@ export default function DiscoverPage() {
       </Section>
       <Section id="board" tag={`The registry · ${signs.length} protocols · ${open} open · Elyia routes through ${routable}`} title="The trail board" lede="All the protocols of the registry, filed under the highest altitude each stands on. Filter by kind, status, network or what Elyia executes; a sign reads OPEN only once its contracts or endpoints were seen working, and the live check says whether they still answer.">
         <p className="-mt-4 mb-8 text-center font-mono text-[11px] text-ink-3" aria-live="polite">
+          {registryNote}
+          <br />
           {liveNote}
         </p>
-        <TrailBoard live={live} />
+        <TrailBoard signs={signs} live={live} />
       </Section>
     </Page>
   );

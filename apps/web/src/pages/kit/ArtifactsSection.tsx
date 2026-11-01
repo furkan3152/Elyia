@@ -14,6 +14,7 @@ import { ConditionSign } from "../../topo/ConditionSign";
 import { GuideLicence } from "../../topo/GuideLicence";
 import { RadioLog } from "../../topo/RadioLog";
 import { RouteCard } from "../../topo/RouteCard";
+import { DEFAULT_RULE_BOOK_HASH } from "../../topo/ruleBook";
 import { SignpostCluster } from "../../topo/Signpost";
 import { SummitRegister } from "../../topo/SummitRegister";
 import { Weather } from "../../topo/Weather";
@@ -119,7 +120,7 @@ export function ArtifactsSection() {
           signatures={{ done: 2, needed: 4, note: "W2+W3 batched" }}
           quote={{ expiresAt: quoteExpiry, boundTo: "SUMMIT #18,514,920" }}
           rules={["slippage ≤ 1%", "venues on the list", "exact approvals", "to your own address", "day cap $5,000"]}
-          binding="sha256:350c68af…"
+          binding={DEFAULT_RULE_BOOK_HASH}
           evidence={[
             { step: "W1", text: "ledger update on the Floor matches 1,000 USDC · nonce 1730210531", proven: true },
             { step: "W2", text: "receipt 0x5e1c…9a04 · amountOut 11.94 ≥ bound 11.88", proven: true },

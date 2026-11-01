@@ -235,7 +235,15 @@ curl -sN localhost:3001/v1/portfolio/0x5e9ee1089755c3435139848e47e6635505d5a13a/
 ### `POST /v1/intents/parse`
 Reads an English or Turkish sentence into goals, questions and chips; never
 plans or signs. Body: `{ text, locale?: "en"|"tr", answers?: { question, option? | text? }[], thread?, account?: 0x…, context?: { balances?, positions?, timezone?, telegramLinked? } }`.
-Response: `ParseIntentResponse`.
+Response: `ParseIntentResponse`. Once `ready`, `thread` carries every answer
+of the conversation (signed, bound to the same words) and `plan`
+(`LanguagePlanInput`) says what POST /v1/intents takes: `{ text, thread }`
+(the planner re-reads the words with those answers to the same goals) or
+`goals` (the reading itself). `plan` is null while questions are open and
+for readings that are not one-off moves (Agent rules, questions). Clients
+never re-plan the canonical sentence. A named venue warns
+`VENUE_NOT_EXECUTABLE` only when the running engine does not execute it
+(the same set as `executableIds` of GET /v1/protocols).
 ```sh
 curl -s -X POST localhost:3001/v1/intents/parse -H 'content-type: application/json' -d '{"text":"swap 10 HYPE to USDC on Elysium"}'
 ```
@@ -301,6 +309,10 @@ read-only registry venues. `kind`: `dex`, `bridge`, `link`, `trading`,
 `transfer`, `wrap`, `staking`, `vault`, `lending`, `names`, `launchpad`,
 `aggregator`, `perps`; `status`: `live`, `read-only`, `unavailable`. A
 protocol the engine executes is never listed read-only. Cache 60 s.
+Swap venues carry `probe` (`VenueProbe`): a pair the venue holds liquidity
+for, to quote it with (Kalos V3 / Dex Da Costa HYPE/USDC, PerpMe
+HYPE/PERPME, HexSwap HYPE/HEX, HyperSwap V3 HYPE/USDC with `liquid: false`:
+its testnet pools read empty on 2026-11-01).
 Response: `VenuesResponse` (`venues`, `priceSource`, `executableProtocols`).
 ```sh
 curl -s "localhost:3001/v1/venues?network=elysium-testnet&status=live"
