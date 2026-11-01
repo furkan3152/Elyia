@@ -9,7 +9,7 @@ import type { NetworkKey } from "../networks.js";
 export const ADMIN_API_VERSION = "elyia.api.admin/v1" as const;
 
 /** Contracts Elyia ships (packages/contracts; artifacts in @elyia/core/contracts). */
-export const ELYIA_CONTRACT_NAMES = Object.freeze(["ElyiaRouter", "ElyAccountFactory", "ElyAccount", "ElyOrders"] as const);
+export const ELYIA_CONTRACT_NAMES = Object.freeze(["ElyiaRouter", "ElyAccountFactory", "ElyAccount", "ElyOrders", "ElyHerd"] as const);
 export type ElyiaContractName = (typeof ELYIA_CONTRACT_NAMES)[number];
 
 /** The artifact shape the server and the web read (ABI + bytecode + version). */

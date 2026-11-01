@@ -526,6 +526,52 @@ Telegram (grammY): long polling in development, `POST /telegram/webhook`
 
 ---
 
+## The Herd: NFT collection, WL and perks (`api/herd`)
+
+Live reads come from the ElyHerd recorded in the admin registry
+(`POST /v1/admin/deployments`, contract `ElyHerd`); with none recorded every
+read says `source: "not-deployed"` and shows the planned defaults. The
+server never signs: owner calls are calldata for the admin's wallet.
+
+| Route | Auth | Returns |
+|---|---|---|
+| `GET /v1/herd?network=` | public | `HerdConfigResponse`: supply, phase, windows, quotes (fixed/twap/fallback/unavailable), allocations, roots, reveal, owner/treasury/oracle state, links ("not configured" = null) |
+| `GET /v1/herd/tokens/:id` | public | `HerdTokenMetadata`; placeholder before reveal; after reveal only minted ids (art = `metadataIndexOf(id)+1`, from `HERD_ART_DIR`) |
+| `GET /v1/herd/images/:id.png`, `/v1/herd/images/placeholder.png` | public | PNG |
+| `GET /v1/herd/holder/:address` | public | `HerdHolderResponse` (balanceOf on chain, ids from the indexer, `mintedBy`, perks) |
+| `GET /v1/herd/raffles/:id` | public | `HerdRaffle` (entrants hash, block hash, seed, winners) |
+| `GET /v1/herd/wl/tasks` | public | `HerdTasksResponse` |
+| `POST /v1/herd/wl/apply` | session (auth limit) | `HerdApplication` (201). Wallet = session; one per wallet; X handle unique; 6/h per wallet, 60/day per coarse network hash; re-apply after rejection `reapplyLimit` times |
+| `GET /v1/herd/wl/me` | session | `HerdMeResponse` (status, live score, reapplyLeft, list, pending move) |
+| `GET /v1/herd/wl/card/:wallet.png` | public (heavy) | 1200×630 WL card PNG |
+| `GET /v1/herd/wl/proof/:wallet` | public | `HerdProofResponse` (OZ StandardMerkleTree proof, `rootOnChain`) |
+| `POST /v1/herd/wl/move/start {to}`, `POST /v1/herd/wl/move/accept {from}` | session | two-step wallet change (30 min, `moveLimit`, refused once minted) |
+| `GET /v1/admin/herd/overview` | admin | config, settings, tasks, builds, partners, raffles, audit, counts, indexer |
+| `PUT /v1/admin/herd/settings` | admin | `HerdSettings` |
+| `GET/POST /v1/admin/herd/tasks`, `PATCH/DELETE /v1/admin/herd/tasks/:id` | admin | tasks CRUD |
+| `GET /v1/admin/herd/applications?status&minScore&flagged&tasksDone&q&sort&limit&cursor` | admin | `HerdApplicationsResponse` |
+| `POST /v1/admin/herd/applications/decision {ids,status,note?}` | admin | bulk approve / reject / waitlist |
+| `POST /v1/admin/herd/applications/:id/notes`, `/flags {cleared}`, `/verify` (X API), `POST .../rescore` | admin | |
+| `GET /v1/admin/herd/applications/export?format=csv\|json` | admin | file |
+| `GET/POST /v1/admin/herd/raffles`, `POST .../:id/draw`, `POST .../:id/apply` | admin | weighted raffle, future-block seed |
+| `GET /v1/admin/herd/partners`, `PUT/DELETE /v1/admin/herd/partners/:tag` | admin | collab partner lists |
+| `POST /v1/admin/herd/merkle/:list/build` (`wl`, `collab`, `snapshot`), `GET .../export?format=` | admin | root + leaves + proofs |
+| `GET /v1/admin/herd/snapshot?format=csv\|json` | admin | testnet → mainnet WL (approved + collab + minters) + root |
+| `POST /v1/admin/herd/tx {functionName,args}` | admin | `HerdPreparedTx` (guards mirroring the contract, eth_call from the owner) |
+| `POST /v1/admin/herd/tx/sent {functionName,hash}` | admin | audit of what the wallet sent |
+| `GET /v1/admin/herd/dashboard`, `GET /v1/admin/herd/audit` | admin | mint dashboard; audit log |
+
+Usage score (0–100, capped) and raffle weight `1 + score/25` (≤ 5×; 0 while a
+high sybil flag is not cleared): see `modules/herd/score.ts`. Perks
+(`perksFor`, balanceOf cached 60 s) raise: signed-in agent chat turns/day
+200 → 1000, automations 12 → 24 (and holder-first scheduling), alerts
+50 → 100, developer key quotas ×2.
+
+Env: `HERD_X_PROFILE_URL`, `HERD_ENGAGEMENT_POST_URLS`,
+`HERD_TREASURY_ADDRESS`, `HERD_MARKETPLACE_URL`, `HERD_MAINNET_LAUNCH`,
+`HERD_ART_DIR`, `HERD_PUBLIC_BASE_URL`, `X_API_BEARER` (all optional; unset =
+"not configured").
+
 ## Environment (new)
 
 | variable | purpose |

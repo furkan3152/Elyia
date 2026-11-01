@@ -14,6 +14,7 @@ import { HerdPortrait } from "../../../pixel/Herd";
 import { PixelCanvas } from "../../../pixel/PixelCanvas";
 import { cx, FOCUS_RING } from "../../../ui/cx";
 import { herdIdOf } from "../../../features/ely/herdId";
+import { useHerdAvatar } from "../../../features/herd/useHerdAvatar";
 import { useJourneys } from "../../track/flow/journeyStore";
 
 export interface RailProps {
@@ -46,6 +47,7 @@ function ClimbingEly() {
  * AND a word, never colour alone) and Automations, then the account footer.
  */
 export function Rail({ threads, activeId, liveIds, onNew, onPick, onRecipe, ropes, ropesSample, address, sample, token, signingIn, onSignIn, onSignOut, connected }: RailProps) {
+  const herdAvatar = useHerdAvatar(sample ? null : address);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const now = useNow(60_000);
@@ -187,10 +189,10 @@ export function Rail({ threads, activeId, liveIds, onNew, onPick, onRecipe, rope
         <AutomationsGroup token={token} automations={automations.data?.automations ?? null} catalog={skills.data?.automations ?? []} />
       </div>
       <div className="rail-foot">
-        <HerdPortrait id={herdIdOf(address)} scale={1} label={null} />
+        <HerdPortrait id={herdAvatar ? herdAvatar.art : herdIdOf(address)} scale={1} label={herdAvatar ? `Your Herd goat${herdAvatar.tokenId ? ` #${herdAvatar.tokenId}` : ""}` : null} />
         <div className="who">
           <b className="num">{sample ? "Sample wallet" : address ? short(address) : "—"}</b>
-          <i>{sample ? "labelled sample · connect yours" : token ? "signed in · propose mode" : "propose mode"}</i>
+          <i>{herdAvatar && !sample ? "Herd holder · " : ""}{sample ? "labelled sample · connect yours" : token ? "signed in · propose mode" : "propose mode"}</i>
         </div>
         {connected ? (
           token ? (

@@ -28,7 +28,9 @@ import { NETWORK_KEYS, type IntentActionSpec, type NetworkKey } from "@elyia/cor
 import type { Request } from "express";
 import { z } from "zod";
 import type { AppContext } from "../../context.js";
-import { ElyiaHttpError } from "../../http/errors.js";
+import { ElyiaHttpError, retryAfterHeader } from "../../http/errors.js";
+import { HERD_HOLDER_PERKS } from "@elyia/core/api/herd";
+import { perksFor } from "../herd/perks.js";
 import type { ApiModule } from "../../http/router.js";
 import { openSse } from "../../http/sse.js";
 import { evmAddress, parseBody, parseParams } from "../../http/validate.js";
@@ -114,6 +116,18 @@ function owner(req: Request): string {
   return mustSession(req).address;
 }
 
+/** Signed-in chat turns per UTC day: the base allowance, more for Herd holders (perksFor: balanceOf on chain, cached). */
+export async function chatQuota(ctx: AppContext, owner: string): Promise<void> {
+  const now = ctx.clock.now();
+  const day = new Date(now).toISOString().slice(0, 10);
+  const limit = (await perksFor(ctx, owner)).agentChatPerDay;
+  const used = await ctx.store.counters("agent_chat_daily").increment(`${owner}:${day}`, 1, { ttlMs: 2 * 86_400_000 });
+  if (used > limit) {
+    const seconds = Math.max(1, Math.ceil((Date.parse(`${day}T00:00:00Z`) + 86_400_000 - now) / 1000));
+    throw new ElyiaHttpError("QUOTA_EXCEEDED", 429, `You used today's ${limit} Ely turns. They reset at 00:00 UTC${limit < HERD_HOLDER_PERKS.agentChatPerDay ? `; Herd holders get ${HERD_HOLDER_PERKS.agentChatPerDay}` : ""}.`, { limit }, { headers: retryAfterHeader(seconds) });
+  }
+}
+
 function needKeeper(ctx: AppContext): void {
   if (!ctx.config.keeperSecret) throw keeperUnavailable();
 }
@@ -128,6 +142,7 @@ export const agentModule: ApiModule = {
       const signedIn = await readSession(ctx, req);
       const address = body.address ?? signedIn?.address;
       if (!address) throw new ElyiaHttpError("INVALID_REQUEST", 400, "Send `address` or sign in: Ely needs a wallet to look at.");
+      if (signedIn) await chatQuota(ctx, signedIn.address);
       const integratorFee = await integratorFeeOf(ctx, req);
       const stream = openSse(req, res, { slots: ctx.limits.streams, now: () => ctx.clock.now() });
       if (stream.closed) return;

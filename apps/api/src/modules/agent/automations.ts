@@ -12,6 +12,7 @@
 import { AUTOMATION_KINDS, type Automation, type AutomationInput, type AutomationKind, type AutomationListResponse, type InsightKind } from "@elyia/core/api/agent";
 import type { AppContext } from "../../context.js";
 import { ElyiaHttpError } from "../../http/errors.js";
+import { perksFor } from "../herd/perks.js";
 import { randomHex } from "../ops/auth/crypto.js";
 import { docs, iso, PLATFORM_COLLECTIONS } from "../ops/docs.js";
 import { registerStats } from "../admin/stats.js";
@@ -88,7 +89,8 @@ export async function listAutomations(ctx: AppContext, owner: string): Promise<A
 }
 
 export async function createAutomation(ctx: AppContext, owner: string, input: AutomationInput): Promise<Automation> {
-  if ((await listAutomations(ctx, owner)).length >= MAX_AUTOMATIONS_PER_OWNER) throw new ElyiaHttpError("AUTOMATION_LIMIT", 409, `At most ${MAX_AUTOMATIONS_PER_OWNER} automations.`);
+  const max = Math.max(MAX_AUTOMATIONS_PER_OWNER, (await perksFor(ctx, owner)).automations);
+  if ((await listAutomations(ctx, owner)).length >= max) throw new ElyiaHttpError("AUTOMATION_LIMIT", 409, `At most ${max} automations${max > MAX_AUTOMATIONS_PER_OWNER ? " (Herd holder)" : ""}.`);
   const now = ctx.clock.now();
   const doc: AutomationDoc = { id: `aut_${randomHex(10)}`, owner, kind: input.kind, params: input.params ?? {}, enabled: input.enabled ?? true, keeper: input.keeper ?? false, createdAt: now, updatedAt: now, lastRunAt: null, lastResult: null, runs: 0, proposed: {} };
   await collection(ctx).put(`${owner}:${doc.id}`, doc);
@@ -151,8 +153,12 @@ export async function schedulerPass(ctx: AppContext, state: SchedulerState): Pro
   const rows = await collection(ctx).list({ ...(state.cursor ? { after: state.cursor } : {}), limit: MAX_PER_TICK });
   state.cursor = rows.length < MAX_PER_TICK ? undefined : rows.at(-1)?.id;
   let ran = 0;
-  for (const row of rows) {
-    if (!row.value.enabled) continue;
+  // Herd holders' automations run first in every pass (priority keeper scheduling; perks are cached on-chain reads).
+  const enabled = rows.filter((row) => row.value.enabled);
+  const priority = new Map<string, boolean>();
+  for (const row of enabled) if (!priority.has(row.value.owner)) priority.set(row.value.owner, (await perksFor(ctx, row.value.owner)).priorityKeeper);
+  enabled.sort((a, b) => Number(priority.get(b.value.owner) ?? false) - Number(priority.get(a.value.owner) ?? false));
+  for (const row of enabled) {
     try {
       await runAutomation(ctx, row.value);
       ran += 1;

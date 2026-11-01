@@ -35,6 +35,18 @@ export const PLATFORM_COLLECTIONS = Object.freeze({
   agentFeed: "agent_feed",
   keepers: "keepers",
   keeperAudit: "keeper_audit",
+  herdTasks: "herd_tasks",
+  herdApplications: "herd_applications",
+  herdHandles: "herd_handles",
+  herdSettings: "herd_settings",
+  herdRaffles: "herd_raffles",
+  herdMerkle: "herd_merkle",
+  herdPartners: "herd_partners",
+  herdAudit: "herd_audit",
+  herdTokens: "herd_tokens",
+  herdIndex: "herd_index",
+  herdMoves: "herd_moves",
+  herdSeen: "herd_seen",
 } as const);
 
 export function docs<T>(ctx: AppContext, name: string): Collection<T> {

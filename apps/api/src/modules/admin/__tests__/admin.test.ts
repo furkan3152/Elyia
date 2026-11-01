@@ -98,7 +98,13 @@ describe("admin: deployment registry", () => {
   it("builds the owner's deploy plan from the manifest", async () => {
     const plan = await call("GET", "/v1/admin/deploy-plan?network=elysium-testnet");
     const steps = plan.body.steps as Array<{ contract: string; transaction: { data: string } | null; constructorArgs: Array<{ name: string; value: string | null }> }>;
-    assert.deepEqual(steps.map((step) => step.contract), ["ElyiaRouter", "ElyAccountFactory", "ElyOrders"]);
+    assert.deepEqual(steps.map((step) => step.contract), ["ElyiaRouter", "ElyAccountFactory", "ElyOrders", "ElyHerd"]);
+    // The Herd needs the owner's treasury (HERD_TREASURY_ADDRESS); never guessed.
+    const herd = steps[3] as unknown as { transaction: unknown; note: string | null; constructorArgs: Array<{ name: string; value: string | null }> };
+    assert.equal(herd.transaction, null);
+    assert.equal(herd.constructorArgs.find((arg) => arg.name === "treasury_")?.value, null);
+    assert.equal(herd.constructorArgs.find((arg) => arg.name === "initialOwner")?.value, ADMIN);
+    assert.match(herd.note ?? "", /HERD_TREASURY_ADDRESS/u);
     assert.ok(steps[0]?.transaction?.data.startsWith(elyiaRouterArtifact.bytecode.slice(0, 40)));
     assert.equal(steps[0]?.constructorArgs[0]?.value, ADMIN);
     // The router is recorded now, so ElyOrders gets its address.

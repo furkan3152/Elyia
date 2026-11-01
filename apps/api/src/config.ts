@@ -72,6 +72,25 @@ export interface Config {
     readonly serverFallback: boolean;
   };
   readonly hyperdexerApiKey: string | null;
+  /** The Herd (NFT collection + WL). Owner inputs: null / empty = not configured (never invented). */
+  readonly herd: {
+    /** HERD_X_PROFILE_URL: the X profile applicants follow. */
+    readonly xProfileUrl: string | null;
+    /** HERD_ENGAGEMENT_POST_URLS: X post URLs for the engagement task (comma-separated). */
+    readonly engagementPostUrls: readonly string[];
+    /** HERD_TREASURY_ADDRESS: where withdraw() and royalties may go besides the owner. */
+    readonly treasury: string | null;
+    /** HERD_MARKETPLACE_URL: the collection page on Kalos (shown once the owner sets it). */
+    readonly marketplaceUrl: string | null;
+    /** HERD_MAINNET_LAUNCH: ISO date of the mainnet mint (shown as planned, not promised). */
+    readonly mainnetLaunch: string | null;
+    /** HERD_ART_DIR: the art generator's output folder (metadata/<id>.json, images/<id>.png). */
+    readonly artDir: string | null;
+    /** HERD_PUBLIC_BASE_URL: public https origin of this API for metadata image links (else the request's host). */
+    readonly publicBaseUrl: string | null;
+    /** X_API_BEARER (optional): enables the x-api verifier; without it X tasks are reviewed manually. */
+    readonly xApiBearer: string | null;
+  };
   readonly hyperliquid: {
     /** REST weight this process may spend per minute per HyperCore network. */
     readonly weightPerMinute: number;
@@ -200,6 +219,14 @@ const EnvSchema = z.object({
   HYPEREVM_TESTNET_RPC_URL: optionalString,
   HYPEREVM_MAINNET_RPC_URL: optionalString,
   HYPERDEXER_API_KEY: optionalString,
+  HERD_X_PROFILE_URL: optionalString,
+  HERD_ENGAGEMENT_POST_URLS: optionalString,
+  HERD_TREASURY_ADDRESS: optionalString,
+  HERD_MARKETPLACE_URL: optionalString,
+  HERD_MAINNET_LAUNCH: optionalString,
+  HERD_ART_DIR: optionalString,
+  HERD_PUBLIC_BASE_URL: optionalString,
+  X_API_BEARER: optionalString,
   ELYIA_LOG_LEVEL: z.preprocess(
     (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
     z.enum(LOG_LEVELS).optional(),
@@ -307,6 +334,35 @@ export function loadConfig(source: Readonly<Record<string, string | undefined>> 
   if (env.TELEGRAM_WEBHOOK_URL && !/^https:\/\/[^\s]+$/u.test(env.TELEGRAM_WEBHOOK_URL)) {
     issues.push("TELEGRAM_WEBHOOK_URL: must be an https URL");
   }
+  const httpsUrl = (name: string, raw: string | undefined): string | null => {
+    if (!raw) return null;
+    try {
+      const url = new URL(raw);
+      if (url.protocol === "https:" && !url.username && !url.password) return url.toString();
+    } catch {
+      // reported below
+    }
+    issues.push(`${name}: must be an https URL`);
+    return null;
+  };
+  const xUrl = (name: string, raw: string | undefined): string | null => {
+    const url = httpsUrl(name, raw);
+    if (url && !/^https:\/\/(?:www\.)?(?:x|twitter)\.com\//iu.test(url)) {
+      issues.push(`${name}: must be an x.com (or twitter.com) URL`);
+      return null;
+    }
+    return url;
+  };
+  const herdProfile = xUrl("HERD_X_PROFILE_URL", env.HERD_X_PROFILE_URL);
+  const herdPosts = splitList(env.HERD_ENGAGEMENT_POST_URLS).map((raw) => xUrl("HERD_ENGAGEMENT_POST_URLS", raw)).filter((url): url is string => url !== null);
+  if (env.HERD_TREASURY_ADDRESS && !/^0x[0-9a-fA-F]{40}$/u.test(env.HERD_TREASURY_ADDRESS)) issues.push("HERD_TREASURY_ADDRESS: must be a 0x-prefixed 20-byte address");
+  const herdMarketplace = httpsUrl("HERD_MARKETPLACE_URL", env.HERD_MARKETPLACE_URL);
+  if (env.HERD_MAINNET_LAUNCH && Number.isNaN(Date.parse(env.HERD_MAINNET_LAUNCH))) issues.push("HERD_MAINNET_LAUNCH: must be an ISO 8601 date");
+  let herdPublicBase: string | null = null;
+  if (env.HERD_PUBLIC_BASE_URL) {
+    herdPublicBase = parseOrigin(env.HERD_PUBLIC_BASE_URL, production);
+    if (!herdPublicBase) issues.push("HERD_PUBLIC_BASE_URL: must be an exact https origin");
+  }
   if (issues.length > 0) throw new ConfigError(issues);
 
   const config: Config = {
@@ -334,6 +390,16 @@ export function loadConfig(source: Readonly<Record<string, string | undefined>> 
       serverFallback: env.ELYIA_AGENT_SERVER_FALLBACK === "1" || env.ELYIA_AGENT_SERVER_FALLBACK === "true",
     }),
     hyperdexerApiKey: env.HYPERDEXER_API_KEY ?? null,
+    herd: Object.freeze({
+      xProfileUrl: herdProfile,
+      engagementPostUrls: Object.freeze(herdPosts),
+      treasury: env.HERD_TREASURY_ADDRESS?.toLowerCase() ?? null,
+      marketplaceUrl: herdMarketplace,
+      mainnetLaunch: env.HERD_MAINNET_LAUNCH ? new Date(env.HERD_MAINNET_LAUNCH).toISOString() : null,
+      artDir: env.HERD_ART_DIR ?? null,
+      publicBaseUrl: herdPublicBase,
+      xApiBearer: env.X_API_BEARER ?? null,
+    }),
     hyperliquid: Object.freeze({ weightPerMinute: env.ELYIA_HL_WEIGHT_PER_MIN }),
     networks: withRpcOverrides(rpcOverrides),
     rpcOverrides: Object.freeze(rpcOverrides),

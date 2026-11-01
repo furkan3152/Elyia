@@ -16,6 +16,7 @@ import type { Request, RequestHandler, Response } from "express";
 import { API_KEY_HEADER, USAGE_METRICS, type ApiKeyScope, type UsageDay, type UsageMetric } from "@elyia/core/api/developers";
 import type { AppContext } from "../../context.js";
 import { ElyiaHttpError, retryAfterHeader } from "../../http/errors.js";
+import { perksFor } from "../herd/perks.js";
 import { sendError } from "../../http/request.js";
 import { docs, PLATFORM_COLLECTIONS } from "../ops/docs.js";
 import { lookupKey, touchKey, type ApiKeyRecord } from "./keys.js";
@@ -59,7 +60,15 @@ function quotaError(metric: string, limit: number, seconds: number): ElyiaHttpEr
   return new ElyiaHttpError("QUOTA_EXCEEDED", 429, `This key's ${metric} quota (${limit}) is used up. Retry in ${seconds} s or raise the key's quota.`, { metric, limit }, { headers: retryAfterHeader(seconds) });
 }
 
-async function meter(ctx: AppContext, key: ApiKeyRecord, metric: UsageMetric | null): Promise<void> {
+/** The key's quotas, multiplied for Herd holders (balanceOf on chain, cached; never from the client). */
+export async function effectiveQuotas(ctx: AppContext, key: ApiKeyRecord): Promise<ApiKeyRecord["quotas"]> {
+  const factor = Math.max(1, (await perksFor(ctx, key.owner)).developerQuotaMultiplier);
+  if (factor === 1) return key.quotas;
+  return { requestsPerDay: key.quotas.requestsPerDay * factor, plansPerDay: key.quotas.plansPerDay * factor, preparesPerDay: key.quotas.preparesPerDay * factor, requestsPerMinute: key.quotas.requestsPerMinute * factor };
+}
+
+async function meter(ctx: AppContext, record: ApiKeyRecord, metric: UsageMetric | null): Promise<void> {
+  const key = { ...record, quotas: await effectiveQuotas(ctx, record) };
   const now = ctx.clock.now();
   const counters = ctx.store.counters("dev_usage");
   const minute = Math.floor(now / 60_000);

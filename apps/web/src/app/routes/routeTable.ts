@@ -21,6 +21,8 @@ export type RouteId =
   | "elysium"
   | "developers"
   | "admin"
+  | "herd"
+  | "herdWl"
   | "system"
   | "kit"
   | "deck"
@@ -95,6 +97,22 @@ export const ROUTES: Readonly<Record<RouteId, RouteDefinition>> = Object.freeze(
     description: "Owner only: deploy and configure Elyia's contracts from your own wallet; flags, health and usage.",
     robots: PRIVATE_ROBOTS,
     load: () => import("../../pages/admin/AdminPage"),
+  },
+  herd: {
+    id: "herd",
+    pattern: "/herd",
+    kind: "app",
+    title: "The Herd",
+    description: "The Herd: Ely as 3,333 pixel goats on Elysium. Live supply, phases, the mint (your wallet signs), the gallery, traits and holder perks.",
+    load: () => import("../../pages/herd/HerdPage"),
+  },
+  herdWl: {
+    id: "herdWl",
+    pattern: "/herd/wl",
+    kind: "app",
+    title: "Herd WL application",
+    description: "Apply for The Herd's WL: sign in with your wallet, do the tasks, share your card. The more you use Elyia, the higher your chance.",
+    load: () => import("../../pages/herd/WlPage"),
   },
   system: {
     id: "system",
@@ -248,6 +266,8 @@ const ORDER: readonly RouteId[] = [
   "elysium",
   "developers",
   "admin",
+  "herd",
+  "herdWl",
   "system",
   "kit",
   "deck",

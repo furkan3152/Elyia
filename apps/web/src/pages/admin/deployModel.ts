@@ -6,7 +6,9 @@
  */
 import { getContractAddress, type Address } from "viem";
 
-export const DEPLOYABLE = ["ElyiaRouter", "ElyAccountFactory", "ElyOrders"] as const;
+export const DEPLOYABLE = ["ElyiaRouter", "ElyAccountFactory", "ElyOrders", "ElyHerd"] as const;
+/** The platform contracts (manifest `order`); ElyHerd is a standalone collection (manifest `collections`). */
+export const PLATFORM_DEPLOYABLE = ["ElyiaRouter", "ElyAccountFactory", "ElyOrders"] as const;
 export type Deployable = (typeof DEPLOYABLE)[number];
 
 export type AdminNetwork = "elysium-testnet" | "hyperevm-testnet" | "elysium-mainnet";
@@ -199,14 +201,21 @@ export type ResolvedArgs = { readonly ok: true; readonly values: readonly unknow
  * `$<Contract>` the recorded address of an earlier step (from
  * /v1/config/contracts). Never invents a value: anything unknown is missing.
  */
-export function resolveArgs(args: readonly ManifestArg[], owner: string | null, deployed: Readonly<Partial<Record<string, string>>>): ResolvedArgs {
+export function resolveArgs(args: readonly ManifestArg[], owner: string | null, deployed: Readonly<Partial<Record<string, string>>>, params: Readonly<Partial<Record<string, string>>> = {}): ResolvedArgs {
   const values: unknown[] = [];
   const shown: { name: string; value: string }[] = [];
   const missing: string[] = [];
   for (const arg of args) {
     let value: unknown = arg.value;
     if (value === "$OWNER") value = owner;
-    else if (typeof value === "string" && value.startsWith("$")) value = deployed[value.slice(1)] ?? null;
+    else if (typeof value === "string" && value.startsWith("$PARAM.")) {
+      const param = params[value.slice(7)]?.trim();
+      value = param && /^0x[0-9a-fA-F]{40}$/u.test(param) ? param : null;
+      if (value === null) {
+        missing.push(`${String(arg.value).slice(7)} (enter it below)`);
+        continue;
+      }
+    } else if (typeof value === "string" && value.startsWith("$")) value = deployed[value.slice(1)] ?? null;
     if (value === null || value === undefined) {
       missing.push(arg.value === "$OWNER" ? "your wallet address" : `${String(arg.value).slice(1)} address (deploy and record it first)`);
       continue;
@@ -215,6 +224,11 @@ export function resolveArgs(args: readonly ManifestArg[], owner: string | null, 
     shown.push({ name: arg.name, value: Array.isArray(value) ? `${value.length} items` : String(value) });
   }
   return missing.length > 0 ? { ok: false, missing } : { ok: true, values, shown };
+}
+
+/** `$PARAM.<name>` inputs a manifest step needs (the admin enters them; never guessed). */
+export function paramNames(args: readonly ManifestArg[]): string[] {
+  return args.flatMap((arg) => (typeof arg.value === "string" && arg.value.startsWith("$PARAM.") ? [arg.value.slice(7)] : []));
 }
 
 /** The address a CREATE from `from` at `nonce` lands on. */

@@ -130,9 +130,11 @@ describe("ops: transaction tracker", () => {
   it("backs off between checks", async () => {
     const record = { id: "trk_x", kind: "evm-tx" as const, network: "elysium-testnet" as const, reference: HASH, label: null, status: "pending" as const, createdAt: ctx.clock.now(), updatedAt: 0, checks: 3, nextCheckAt: 0, detail: { blockNumber: null, from: null, to: null, toContract: null, logs: [], explorerUrl: null, note: null } };
     observation = { state: "pending" };
+    const before = ctx.clock.now();
     const next = await checkTrack(ctx, record);
     assert.equal(next.checks, 4);
-    assert.ok((next.nextCheckAt ?? 0) - ctx.clock.now() >= 5_000 * 16);
+    // Measured from before the check: elapsed time during the call must not eat into the backoff.
+    assert.ok((next.nextCheckAt ?? 0) - before >= 5_000 * 16);
   });
 });
 

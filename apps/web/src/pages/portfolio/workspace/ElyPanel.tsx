@@ -10,6 +10,8 @@ import { RouteArtifact } from "../../../features/ely/RouteArtifact";
 import { signSourceOf } from "../../../features/ely/signSource";
 import { primaryCard, type ElyTurn, type Turn } from "../../../features/ely/turn";
 import { ElyAvatar, Glyph } from "../../../features/ely/ui";
+import { useHerdAvatar } from "../../../features/herd/useHerdAvatar";
+import { HerdPortrait } from "../../../pixel/Herd";
 import type { WalletSession } from "../../../features/session/useWalletSession";
 import { cx, FOCUS_RING } from "../../../ui/cx";
 import { Sheet } from "../../../ui/Sheet";
@@ -54,6 +56,7 @@ export interface ElyPanelProps {
  * switches and Autopilot's caps; and the trust line. Nothing here signs.
  */
 export function ElyPanel({ insights, insightsSample, insightsLoading, insightsError, chat, pnl, pnlSample, followed, chatAddress, session, token, own, phone, automationsOpen, onAutomationsOpen, onDraft }: ElyPanelProps) {
+  const herdAvatar = useHerdAvatar(session.address);
   const views = useMemo(() => insightViews(insights).slice(0, 5), [insights]);
   const [why, setWhy] = useState<string | null>(null);
   const [cardTurn, setCardTurn] = useState<string | null>(null);
@@ -82,7 +85,13 @@ export function ElyPanel({ insights, insightsSample, insightsLoading, insightsEr
       <div ref={scroller} className="ep-scroll">
         <div ref={content} className="ep-thread">
           <div className="msg-e">
-            <ElyAvatar state={insightsLoading ? "climb" : views.some((view) => view.severity === "act") ? "worry" : "idle"} label={`Ely: ${status}`} />
+            {herdAvatar ? (
+              <span className="inline-block h-[44px] w-[44px] shrink-0">
+                <HerdPortrait id={herdAvatar.art} fluid label={`Your Ely, Herd goat${herdAvatar.tokenId ? ` #${herdAvatar.tokenId}` : ""}: ${status}`} />
+              </span>
+            ) : (
+              <ElyAvatar state={insightsLoading ? "climb" : views.some((view) => view.severity === "act") ? "worry" : "idle"} label={`Ely: ${status}`} />
+            )}
             <div className="bd">
               <div className="who">
                 <b>Ely</b> · <span>{status}</span>

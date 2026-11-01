@@ -58,6 +58,8 @@ export interface DeployManifest {
   readonly chainId: number;
   readonly version: string;
   readonly order: ReadonlyArray<{ readonly step: number; readonly contract: string; readonly constructor: ReadonlyArray<{ readonly name: string; readonly type: string; readonly value: unknown }> }>;
+  /** Standalone contracts (the Herd collection): constructor values may name `$PARAM.<name>` deploy-time inputs. */
+  readonly collections?: ReadonlyArray<{ readonly key: string; readonly contract: string; readonly constructor: ReadonlyArray<{ readonly name: string; readonly type: string; readonly value: unknown }> }>;
 }
 
 const manifests = new Map<string, DeployManifest>();

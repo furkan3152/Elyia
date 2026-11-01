@@ -7,7 +7,7 @@
  * owner pressing Sign in their own wallet.
  */
 import type { DeployPlanResponse } from "@elyia/core/api/admin";
-import { elyAccountFactoryArtifact, elyiaRouterArtifact, elyOrdersArtifact, elysiumTestnetDeployManifest } from "@elyia/core/contracts/index";
+import { elyAccountFactoryArtifact, elyHerdArtifact, elyiaRouterArtifact, elyOrdersArtifact, elysiumTestnetDeployManifest } from "@elyia/core/contracts/index";
 import { useCallback, useReducer } from "react";
 import { encodeDeployData, type Abi, type Hex } from "viem";
 import { useAccount, usePublicClient, useSendTransaction, useSwitchChain } from "wagmi";
@@ -20,9 +20,18 @@ export const ARTIFACTS = {
   ElyiaRouter: elyiaRouterArtifact,
   ElyAccountFactory: elyAccountFactoryArtifact,
   ElyOrders: elyOrdersArtifact,
+  ElyHerd: elyHerdArtifact,
 } as const;
 
 export const MANIFEST = elysiumTestnetDeployManifest;
+
+/** The manifest step of a contract: `order` (platform) or `collections` (the Herd). */
+export function manifestStep(contract: Deployable): { readonly constructor: readonly { readonly name: string; readonly type: string; readonly value: unknown }[] } | null {
+  const ordered = MANIFEST.order.find((entry) => entry.contract === contract);
+  if (ordered) return ordered as never;
+  const collections = (MANIFEST as unknown as { collections?: readonly { contract: string; constructor: readonly { name: string; type: string; value: unknown }[] }[] }).collections ?? [];
+  return collections.find((entry) => entry.contract === contract) ?? null;
+}
 
 function walletWords(error: unknown): string {
   const text = describeError(error);
@@ -31,23 +40,25 @@ function walletWords(error: unknown): string {
 }
 
 /** Creation data for `contract` on `network`: local (manifest + artifact) on 99801, the server's plan elsewhere. */
-export function creationData(contract: Deployable, network: AdminNetwork, owner: string | null, deployed: Readonly<Partial<Record<string, string>>>, plan: DeployPlanResponse | undefined) {
+export function creationData(contract: Deployable, network: AdminNetwork, owner: string | null, deployed: Readonly<Partial<Record<string, string>>>, plan: DeployPlanResponse | undefined, params: Readonly<Partial<Record<string, string>>> = {}) {
   const serverStep = plan?.network === network ? plan.steps.find((step) => step.contract === contract) : undefined;
   const serverData = serverStep?.transaction?.data ?? null;
   if (network === MANIFEST.network) {
-    const step = MANIFEST.order.find((entry) => entry.contract === contract);
+    const step = manifestStep(contract);
     if (!step) return { ok: false as const, reason: `${contract} is not in the manifest.` };
-    const args = resolveArgs(step.constructor as never, owner, deployed);
+    const args = resolveArgs(step.constructor as never, owner, deployed, params);
     if (!args.ok) return { ok: false as const, reason: `Waiting for ${args.missing.join(", ")}.` };
     const artifact = ARTIFACTS[contract];
     const data = encodeDeployData({ abi: artifact.abi as Abi, bytecode: artifact.bytecode as Hex, args: args.values as never });
-    return { ok: true as const, data, args: args.shown, matchesServerPlan: serverData === null ? null : serverData.toLowerCase() === data.toLowerCase() };
+    // The server fills $PARAM values from its own config (HERD_TREASURY_ADDRESS): only compare when the admin's inputs match it.
+    const comparable = serverData !== null && (contract !== "ElyHerd" || serverStep?.constructorArgs.every((arg) => arg.value !== null));
+    return { ok: true as const, data, args: args.shown, matchesServerPlan: !comparable ? null : serverData!.toLowerCase() === data.toLowerCase() ? true : contract === "ElyHerd" ? null : false };
   }
   if (!serverData) return { ok: false as const, reason: serverStep?.note ?? "No server plan for this network yet." };
   return { ok: true as const, data: serverData, args: (serverStep?.constructorArgs ?? []).map((arg) => ({ name: arg.name, value: arg.value ?? "—" })), matchesServerPlan: true };
 }
 
-export function useDeploy(contract: Deployable, network: AdminNetwork, deployed: Readonly<Partial<Record<string, string>>>, plan: DeployPlanResponse | undefined) {
+export function useDeploy(contract: Deployable, network: AdminNetwork, deployed: Readonly<Partial<Record<string, string>>>, plan: DeployPlanResponse | undefined, params: Readonly<Partial<Record<string, string>>> = {}) {
   const [state, dispatch] = useReducer(deployReducer, { phase: "idle" });
   const option = NETWORK_OPTIONS.find((entry) => entry.key === network)!;
   const { address, chainId } = useAccount();
@@ -62,7 +73,7 @@ export function useDeploy(contract: Deployable, network: AdminNetwork, deployed:
       if (!option.enabled) throw new Error(option.note);
       if (!address) throw new Error("Connect the owner wallet first.");
       if (!publicClient) throw new Error(`No RPC for chain ${option.chainId} in this build.`);
-      const built = creationData(contract, network, address, deployed, plan);
+      const built = creationData(contract, network, address, deployed, plan, params);
       if (!built.ok) throw new Error(built.reason);
       if (built.matchesServerPlan === false) throw new Error("The server's plan builds different creation data than the manifest. Stop and check versions.");
       const nonce = await publicClient.getTransactionCount({ address, blockTag: "pending" });
@@ -93,7 +104,7 @@ export function useDeploy(contract: Deployable, network: AdminNetwork, deployed:
     } catch (error) {
       dispatch({ type: "fail", error: walletWords(error) });
     }
-  }, [address, contract, deployed, network, option, plan, publicClient]);
+  }, [address, contract, deployed, network, option, params, plan, publicClient]);
 
   const sign = useCallback(
     async (current: DeployPreview) => {

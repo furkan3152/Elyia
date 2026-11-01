@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Bell, Bot, ChartCandlestick, Compass, Map, Mountain, Radio, Route, Settings, ShieldCheck, Sprout, Waypoints, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, Bell, Bot, ChartCandlestick, Compass, Map, Mountain, PawPrint, Radio, Route, Settings, ShieldCheck, Sprout, Waypoints, type LucideIcon } from "lucide-react";
 
 import { routeHref, type RouteId } from "../routes/routeTable";
 
@@ -24,6 +24,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: "trade", label: "Trade", href: routeHref("trade"), icon: ChartCandlestick, hint: "HyperCore perps and spot terminal", keys: "g t", primary: true },
   { id: "discover", label: "Discover", href: routeHref("discover"), icon: Compass, hint: "First ascents: new pools with route conditions", keys: "g x", primary: true },
   { id: "developers", label: "Developers", href: routeHref("developers"), icon: Compass, hint: "Keys, playground, MCP, webhooks, your fee", primary: true },
+  { id: "herd", label: "Herd", href: routeHref("herd"), icon: PawPrint, hint: "The Herd: Ely as 3,333 goats · mint and WL", keys: "g h" },
   { id: "basecamp", label: "Base camp", href: routeHref("basecamp"), icon: Mountain, hint: "Net worth, ropes, routes in progress", keys: "g c" },
   { id: "agent", label: "Guide", href: routeHref("agent"), icon: Bot, hint: "The Guide, its licence and the kill switch", keys: "g a" },
   { id: "bridge", label: "Bridge", href: routeHref("bridge"), icon: Waypoints, hint: "Ascend and descend: Floor, Ridge, Summit", keys: "g b" },

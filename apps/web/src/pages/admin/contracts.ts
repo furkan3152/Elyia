@@ -4,7 +4,7 @@ import { useMemo } from "react";
 
 import { evmNetwork } from "../../app/wallet/chains";
 import type { AdminNetwork, Deployable } from "./deployModel";
-import { MANIFEST } from "./useDeploy";
+import { manifestStep } from "./useDeploy";
 
 export function explorerAddress(network: AdminNetwork, address: string): string | null {
   const explorer = evmNetwork(network).explorer;
@@ -18,8 +18,8 @@ export function recordedOn(config: ContractsConfigResponse | undefined, network:
 
 /** Dependencies per the manifest: a contract whose args name `$X` waits for X. */
 export function dependsOn(contract: Deployable): Deployable[] {
-  const step = MANIFEST.order.find((entry) => entry.contract === contract);
-  return (step?.constructor ?? []).flatMap((arg) => (typeof arg.value === "string" && arg.value.startsWith("$") && arg.value !== "$OWNER" ? [arg.value.slice(1) as Deployable] : []));
+  const step = manifestStep(contract);
+  return (step?.constructor ?? []).flatMap((arg) => (typeof arg.value === "string" && arg.value.startsWith("$") && arg.value !== "$OWNER" && !arg.value.startsWith("$PARAM.") ? [arg.value.slice(1) as Deployable] : []));
 }
 
 export function useRecordsByContract(records: readonly DeploymentRecord[] | undefined, network: AdminNetwork) {

@@ -13,6 +13,7 @@ const META: Readonly<Record<Deployable, { readonly glyph: PortalGlyphName; reado
   ElyiaRouter: { glyph: "swap", blurb: "split + multicall · fees" },
   ElyAccountFactory: { glyph: "people", blurb: "CREATE2 smart accounts" },
   ElyOrders: { glyph: "clock", blurb: "stops, TP, DCA, TWAP" },
+  ElyHerd: { glyph: "star", blurb: "The Herd · 3333 · ERC-721" },
 };
 
 const STAMP_TONE: Readonly<Record<ContractStamp, "up" | "acc" | "ink">> = { Verified: "up", Deployed: "acc", Deploying: "acc", "Not deployed": "ink" };
@@ -117,9 +118,13 @@ export interface DeployFlowProps {
   readonly mocked?: boolean;
   /** The selected contract is already recorded on this network (nothing to deploy). */
   readonly recordedAt?: string | null;
+  /** Deploy-time inputs ($PARAM values) shown above the preview button. */
+  readonly inputs?: React.ReactNode;
+  /** Section id (default "deployments"). */
+  readonly sectionId?: string;
 }
 
-export function DeployFlow({ contract, network, state, walletAddress, walletChainId, nativeSymbol, onPreview, onSign, onReset, mocked = false, recordedAt = null }: DeployFlowProps) {
+export function DeployFlow({ contract, network, state, walletAddress, walletChainId, nativeSymbol, onPreview, onSign, onReset, mocked = false, recordedAt = null, inputs, sectionId = "deployments" }: DeployFlowProps) {
   const done = recordedAt && state.phase === "idle" ? 5 : campsDone(state);
   const option = NETWORK_OPTIONS.find((entry) => entry.key === network)!;
   const preview = "preview" in state ? state.preview : state.phase === "failed" && "preview" in state.previous ? state.previous.preview : null;
@@ -128,8 +133,8 @@ export function DeployFlow({ contract, network, state, walletAddress, walletChai
   const failedCamp = state.phase === "failed" ? CAMPS.findIndex((camp) => camp.id === state.camp) : -1;
   const fee = preview?.gas && preview.gasPriceWei ? formatNative(preview.gas * preview.gasPriceWei) : null;
   return (
-    <section id="deployments" aria-labelledby="deploy-title" className="mt-14 scroll-mt-28 border-t-2 border-dashed border-rule pt-14">
-      <SectionHead id="deploy-title" tag={`Deploy · ${contract} → ${option.label.split(" · ")[0]}`} title="Five camps. One signature." lede="The same route card language as every trade: each camp settles before the next, and the stamp only lands when the chain proves it." />
+    <section id={sectionId} aria-labelledby={`${sectionId}-title`} className="mt-14 scroll-mt-28 border-t-2 border-dashed border-rule pt-14">
+      <SectionHead id={`${sectionId}-title`} tag={`Deploy · ${contract} → ${option.label.split(" · ")[0]}`} title="Five camps. One signature." lede="The same route card language as every trade: each camp settles before the next, and the stamp only lands when the chain proves it." />
       {mocked ? (
         <p className="mb-4 text-center">
           <Pill tone="warn">QA preview · mocked wallet · nothing is broadcast</Pill>
@@ -183,6 +188,7 @@ export function DeployFlow({ contract, network, state, walletAddress, walletChai
             />
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-6 text-center">
+              {inputs && !recordedAt ? <div className="w-full text-left">{inputs}</div> : null}
               <p className="max-w-[340px] text-[12.5px] text-ink-2">
                 {recordedAt ? `${contract} is already recorded here at ${shortHex(recordedAt)}. Every contract on this network is live; pick another network to deploy there.` : "Read the chain first: your nonce, the predicted address, gas and a dry eth_call of the creation code. Nothing is signed."}
               </p>

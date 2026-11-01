@@ -10,29 +10,48 @@ import { Card } from "../developers/portal/ui";
 import { useContractsConfig, useDeployments, useDeployPlan } from "./adminApi";
 import { recordedOn, useRecordsByContract } from "./contracts";
 import { ContractCard, DeployFlow } from "./ContractsSection";
-import { DEPLOYABLE, NETWORK_OPTIONS, type AdminNetwork, type Deployable } from "./deployModel";
+import { NETWORK_OPTIONS, PLATFORM_DEPLOYABLE, type AdminNetwork, type Deployable } from "./deployModel";
 import { mockDeployState } from "./mockFlow";
 import { PlatformSection } from "./PlatformSection";
 import { RouterSection } from "./RouterSection";
 import { useDeploy } from "./useDeploy";
+import { HerdConsole } from "./herd/HerdConsole";
 
 const GROUPS: readonly PortalNavGroup[] = [
   {
     title: "On chain",
     items: [
-      { id: "contracts", label: "Contracts", glyph: "block", badge: 3, keywords: "router factory orders" },
-      { id: "deployments", label: "Deployments", glyph: "flag", keywords: "deploy camps wallet" },
-      { id: "router", label: "Router fee", glyph: "percent", keywords: "protocol fee bps" },
-      { id: "pause", label: "Pause", glyph: "pause", keywords: "kill switch" },
+      { id: "contracts", label: "Contracts", glyph: "block", badge: 3, keywords: "router factory orders", view: "console" },
+      { id: "deployments", label: "Deployments", glyph: "flag", keywords: "deploy camps wallet", view: "console" },
+      { id: "router", label: "Router fee", glyph: "percent", keywords: "protocol fee bps", view: "console" },
+      { id: "pause", label: "Pause", glyph: "pause", keywords: "kill switch", view: "console" },
     ],
   },
   {
     title: "Platform",
     items: [
-      { id: "flags", label: "Feature flags", glyph: "grid" },
-      { id: "health", label: "Health", glyph: "pulse", keywords: "rpc latency" },
-      { id: "usage", label: "Usage", glyph: "people" },
-      { id: "audit", label: "Audit log", glyph: "book", keywords: "records" },
+      { id: "flags", label: "Feature flags", glyph: "grid", view: "console" },
+      { id: "health", label: "Health", glyph: "pulse", keywords: "rpc latency", view: "console" },
+      { id: "usage", label: "Usage", glyph: "people", view: "console" },
+      { id: "audit", label: "Audit log", glyph: "book", keywords: "records", view: "console" },
+    ],
+  },
+  {
+    title: "The Herd",
+    items: [
+      { id: "herd", label: "Herd overview", glyph: "star", keywords: "nft collection mint kalos", view: "herd" },
+      { id: "herd-deploy", label: "Deploy ElyHerd", glyph: "flag", keywords: "deploy camps", view: "herd" },
+      { id: "herd-phases", label: "Phases & prices", glyph: "clock", keywords: "wl public window timeline", view: "herd" },
+      { id: "herd-price", label: "Price oracle", glyph: "pulse", keywords: "twap fallback usd", view: "herd" },
+      { id: "herd-supply", label: "Allocations & partners", glyph: "grid", keywords: "rollover collab caps", view: "herd" },
+      { id: "herd-lists", label: "Merkle & exports", glyph: "book", keywords: "root snapshot csv json", view: "herd" },
+      { id: "herd-reveal", label: "Reveal", glyph: "eye", keywords: "provenance base uri freeze", view: "herd" },
+      { id: "herd-ops", label: "Operations", glyph: "wallet", keywords: "team mint withdraw pause royalty", view: "herd" },
+      { id: "herd-wl", label: "WL tasks", glyph: "check", keywords: "settings tasks", view: "herd" },
+      { id: "herd-queue", label: "Applications", glyph: "people", keywords: "approve reject waitlist queue", view: "herd" },
+      { id: "herd-raffle", label: "Raffle", glyph: "star", keywords: "draw seed block", view: "herd" },
+      { id: "herd-dashboard", label: "Mint dashboard", glyph: "pulse", keywords: "revenue holders mints", view: "herd" },
+      { id: "herd-audit", label: "Herd audit log", glyph: "book", keywords: "log", view: "herd" },
     ],
   },
 ];
@@ -86,7 +105,7 @@ function Console({ owner }: { readonly owner: string }) {
   const plan = useDeployPlan(network, true);
   const records = useRecordsByContract(deployments.data?.deployments, network);
   const recorded = useMemo(() => recordedOn(config.data, network), [config.data, network]);
-  const nextUp = DEPLOYABLE.find((name) => !recorded[name]) ?? "ElyOrders";
+  const nextUp = PLATFORM_DEPLOYABLE.find((name) => !recorded[name]) ?? "ElyOrders";
   const [picked, setPicked] = useState<Deployable | null>(null);
   const selected = picked ?? nextUp;
   const deploy = useDeploy(selected, network, recorded, plan.data);
@@ -118,7 +137,7 @@ function Console({ owner }: { readonly owner: string }) {
           />
         </div>
         <div className="mt-7 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {DEPLOYABLE.map((name) => (
+          {PLATFORM_DEPLOYABLE.map((name) => (
             <ContractCard
               key={name}
               contract={name}
@@ -175,6 +194,7 @@ export default function AdminPage() {
         chip="Owner console"
         navLabel="Owner console"
         groups={GROUPS}
+        views={admin && session ? [{ id: "console", label: "Platform", node: <Console owner={session.address} /> }, { id: "herd", label: "The Herd", node: <HerdConsole owner={session.address} /> }] : undefined}
         searchPlaceholder="Search the console"
         note={
           <>
@@ -189,7 +209,7 @@ export default function AdminPage() {
           </>
         }
       >
-        {admin && session ? <Console owner={session.address} /> : <OwnerOnly signedIn={Boolean(session)} />}
+        {admin && session ? null : <OwnerOnly signedIn={Boolean(session)} />}
       </PortalShell>
     </>
   );

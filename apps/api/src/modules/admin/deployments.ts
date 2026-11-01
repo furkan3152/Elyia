@@ -179,13 +179,17 @@ export async function deployPlan(ctx: AppContext, network: NetworkKey, owner: st
   const manifest = await deployManifest(network);
   const deployed = new Map((await listDeployments(ctx, network)).map((record) => [record.contract, record.address]));
   const allowlist = routerAllowlist(network);
+  const params: Readonly<Record<string, string | null>> = { owner, treasury: ctx.config.herd.treasury };
   const resolve = (value: unknown): unknown => {
     if (value === "$OWNER") return owner;
+    if (typeof value === "string" && value.startsWith("$PARAM.")) return params[value.slice(7)] ?? null;
     if (typeof value === "string" && value.startsWith("$")) return deployed.get(value.slice(1) as ElyiaContractName) ?? null;
     if (Array.isArray(value)) return value.map(resolve);
     return value;
   };
   const order = manifest ? [...manifest.order].sort((a, b) => a.step - b.step).map((step) => step.contract) : ["ElyiaRouter", "ElyAccountFactory", "ElyOrders"];
+  // The Herd collection deploys on its own (no dependency on the router): offered once its artifact is exported.
+  if (!order.includes("ElyHerd") && artifacts.has("ElyHerd")) order.push("ElyHerd");
   const steps: DeployPlanResponse["steps"][number][] = [];
   for (const name of order) {
     const artifact = artifacts.get(name);
@@ -194,7 +198,7 @@ export async function deployPlan(ctx: AppContext, network: NetworkKey, owner: st
       continue;
     }
     const inputs = constructorOf(artifact.abi)?.inputs ?? [];
-    const fromManifest = manifest?.order.find((step) => step.contract === name)?.constructor ?? null;
+    const fromManifest = manifest?.order.find((step) => step.contract === name)?.constructor ?? manifest?.collections?.find((entry) => entry.contract === name)?.constructor ?? null;
     const values: unknown[] = [];
     const shown: Array<{ name: string; type: string; value: string | null }> = [];
     for (const [index, input] of inputs.entries()) {
@@ -207,6 +211,7 @@ export async function deployPlan(ctx: AppContext, network: NetworkKey, owner: st
       else if (key === "venues") value = allowlist.map((item) => item.venue);
       else if (key === "kinds") value = allowlist.map((item) => item.kind);
       else if (key === "router") value = deployed.get("ElyiaRouter") ?? null;
+      else if (key === "treasury" || key === "royaltyreceiver" || key === "royaltyrecipient" || key === "initialtreasury") value = ctx.config.herd.treasury;
       values.push(value);
       shown.push({ name: input.name ?? "", type: input.type, value: value === null ? null : Array.isArray(value) ? value.join(",") : String(value) });
     }
@@ -216,7 +221,7 @@ export async function deployPlan(ctx: AppContext, network: NetworkKey, owner: st
       deployed: deployed.get(name as ElyiaContractName) ?? null,
       transaction: ready ? { data: encodeDeployData({ abi: artifact.abi as Abi, bytecode: artifact.bytecode, args: values } as never), value: "0" } : null,
       constructorArgs: shown,
-      note: ready ? (manifest ? `From the contracts manifest v${manifest.version}.` : null) : name === "ElyOrders" ? "Deploy and record ElyiaRouter first: ElyOrders takes the router's address." : "A constructor argument is unknown to the server.",
+      note: ready ? (manifest ? `From the contracts manifest v${manifest.version}.` : null) : name === "ElyOrders" ? "Deploy and record ElyiaRouter first: ElyOrders takes the router's address." : name === "ElyHerd" && !ctx.config.herd.treasury ? "Set HERD_TREASURY_ADDRESS (the owner's treasury) first: ElyHerd takes it in its constructor." : "A constructor argument is unknown to the server.",
     });
   }
   return { network, chainId: evm.chainId, steps, simulated: false };

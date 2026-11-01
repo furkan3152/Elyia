@@ -18,6 +18,7 @@ import type { IntentStreamEvent } from "@elyia/core/api/intents";
 import type { AppContext } from "../../context.js";
 import { hypercoreNetworkFor } from "../../config.js";
 import { ElyiaHttpError } from "../../http/errors.js";
+import { perksFor } from "../herd/perks.js";
 import { registerStats } from "../admin/stats.js";
 import { randomHex } from "./auth/crypto.js";
 import { docs, iso, PLATFORM_COLLECTIONS } from "./docs.js";
@@ -64,8 +65,9 @@ export function validateAlert(input: AlertInput): void {
 
 export async function createAlert(ctx: AppContext, owner: string, input: AlertInput): Promise<AlertRecord> {
   validateAlert(input);
-  const existing = await alerts(ctx).list({ prefix: `${owner}:`, limit: MAX_ALERTS_PER_OWNER + 1 });
-  if (existing.length >= MAX_ALERTS_PER_OWNER) throw new ElyiaHttpError("ALERT_LIMIT", 409, `At most ${MAX_ALERTS_PER_OWNER} alerts.`);
+  const max = Math.max(MAX_ALERTS_PER_OWNER, (await perksFor(ctx, owner)).alerts);
+  const existing = await alerts(ctx).list({ prefix: `${owner}:`, limit: max + 1 });
+  if (existing.length >= max) throw new ElyiaHttpError("ALERT_LIMIT", 409, `At most ${max} alerts${max > MAX_ALERTS_PER_OWNER ? " (Herd holder)" : ""}.`);
   const record: AlertRecord = {
     id: `alr_${randomHex(10)}`,
     owner,
