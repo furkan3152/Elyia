@@ -1,0 +1,9 @@
+{
+  "name": "The Herd",
+  "description": "The Herd: 3333 pixel ibexes from Elyia, each drawn in code on the elevation map of the layer it lives on. Holding one makes it your Ely across the Elyia platform.",
+  "image": "ipfs://COLLECTION_CID/collection.png",
+  "external_link": "OWNER_INPUT_EXTERNAL_LINK",
+  "seller_fee_basis_points": 500,
+  "fee_recipient": "OWNER_INPUT_TREASURY_ADDRESS",
+  "total_supply": 3333
+}

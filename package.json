@@ -27,7 +27,10 @@
     "build:web": "npm run build:packages && npm run build -w @elyia/web",
     "test:api": "npm test -w @elyia/api",
     "test:web": "npm test -w @elyia/web",
-    "verify": "npm run build:packages && npm run test:packages && npm run lint && npm run typecheck && npm run test:api && npm run test:web && npm run build:web && npm run build -w @elyia/api"
+    "test:herd": "tsc -p packages/herd-art && node --import tsx --test \"packages/herd-art/test/*.test.ts\"",
+    "herd:generate": "node --import tsx packages/herd-art/src/generate.ts",
+    "herd:gallery": "node --import tsx packages/herd-art/src/gallery.ts",
+    "verify": "npm run build:packages && npm run test:packages && npm run lint && npm run typecheck && npm run test:api && npm run test:web && npm run test:herd && npm run build:web && npm run build -w @elyia/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -45,7 +45,7 @@ import { Ely, ElyLoader, ElyEmpty, PixelScene, PixelTerrain, PixelRope, Cards, S
 | `PixelProfile` | `series: {t, value}[]`, `camps?: {t, label}[]`, `label`, `height?` (pixels), `formatValue?`, `startLabel?`, `endLabel?`, `caption?`, `className?` |
 | `PixelBarograph` | `feed?: BlockFeed \| null`, `sampleCadenceMs?`, `height?`, `readout?`, `label?`, `className?` |
 | `PixelStamp` | `state?: "settled" \| "signed" \| "queued" \| "refused"`, `text?`, `detail?`, `size?`, `animate?`, `delayMs?`, `rotate?`, `label?`, `className?` |
-| `HerdPortrait` | `id?` or `member?`, `scale?`, `fluid?`, `label?`, `className?` |
+| `HerdPortrait` | `id?` (1..3333; 0 = the unrevealed placeholder) or `member?`, `scale?` (default 4: 192 px), `fluid?`, `label?`, `className?` |
 | `HerdCard` | `id`, `onSelect?(id)`, `selected?`, `className?` |
 | `RarityBadge` | `rarity`, `className?` |
 | `PixelGlyph` | `rows`, `frames?`, `fps?`, `scale?`, `palette?` (hex or `--token`), `label: string \| null`, `className?` |
@@ -58,9 +58,24 @@ import { Ely, ElyLoader, ElyEmpty, PixelScene, PixelTerrain, PixelRope, Cards, S
 - `terrain.ts`: `terrainModel(holdings, w, h, shock)` (the height field from holdings), `paintTerrain(ctx, model, seconds, palette)` (`DAY_TERRAIN` / `NIGHT_TERRAIN`: moonlit bands by NIGHT), `layoutTerrain`, `snappedBy`, `landBand`, `placeLabels` (labels clamped onto the map, never touching), `SAMPLE_TERRAIN`.
 - `draw.ts`: `drawGrid`, `drawSilhouette`, `drawDisc`, `fixedScale`, `fitScale`, `withSpriteHalo(color, paint)` + `NIGHT_HALO` (#6E8C7E: by NIGHT every sprite drawn with `drawGrid` gets a one pixel moonlit rim outside its ink outline, 4.5:1 on the NIGHT card; PixelCanvas applies it from the painted sheet).
 - `ticker.ts`: `createTicker(env)` (one rAF loop, per-subscriber fps cap, visibility, reduced motion); `useTicker.ts`: `sharedTicker()`, `usePixelLoop(element, draw(seconds, still), {fps, endTime, enabled, redrawKey})` (IntersectionObserver pause; still canvases repaint the end state only when their inputs change).
-- `herd.ts`: `HERD_TRAITS` (weighted), `herdMember(id)`, `rarityOf`, `nextHerdId`, `herdLabel`.
+- `herd.ts`, `herdTraits.ts`, `herdArt.ts`, `herdLegends.ts`: The Herd (below).
 - `scene.ts`, `states.ts`, `profile.ts`, `rope.ts`, `route.ts`, `glyphs.ts`, `blockTicks.ts`: the drawings behind the components.
 
 ## Re-skinned kit
 
 `ui/*` keep their exports and props; they now draw pixel frames (Button, Panel, Tabs, SegmentedControl, Toggle, Slider, Input/Field, Badge, Chip, Tag, Kbd, Dialog, Sheet, Popover, Stat, DataTable, EmptyState → Ely hut, Toaster → ElyToast, Skeleton → dither, ContourLoader → pixel blocks). `topo/*` keep their props: Relief → PixelTerrain, Rope → PixelRope, ElevationProfile → PixelProfile, HutStamp → PixelStamp, Altimeter → PixelAltimeter, Barograph → PixelBarograph; Weather, Windsock, Blaze, AvalanchePictogram are pixel glyphs; RouteCard has a pixel profile with Ely on the live step; AvalancheBulletin carries Ely (worry at level 3+); GuideLicence is a pixel permit with punched days and Ely on watch.
+
+## The Herd (NFT art, one source of truth)
+
+3333 goats, 48 x 48 art: the mascot's own head (`paintElyHead` in `ely.ts`) on a neck and chest, over a seeded elevation map. The browser and the PNG generator (`packages/herd-art`) run the same code; the art uses only IEEE-exact maths (`+ - * /`, `sqrt`, integers; `dexp` instead of `Math.exp`), so every JS engine paints the generator's pixels bit for bit.
+
+- `herdTraits.ts`: `HERD_TRAIT_TABLE` (9 categories in layer order: background, fur, horns, eyes, mouth, beard, headwear, neck, accessory; weights out of 1000), `HERD_CONFLICTS` (pairs that never share a goat, with reasons), `TRAIT_KEYS`, `TRAIT_LABELS`.
+- `herdArt.ts`: `paintHerd(look, seed)` → 48 x 48 grid; `paintFigure`, `paintBackdrop`, `dexp`, `herdField`. Layers are outlined one by one (back, body, neck, head, front); night scenes get the moonlit rim (`NIGHT_HALO`), alpenglow a sun rim.
+- `herdLegends.ts`: `HERD_LEGENDS`, the 15 hand-made 1/1s.
+- `herd.ts`:
+  - `herdMember(id)` → `{ id, name, traits[{key,label,name,share}], legend, odds, score, rank, rarity, grid, backdrop }` (memoised; art painted on first `grid` read).
+  - `herdTraits()` → every category and option with live `count`, `share`, `tier`.
+  - `drawHerd(canvas, id, scale = 1)` sizes and paints any canvas (`id` 0 = placeholder).
+  - `herdMetadata(id, imageBase)` (ERC-721 JSON), `herdPlaceholderArt()`, `herdPlaceholderMetadata()`, `herdRoster()`, `herdLook(id)`, `rarityOfRank`, `herdLabel`, `nextHerdId`, `HERD_SIZE`, `HERD_SEED`, `RARITY_LABEL`, `RARITY_FILL`.
+  - Roll: legend ids drawn first from `HERD_SEED`, then ids 1..3333 rolled in order (each category skips options conflicting with earlier picks; duplicate combinations re-rolled). Rarity score = sum over categories of 3333 / count; 1/1s rank 1..15; tiers by rank: legendary 15, epic 100, rare 333, uncommon 900, common 1985.
+- Generator: `npm run herd:generate` (PNGs at 960 px, metadata, collection.json, rarity.json, provenance.json, placeholder; default out `/home/user/elyia-design/herd/out`), `npm run herd:gallery`, `npm run test:herd`.

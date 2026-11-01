@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { HerdCard, HerdPortrait, RarityBadge } from "../../pixel/Herd";
-import { herdLabel, herdMember, nextHerdId, TRAIT_LABELS } from "../../pixel/herd";
+import { herdLabel, herdMember, nextHerdId } from "../../pixel/herd";
 import { Cards, Section } from "../../pixel/layout";
 import { Button } from "../../ui/Button";
 import { ImportLine } from "./KeySection";
@@ -13,7 +13,7 @@ export function HerdSection() {
   const [id, setId] = useState(777);
   const member = useMemo(() => herdMember(id), [id]);
   return (
-    <Section id="herd" tag="04 · NFT collection · The Herd" title="Every Ely is one of a kind, every background a map." lede="Fur, horns, eyes, mouth, gear and the elevation map of the layer it lives on. All generated in code: the same number always gives the same Ely.">
+    <Section id="herd" tag="04 · NFT collection · The Herd" title="Every Ely is one of a kind, every background a map." lede="Nine layered traits, fifteen hand-made 1/1s, 3333 goats. All generated in code: the same number always gives the same Ely, here and in the collection’s PNGs.">
       <ImportLine>{'import { HerdCard, HerdPortrait, herdMember } from "src/pixel"'}</ImportLine>
       <div className="mx-auto flex max-w-[400px] flex-col items-center">
         <div className="w-full bg-card px-frame px-drop-lg">
@@ -27,12 +27,12 @@ export function HerdSection() {
           Draw another Ely
         </Button>
       </div>
-      <Cards n={6} className="mt-12">
+      <Cards n={member.traits.length === 1 ? 1 : 3} className="mt-12">
         {member.traits.map((trait) => (
           <div key={trait.key} className="flex h-full flex-col items-center justify-center bg-card px-2 py-3 text-center px-frame-thin">
-            <span className="font-tag text-[11px] uppercase text-ink-2">{TRAIT_LABELS[trait.key]}</span>
+            <span className="font-tag text-[11px] uppercase text-ink-2">{trait.label}</span>
             <span className="mt-1 font-display text-[17px] font-bold text-ink">{trait.name}</span>
-            <span className="font-mono text-xs text-summit-ink">{Math.round(trait.share * 100)}% of the herd</span>
+            <span className="font-mono text-xs text-summit-ink">{trait.share * 100 < 1 ? (trait.share * 100).toFixed(1) : Math.round(trait.share * 100)}% of the herd</span>
           </div>
         ))}
       </Cards>

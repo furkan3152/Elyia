@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { ropeGeometry } from "../../topo/geometry/rope";
 import { drawGrid, fitScale, fixedScale, type PixelSurface } from "../draw";
 import { EYES, GEAR, INK, makeEly, mini, MOUTHS, outline, FURS, HORNS, ELY_W, ELY_H, type GearKind } from "../ely";
-import { HERD_TRAITS, herdMember, nextHerdId, rarityOf, TRAIT_KEYS } from "../herd";
+import { HERD_ART, HERD_SIZE, HERD_TRAIT_TABLE, herdMember, herdTraits, nextHerdId, rarityOfRank, TRAIT_KEYS } from "../herd";
 import { paintProfile, profileColumns } from "../profile";
 import { paintRope, ropeLayout } from "../rope";
 import { drawScene, sceneAltitude, sceneModel, sceneProgress, type TextSurface } from "../scene";
@@ -208,42 +208,35 @@ describe("terrain (height field from holdings)", () => {
 describe("the herd", () => {
   it("is deterministic per number", () => {
     const a = herdMember(777);
-    const b = herdMember(777);
-    assert.deepEqual(a.traits, b.traits);
-    assert.equal(a.rarity, b.rarity);
-    assert.deepEqual(a.grid, b.grid);
+    assert.deepEqual(a.traits, herdMember(777).traits);
+    assert.equal(a.grid.length, HERD_ART);
+    assert.ok(a.grid.every((row) => row.length === HERD_ART && row.every((cell) => typeof cell === "string")));
     assert.notDeepEqual(herdMember(778).traits, a.traits);
   });
 
   it("follows the trait weights across the herd", () => {
-    const counts = new Map<string, number>();
-    const n = 4000;
-    for (let id = 1; id <= n; id += 1) {
-      const fur = herdMember(id).traits.find((trait) => trait.key === "fur")!.name;
-      counts.set(fur, (counts.get(fur) ?? 0) + 1);
-    }
-    const rock = (counts.get("Rock") ?? 0) / n;
-    const gold = (counts.get("Gold") ?? 0) / n;
-    assert.ok(Math.abs(rock - 0.36) < 0.04, `rock ${rock}`);
-    assert.ok(gold < 0.08, `gold ${gold}`);
+    const rock = herdTraits()
+      .find((category) => category.key === "fur")!
+      .options.find((option) => option.name === "Rock")!;
+    assert.ok(Math.abs(rock.share - 0.22) < 0.03, `rock ${rock.share}`);
   });
 
-  it("grades rarity by the odds of the whole combination", () => {
-    assert.equal(rarityOf(0.00001), "legendary");
-    assert.equal(rarityOf(0.0001), "rare");
-    assert.equal(rarityOf(0.0005), "uncommon");
-    assert.equal(rarityOf(0.01), "common");
+  it("ranks by the rarity score, the 1/1s first", () => {
+    const ranks = new Set<number>();
+    for (let id = 1; id <= HERD_SIZE; id += 1) ranks.add(herdMember(id).rank);
+    assert.equal(ranks.size, HERD_SIZE);
+    assert.equal(rarityOfRank(1), "legendary");
+    assert.equal(rarityOfRank(HERD_SIZE), "common");
     const member = herdMember(42);
-    const expected = member.traits.reduce((p, t) => p * t.share, 1);
-    assert.equal(member.odds, expected);
-    for (const key of TRAIT_KEYS) assert.ok(HERD_TRAITS[key].length > 1);
+    assert.equal(member.odds, member.traits.reduce((p, t) => p * t.share, 1));
+    for (const key of TRAIT_KEYS) assert.ok(HERD_TRAIT_TABLE[key].length > 1);
   });
 
-  it("walks the herd without leaving 1..9999", () => {
+  it("walks the herd without leaving 1..3333", () => {
     let id = 777;
     for (let i = 0; i < 500; i += 1) {
       id = nextHerdId(id);
-      assert.ok(id >= 1 && id <= 9999);
+      assert.ok(id >= 1 && id <= HERD_SIZE);
     }
   });
 });

@@ -6,7 +6,7 @@
 
 /** A colour grid: `grid[y][x]` is a CSS hex colour or null (transparent). */
 export type PixelGrid = ReadonlyArray<ReadonlyArray<string | null>>;
-type MutableGrid = Array<Array<string | null>>;
+export type MutableGrid = Array<Array<string | null>>;
 
 export const ELY_W = 32;
 export const ELY_H = 34;
@@ -16,9 +16,9 @@ export const SUN = "#F2C200";
 export const ROPE_RED = "#C62D1F";
 export const GLACIER = "#17788C";
 export const AQUA = "#6FD3E3";
-const BLUSH = "#E59A84";
-const MUZZLE = "#F1DFC0";
-const LASER = "#FF4D4D";
+export const BLUSH = "#E59A84";
+export const MUZZLE = "#F1DFC0";
+export const LASER = "#FF4D4D";
 
 /** Fur: [base, dark, light]. */
 export const FURS = {
@@ -76,14 +76,23 @@ function bez(t: number, a: number, b: number, c: number, d: number): number {
   return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
 }
 
+/** A horn centre line: points [x, y, t] from the crown (t = 0) to the tip (t = 1), in sprite coordinates. */
+export type HornSpine = ReadonlyArray<readonly [number, number, number]>;
+type Point = readonly [number, number];
+
+/** Samples a cubic horn spine through four control points (the left horn; the right one is mirrored). */
+export function hornSpine(p0: Point, p1: Point, p2: Point, p3: Point, steps = 60): HornSpine {
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const t = i / steps;
+    return [bez(t, p0[0], p1[0], p2[0], p3[0]), bez(t, p0[1], p1[1], p2[1], p3[1]), t] as const;
+  });
+}
+
 /** The horn's centre line: a cubic sweep from the crown out and down, with its taper parameter. */
-const HORN_SPINE: ReadonlyArray<readonly [number, number, number]> = Array.from({ length: 61 }, (_, i) => {
-  const t = i / 60;
-  return [bez(t, 12.6, 10, 3.5, 1.4), bez(t, 10.5, 0.5, 0.2, 6.2), t] as const;
-});
+export const HORN_SPINE: HornSpine = hornSpine([12.6, 10.5], [10, 0.5], [3.5, 0.2], [1.4, 6.2]);
 
 /** Head half-width at row y (an ellipse cap over a tapering muzzle). */
-function headHalfWidth(y: number): number {
+export function headHalfWidth(y: number): number {
   if (y < 8.6) return -1;
   if (y <= 18.5) return 8.7 * Math.sqrt(Math.max(0, 1 - ((y - 17) / 8.6) ** 2));
   return 8.5 + (1.4 - 8.5) * ((y - 18.5) / 9.6);
@@ -109,21 +118,62 @@ export function outline(grid: PixelGrid, ink = INK): PixelGrid {
   return out;
 }
 
-/** Builds Ely from traits: a 32 x 34 colour grid (row 0 is a spare row for crowns). */
-export function makeEly(traits: ElyTraits = {}): PixelGrid {
-  const t = { ...DEFAULT_TRAITS, ...traits };
-  const [F, FD, FL] = FURS[t.fur] ?? FURS.Rock;
-  const [H, HR, HL] = HORNS[t.horn] ?? HORNS.Ivory;
-  const g: MutableGrid = Array.from({ length: ELY_H }, () => Array<string | null>(ELY_W).fill(null));
-  const set = (x: number, y: number, c: string) => {
-    const yy = y + 1;
-    if (x >= 0 && yy >= 0 && x < ELY_W && yy < ELY_H) g[yy]![x] = c;
-  };
-  const sym = (x: number, y: number, c: string) => {
+/**
+ * The ear tilt, cos and sin of -0.35 rad, as literals: the head is painted
+ * with + - * / and sqrt only (IEEE exact), so every JS engine draws the same
+ * pixels (the Herd's PNGs and the browser must agree to the bit).
+ */
+const EAR_COS = 0.93937271284737889;
+const EAR_SIN = -0.34289780745545134;
+
+/** Plots one pixel in the head's own frame (x 0..31, y -1..32); callers clip and offset. */
+export type Plot = (x: number, y: number, color: string) => void;
+
+/** Plots a pixel and its mirror across the centre axis (x and 31 - x). */
+export function mirrored(set: Plot): Plot {
+  return (x, y, c) => {
     set(x, y, c);
     set(31 - x, y, c);
   };
+}
 
+/** The head with resolved colours, so callers outside the named catalogues (the Herd) can bring their own. */
+export interface ElyHeadSpec {
+  /** [base, dark, light] */
+  readonly fur: readonly [string, string, string];
+  /** [base, ring, top light] (the top light is applied by `hornTopLight`). */
+  readonly horn: readonly [string, string, string];
+  readonly spine?: HornSpine;
+  /** Horn half-thickness at the root (default 2.3) and its loss towards the tip (default 1.4). */
+  readonly hornRoot?: number;
+  readonly hornTaper?: number;
+  /** Growth rings along the horn (default 8; 0 for none). */
+  readonly rings?: number;
+  /** The white chevrons on the forehead. */
+  readonly blaze?: boolean;
+  /** The goatee (default on). */
+  readonly beard?: boolean;
+  readonly muzzle?: string;
+  readonly blush?: string;
+  /** Inner ear colour (default the blush). */
+  readonly innerEar?: string;
+}
+
+/**
+ * Paints the bare head (horns, ears, head, goatee, muzzle, blaze, cheek)
+ * through `set`, mirrored for symmetry. No eyes, mouth, gear or outline.
+ */
+export function paintElyHead(set: Plot, spec: ElyHeadSpec): void {
+  const [F, FD, FL] = spec.fur;
+  const [H, HR] = spec.horn;
+  const spine = spec.spine ?? HORN_SPINE;
+  const root = spec.hornRoot ?? 2.3;
+  const taper = spec.hornTaper ?? 1.4;
+  const rings = spec.rings ?? 8;
+  const blush = spec.blush ?? BLUSH;
+  const innerEar = spec.innerEar ?? blush;
+  const muzzle = spec.muzzle ?? MUZZLE;
+  const sym = mirrored(set);
   for (let y = 0; y < ELY_W; y += 1) {
     for (let x = 0; x < 16; x += 1) {
       const px = x + 0.5;
@@ -132,120 +182,147 @@ export function makeEly(traits: ElyTraits = {}): PixelGrid {
       // horns: distance to the tapered spine, with growth rings
       let best = 9;
       let bt = 0;
-      for (const [hx, hy, ht] of HORN_SPINE) {
-        const d = Math.hypot(px - hx, py - hy) - (2.3 - 1.4 * ht);
+      for (const [hx, hy, ht] of spine) {
+        const ddx = px - hx;
+        const ddy = py - hy;
+        const d = Math.sqrt(ddx * ddx + ddy * ddy) - (root - taper * ht);
         if (d < best) {
           best = d;
           bt = ht;
         }
       }
-      if (best <= 0) sym(x, y, (bt * 8) % 1 < 0.22 ? HR : H);
+      if (best <= 0) sym(x, y, rings > 0 && (bt * rings) % 1 < 0.22 ? HR : H);
       // ears: a tilted ellipse with a pink inner ear
       const ex = px - 5.6;
       const ey = py - 15.2;
-      const ca = Math.cos(-0.35);
-      const sa = Math.sin(-0.35);
+      const ca = EAR_COS;
+      const sa = EAR_SIN;
       const rx = ex * ca - ey * sa;
       const ry = ex * sa + ey * ca;
-      if ((rx / 3.4) ** 2 + (ry / 1.5) ** 2 <= 1) sym(x, y, (rx / 2.2) ** 2 + (ry / 0.7) ** 2 <= 1 ? BLUSH : F);
+      if ((rx / 3.4) ** 2 + (ry / 1.5) ** 2 <= 1) sym(x, y, (rx / 2.2) ** 2 + (ry / 0.7) ** 2 <= 1 ? innerEar : F);
       // head
       const w = headHalfWidth(py);
       if (w > 0 && dx <= w) sym(x, y, dx > w - 1.3 && py > 15 ? FD : py < 11.5 && dx < 5 ? FL : F);
       // beard
-      if (py >= 27.5 && py <= 30.6 && dx <= (31 - py) * 0.45 + 0.4) sym(x, y, FD);
+      if (spec.beard !== false && py >= 27.5 && py <= 30.6 && dx <= (31 - py) * 0.45 + 0.4) sym(x, y, FD);
       // muzzle
-      if ((dx / 4.4) ** 2 + ((py - 23.4) / 4.1) ** 2 <= 1) sym(x, y, MUZZLE);
+      if ((dx / 4.4) ** 2 + ((py - 23.4) / 4.1) ** 2 <= 1) sym(x, y, muzzle);
     }
   }
-  // horn top light
-  for (let y = 1; y < ELY_H; y += 1) for (let x = 0; x < ELY_W; x += 1) if (g[y]![x] === H && g[y - 1]![x] === null) g[y]![x] = HL;
   // blaze chevrons
-  if (t.blaze) {
+  if (spec.blaze) {
     for (const off of [0, 2]) {
       sym(15, 11 + off, FL);
       sym(14, 12 + off, FL);
       sym(13, 13 + off, FL);
     }
   }
-  sym(8, 20, BLUSH);
+  sym(8, 20, blush);
+}
 
-  const eyes: Record<EyeKind, () => void> = {
-    open: () => {
-      for (let y = 15; y <= 18; y += 1) for (let x = 9; x <= 11; x += 1) sym(x, y, WHITE);
-      sym(11, 16, INK);
-      sym(10, 17, INK);
-      sym(11, 17, INK);
-      sym(10, 16, WHITE);
-      sym(11, 18, INK);
-      sym(10, 18, INK);
-    },
-    happy: () => {
-      sym(9, 17, INK);
-      sym(10, 16, INK);
-      sym(11, 16, INK);
-      sym(12, 17, INK);
-    },
-    sleep: () => {
-      sym(9, 17, INK);
-      sym(10, 18, INK);
-      sym(11, 18, INK);
-      sym(12, 17, INK);
-    },
-    worried: () => {
-      for (let y = 16; y <= 18; y += 1) for (let x = 9; x <= 11; x += 1) sym(x, y, WHITE);
-      sym(10, 17, INK);
-      sym(10, 18, INK);
-      sym(8, 14, INK);
-      sym(9, 14, INK);
-      sym(10, 15, INK);
-    },
-    laser: () => {
-      for (let x = 7; x <= 15; x += 1) {
-        sym(x, 16, INK);
-        sym(x, 17, INK);
-      }
-      sym(15, 15, INK);
-      sym(9, 16, LASER);
-      sym(10, 16, LASER);
-      sym(9, 17, "#FF9A8A");
-    },
-    blink: () => {
-      sym(9, 17, INK);
-      sym(10, 17, INK);
-      sym(11, 17, INK);
-    },
-  };
-  (eyes[t.eye] ?? eyes.open)();
+/** Lights every horn pixel that has nothing above it (the moonlit top edge). */
+export function hornTopLight(grid: MutableGrid, horn: string, light: string): void {
+  for (let y = 1; y < grid.length; y += 1) for (let x = 0; x < (grid[y]?.length ?? 0); x += 1) if (grid[y]![x] === horn && grid[y - 1]![x] === null) grid[y]![x] = light;
+}
 
-  // nose
+/** The eye drawings, painted through a mirrored plot (head frame). */
+export const ELY_EYES: Readonly<Record<EyeKind, (sym: Plot) => void>> = {
+  open: (sym) => {
+    for (let y = 15; y <= 18; y += 1) for (let x = 9; x <= 11; x += 1) sym(x, y, WHITE);
+    sym(11, 16, INK);
+    sym(10, 17, INK);
+    sym(11, 17, INK);
+    sym(10, 16, WHITE);
+    sym(11, 18, INK);
+    sym(10, 18, INK);
+  },
+  happy: (sym) => {
+    sym(9, 17, INK);
+    sym(10, 16, INK);
+    sym(11, 16, INK);
+    sym(12, 17, INK);
+  },
+  sleep: (sym) => {
+    sym(9, 17, INK);
+    sym(10, 18, INK);
+    sym(11, 18, INK);
+    sym(12, 17, INK);
+  },
+  worried: (sym) => {
+    for (let y = 16; y <= 18; y += 1) for (let x = 9; x <= 11; x += 1) sym(x, y, WHITE);
+    sym(10, 17, INK);
+    sym(10, 18, INK);
+    sym(8, 14, INK);
+    sym(9, 14, INK);
+    sym(10, 15, INK);
+  },
+  laser: (sym) => {
+    for (let x = 7; x <= 15; x += 1) {
+      sym(x, 16, INK);
+      sym(x, 17, INK);
+    }
+    sym(15, 15, INK);
+    sym(9, 16, LASER);
+    sym(10, 16, LASER);
+    sym(9, 17, "#FF9A8A");
+  },
+  blink: (sym) => {
+    sym(9, 17, INK);
+    sym(10, 17, INK);
+    sym(11, 17, INK);
+  },
+};
+
+/** The nose (head frame). */
+export function paintElyNose(sym: Plot): void {
   sym(14, 21, INK);
   sym(15, 21, INK);
   sym(15, 22, INK);
-  const mouths: Record<MouthKind, () => void> = {
-    smile: () => {
-      sym(13, 24, INK);
-      sym(14, 25, INK);
-      sym(15, 25, INK);
-    },
-    grin: () => {
-      sym(13, 24, INK);
-      sym(14, 25, INK);
-      sym(15, 25, INK);
-      sym(14, 24, WHITE);
-      sym(15, 24, WHITE);
-    },
-    flat: () => {
-      sym(14, 25, INK);
-      sym(15, 25, INK);
-    },
-    o: () => {
-      sym(15, 24, INK);
-      sym(15, 25, INK);
-      sym(14, 24, INK);
-      sym(14, 25, INK);
-    },
+}
+
+/** The mouth drawings, painted through a mirrored plot (head frame). */
+export const ELY_MOUTHS: Readonly<Record<MouthKind, (sym: Plot) => void>> = {
+  smile: (sym) => {
+    sym(13, 24, INK);
+    sym(14, 25, INK);
+    sym(15, 25, INK);
+  },
+  grin: (sym) => {
+    sym(13, 24, INK);
+    sym(14, 25, INK);
+    sym(15, 25, INK);
+    sym(14, 24, WHITE);
+    sym(15, 24, WHITE);
+  },
+  flat: (sym) => {
+    sym(14, 25, INK);
+    sym(15, 25, INK);
+  },
+  o: (sym) => {
+    sym(15, 24, INK);
+    sym(15, 25, INK);
+    sym(14, 24, INK);
+    sym(14, 25, INK);
+  },
+};
+
+/** Builds Ely from traits: a 32 x 34 colour grid (row 0 is a spare row for crowns). */
+export function makeEly(traits: ElyTraits = {}): PixelGrid {
+  const t = { ...DEFAULT_TRAITS, ...traits };
+  const fur = FURS[t.fur] ?? FURS.Rock;
+  const horn = HORNS[t.horn] ?? HORNS.Ivory;
+  const g: MutableGrid = Array.from({ length: ELY_H }, () => Array<string | null>(ELY_W).fill(null));
+  const set = (x: number, y: number, c: string) => {
+    const yy = y + 1;
+    if (x >= 0 && yy >= 0 && x < ELY_W && yy < ELY_H) g[yy]![x] = c;
   };
-  (mouths[t.mouth] ?? mouths.smile)();
+  const sym = mirrored(set);
+
+  paintElyHead(set, { fur, horn, blaze: t.blaze });
+  hornTopLight(g, horn[0], horn[2]);
+  (ELY_EYES[t.eye] ?? ELY_EYES.open)(sym);
+  paintElyNose(sym);
+  (ELY_MOUTHS[t.mouth] ?? ELY_MOUTHS.smile)(sym);
 
   const C = t.gearColor;
   switch (t.gear) {

@@ -1,0 +1,43 @@
+{
+  "name": "Ely #3",
+  "description": "The Herd: 3333 pixel ibexes from Elyia, each drawn in code on the elevation map of the layer it lives on. Holding one makes it your Ely across the Elyia platform.",
+  "image": "ipfs://IMAGES_CID/3.png",
+  "attributes": [
+    {
+      "trait_type": "Background",
+      "value": "Sunrise"
+    },
+    {
+      "trait_type": "Fur",
+      "value": "Ember"
+    },
+    {
+      "trait_type": "Horns",
+      "value": "Crystal"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Curious"
+    },
+    {
+      "trait_type": "Mouth",
+      "value": "Fang"
+    },
+    {
+      "trait_type": "Beard",
+      "value": "Classic"
+    },
+    {
+      "trait_type": "Headwear",
+      "value": "None"
+    },
+    {
+      "trait_type": "Neck",
+      "value": "None"
+    },
+    {
+      "trait_type": "Accessory",
+      "value": "Ice axe"
+    }
+  ]
+}

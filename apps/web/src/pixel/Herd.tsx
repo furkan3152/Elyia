@@ -2,16 +2,14 @@ import { useCallback, useMemo } from "react";
 
 import { cx, FOCUS_RING } from "../ui/cx";
 import { drawGrid } from "./draw";
-import { ELY_H, ELY_W, LAYERS } from "./ely";
-import { herdLabel, herdMember, RARITY_FILL, RARITY_LABEL, type HerdMember } from "./herd";
+import { HERD_ART, herdLabel, herdMember, herdPlaceholderArt, RARITY_FILL, RARITY_LABEL, type HerdMember } from "./herd";
 import { PixelCanvas } from "./PixelCanvas";
-import { drawTopo } from "./topo";
 
 export interface HerdPortraitProps {
-  /** Herd number (1..9999); or pass a generated `member`. */
+  /** Herd number (1..3333; 0 = the unrevealed placeholder); or pass a generated `member`. */
   readonly id?: number;
   readonly member?: HerdMember;
-  /** CSS px per pixel (default 4: 128 x 136). Ignored with `fluid`. */
+  /** CSS px per pixel (default 4: 192 x 192). Ignored with `fluid`. */
   readonly scale?: number;
   /** Fill the container width (integer scale, crisp). */
   readonly fluid?: boolean;
@@ -19,23 +17,19 @@ export interface HerdPortraitProps {
   readonly className?: string;
 }
 
-/** One Herd Ely on its layer's elevation map (32 x 34 pixels). */
+/** One Herd Ely (48 x 48), drawn by the same code as the collection's PNGs. */
 export function HerdPortrait({ id = 777, member, scale = 4, fluid = false, label, className }: HerdPortraitProps) {
-  const ely = useMemo(() => member ?? herdMember(id), [member, id]);
-  const draw = useCallback(
-    (ctx: CanvasRenderingContext2D) => {
-      drawTopo(ctx, ely.field, LAYERS[ely.layer]);
-      drawGrid(ctx, ely.grid, 0, 0, 1);
-    },
-    [ely],
-  );
-  const name = label === null ? undefined : (label ?? `Ely ${herdLabel(ely.id)}: ${ely.traits.map((trait) => trait.name).join(", ")}; ${RARITY_LABEL[ely.rarity]}`);
+  const placeholder = !member && id === 0;
+  const ely = useMemo(() => (placeholder ? null : (member ?? herdMember(id))), [placeholder, member, id]);
+  const grid = ely ? ely.grid : herdPlaceholderArt();
+  const draw = useCallback((ctx: CanvasRenderingContext2D) => drawGrid(ctx, grid, 0, 0, 1), [grid]);
+  const name =
+    label === null ? undefined : (label ?? (ely ? `${ely.name}: ${ely.traits.map((trait) => trait.name).join(", ")}; ${RARITY_LABEL[ely.rarity]}` : "An unrevealed Ely in the fog"));
+  const key = ely?.id ?? 0;
   if (fluid) {
-    return (
-      <PixelCanvas width={ELY_W} height={ELY_H} contain halo={false} draw={draw} label={name} decorative={label === null} redrawKey={ely.id} className={className} style={{ background: LAYERS[ely.layer][0] }} />
-    );
+    return <PixelCanvas width={HERD_ART} height={HERD_ART} contain halo={false} draw={draw} label={name} decorative={label === null} redrawKey={key} className={className} style={{ background: grid[0]![0]! }} />;
   }
-  return <PixelCanvas width={ELY_W} height={ELY_H} scale={scale} halo={false} draw={draw} label={name} decorative={label === null} redrawKey={ely.id} className={className} />;
+  return <PixelCanvas width={HERD_ART} height={HERD_ART} scale={scale} halo={false} draw={draw} label={name} decorative={label === null} redrawKey={key} className={className} />;
 }
 
 export function RarityBadge({ rarity, className }: { readonly rarity: HerdMember["rarity"]; readonly className?: string }) {
