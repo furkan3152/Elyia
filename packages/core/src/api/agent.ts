@@ -29,7 +29,12 @@ export interface RouteCard {
   readonly notionalUsd: string | null;
   /** Integrator fee of the developer whose widget or key asked (null: none). */
   readonly integratorFee: { readonly bps: number; readonly recipient: string; readonly developerId: string } | null;
-  readonly policy: { readonly decision: string; readonly reasons: readonly string[] };
+  readonly policy: {
+    readonly decision: string;
+    readonly reasons: readonly string[];
+    /** The same reasons with their Rule Book rule id and limit ("trading.maxNotionalUsd", "10000"). */
+    readonly details?: readonly { readonly rule: string; readonly outcome: string; readonly message: string; readonly limit?: string; readonly observed?: string }[];
+  };
   readonly warnings: readonly string[];
   readonly priceSource: "reference:hypercore-mainnet-mids";
   readonly estimatedSeconds: number | null;
@@ -71,6 +76,8 @@ export interface ProposalDecisionRequest {
   readonly decision: "approve" | "reject";
   /** Approve through the opt-in keeper instead of the wallet (trade-only proposals). */
   readonly via?: "wallet" | "keeper";
+  /** The signing browser's trade-only HyperCore key (needed when the proposal has HyperCore order steps). */
+  readonly agent?: string;
 }
 
 export interface ProposalDecisionResponse {

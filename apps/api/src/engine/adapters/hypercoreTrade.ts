@@ -260,7 +260,7 @@ export function createHypercoreTradeAdapter(deps: EngineDeps): ProtocolAdapter {
         const market = await marketFor(deps, action.network, trade.market, "perp");
         const requested = trade.leverage;
         if (!requested) throw engineError("LEVERAGE_INVALID", "Which leverage? Give a whole number like 5.");
-        if (market.maxLeverage !== null && requested.value > market.maxLeverage) throw engineError("LEVERAGE_INVALID", `${market.displayName} allows at most ${market.maxLeverage}x.`);
+        if (market.maxLeverage !== null && requested.value > market.maxLeverage) throw engineError("LEVERAGE_INVALID", `HyperCore allows at most ${market.maxLeverage}x on ${market.displayName} (an exchange limit, not a Rule Book rule).`);
         const warnings: string[] = [];
         let isCross = requested.mode !== "isolated";
         if (isCross && market.onlyIsolated) {

@@ -204,7 +204,7 @@ export function ElyPanel({ insights, insightsSample, insightsLoading, insightsEr
       <Sheet open={opened !== null && openedPrimary !== null} onClose={() => setCardTurn(null)} side={phone ? "bottom" : "right"} title="Route card" className="ely2">
         {opened && openedPrimary ? (
           <div className={cx("-mx-6", phone ? "h-[70dvh]" : "h-[calc(100dvh-110px)]")}>
-            <RouteArtifact key={opened.id} card={openedPrimary.card} proposal={openedPrimary.proposal} source={signSourceOf(opened, sentenceBefore(chat.turns, opened.id))} session={token} draftedAt={openedPrimary.at} variant="sheet" />
+            <RouteArtifact key={opened.id} card={openedPrimary.card} proposal={openedPrimary.proposal} source={signSourceOf(opened, sentenceBefore(chat.turns, opened.id))} session={token} draftedAt={openedPrimary.at} stateKey={opened.id} variant="sheet" />
           </div>
         ) : null}
       </Sheet>

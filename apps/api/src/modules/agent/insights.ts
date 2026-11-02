@@ -8,7 +8,7 @@
  *   auto-protect       perp positions without a stop -> native reduce-only stop (inside half the liquidation distance)
  *   liquidation-guard  positions within 5 % of liquidation -> reduce 25 %
  *   funding-harvest    highest mainnet funding carry (paper on testnet)
- *   idle-cash          idle USDC on Elysium -> verified vault (yield not measured: said so)
+ *   idle-cash          idle USDC on Elysium -> the only executable ERC-4626 USDC vault (unaudited; yield not measured: said so)
  *   what-if            shocks of -30..+10 % per underlying: PnL, liquidations
  *   gas-top-up         HYPE below the gas floor on Elysium / HyperEVM -> bridge / link from another layer
  *   dust-sweep         priced Elysium holdings below the dust threshold -> swap to HYPE
@@ -109,7 +109,7 @@ function protectInsight(position: PerpPositionView, memory: AgentMemory, network
     id: id("auto-protect", position.id),
     kind: "auto-protect",
     severity: position.liquidationRisk === "danger" ? "act" : "watch",
-    title: { en: `Protect your ${position.coin} ${position.side}`, tr: `${position.coin} ${position.side === "long" ? "long" : "short"} pozisyonunu koru` },
+    title: { en: `Protect your ${position.coin} ${position.side}`, tr: `${position.coin} ${position.side === "long" ? "long" : "short"} pozisyonunuzu koruyun` },
     explanation: {
       en: `No stop is resting for ${position.coin}. A native reduce-only stop at ${stopText} (${round(distancePct)}% from mark ${priceText(mark)}${liq !== null ? `, inside half the distance to liquidation at ${priceText(liq)}` : ""}) caps the loss near ${usd(lossUsd)}. It lives on HyperCore, so it works even when Elyia is offline.`,
       tr: `${position.coin} için bekleyen stop yok. ${stopText} seviyesinde (${round(distancePct)}%, işaret fiyatı ${priceText(mark)}${liq !== null ? `; ${priceText(liq)} tasfiye mesafesinin yarısının içinde` : ""}) yerel, yalnızca azaltan bir stop zararı yaklaşık ${usd(lossUsd)} ile sınırlar. HyperCore üzerinde durur; Elyia kapalıyken de çalışır.`,
@@ -183,7 +183,7 @@ export function computeInsights(input: InsightInput): { readonly insights: Insig
         id: id("rebalance", `${over.underlying}-${under.underlying}`),
         kind: "rebalance",
         severity: "watch",
-        title: { en: `Rebalance: ${over.underlying} is ${over.drift} pts over target`, tr: `Yeniden dengele: ${over.underlying} hedefin ${over.drift} puan üstünde` },
+        title: { en: `Rebalance: ${over.underlying} is ${over.drift} pts over target`, tr: `Yeniden dengeleyin: ${over.underlying} hedefin ${over.drift} puan üstünde` },
         explanation: {
           en: `Target ${over.underlying} ${over.target}% / ${under.underlying} ${under.target}%; now ${over.pct}% / ${under.pct}%. Moving about ${usd(moveUsd)} brings both back inside the ±${memory.targetMix.bandPct} pt band.${actions.length === 0 ? " No wallet balance on Elysium can make this move in one card; it needs a HyperCore trade." : ""}`,
           tr: `Hedef ${over.underlying} %${over.target} / ${under.underlying} %${under.target}; şu an %${over.pct} / %${under.pct}. Yaklaşık ${usd(moveUsd)} taşımak ikisini de ±${memory.targetMix.bandPct} puan bandına geri getirir.${actions.length === 0 ? " Elysium cüzdanındaki bakiye bu hareketi tek kartta yapamıyor; HyperCore işlemi gerekir." : ""}`,
@@ -228,8 +228,8 @@ export function computeInsights(input: InsightInput): { readonly insights: Insig
       severity: "info",
       title: { en: `${usd(idleUsdc)} USDC sits idle on Elysium`, tr: `Elysium'da ${usd(idleUsdc)} USDC boşta bekliyor` },
       explanation: {
-        en: `The Cheshire USDC vault is the verified ERC-4626 venue for USDC on Elysium. Its yield is not measured by Elyia yet, so no APY is promised. ${amount < Math.floor(idleUsdc * 0.9 * 100) / 100 ? `Depositing ${amount} USDC stays under your Rule Book's per-intent cap; sign again for the rest.` : `Depositing 90% (${amount} USDC) keeps a 10% buffer.`}`,
-        tr: `Cheshire USDC kasası, Elysium'da USDC için doğrulanmış ERC-4626 alanı. Getirisi Elyia tarafından henüz ölçülmedi; APY vaadi yok. ${amount < Math.floor(idleUsdc * 0.9 * 100) / 100 ? `${amount} USDC yatırmak Kural Kitabı'nın işlem başı sınırının altında kalır; kalanı için yeniden imzala.` : `%90'ını (${amount} USDC) yatırmak %10 tampon bırakır.`}`,
+        en: `The Cheshire USDC vault is the only executable ERC-4626 USDC venue on Elysium · unaudited. Its yield is not measured by Elyia yet, so no APY is promised. ${amount < Math.floor(idleUsdc * 0.9 * 100) / 100 ? `Depositing ${amount} USDC stays under your Rule Book's per-intent cap; sign again for the rest.` : `Depositing 90% (${amount} USDC) keeps a 10% buffer.`}`,
+        tr: `Cheshire USDC kasası, Elysium'daki tek yürütülebilir ERC-4626 USDC alanı · denetlenmemiş. Getirisi Elyia tarafından henüz ölçülmedi; APY vaadi yok. ${amount < Math.floor(idleUsdc * 0.9 * 100) / 100 ? `${amount} USDC yatırmak Kural Kitabı'nın işlem başı sınırının altında kalır; kalanı için yeniden imzalayın.` : `%90'ını (${amount} USDC) yatırmak %10 tampon bırakır.`}`,
       },
       figures: { idleUsdc: round(idleUsdc), depositUsdc: amount, venue: "cheshire", apyPct: null },
       actions: [{ kind: "deposit", network: elysium, from: "USDC", amount: amount.toFixed(2), protocol: "cheshire" }],
@@ -254,7 +254,7 @@ export function computeInsights(input: InsightInput): { readonly insights: Insig
       title: { en: "Gas is low at a camp", tr: "Bir kampta gaz azaldı" },
       explanation: {
         en: `HYPE for gas: Elysium ${round(elysiumHype, 4)}, HyperEVM ${round(evmHype, 4)}, HyperCore spot ${round(coreHype, 4)} (floor ${floor}). ${gasActions.length > 0 ? `Moving ${topUp} HYPE from a layer with spare HYPE keeps every layer usable.` : "No layer has spare HYPE to move; add some from your wallet."}`,
-        tr: `Gaz için HYPE: Elysium ${round(elysiumHype, 4)}, HyperEVM ${round(evmHype, 4)}, HyperCore spot ${round(coreHype, 4)} (taban ${floor}). ${gasActions.length > 0 ? `Fazlası olan katmandan ${topUp} HYPE taşımak her katmanı kullanılabilir tutar.` : "Taşınacak fazla HYPE yok; cüzdanından ekle."}`,
+        tr: `Gaz için HYPE: Elysium ${round(elysiumHype, 4)}, HyperEVM ${round(evmHype, 4)}, HyperCore spot ${round(coreHype, 4)} (taban ${floor}). ${gasActions.length > 0 ? `Fazlası olan katmandan ${topUp} HYPE taşımak her katmanı kullanılabilir tutar.` : "Taşınacak fazla HYPE yok; cüzdanınızdan ekleyin."}`,
       },
       figures: { elysiumHype: round(elysiumHype, 6), hyperevmHype: round(evmHype, 6), hypercoreHype: round(coreHype, 6), floorHype: floor },
       actions: gasActions,
@@ -311,7 +311,7 @@ export function computeInsights(input: InsightInput): { readonly insights: Insig
       id: id("explain-pnl", String(days)),
       kind: "explain-pnl",
       severity: "info",
-      title: { en: `Your PnL over ${days} days`, tr: `${days} günlük kâr/zararın` },
+      title: { en: `Your PnL over ${days} days`, tr: `${days} günlük kâr/zararınız` },
       explanation: {
         en: `Realized ${usd(totals.realizedPnl)}, fees ${totals.fees >= 0 ? `${usd(totals.fees)} paid` : `${usd(-totals.fees)} rebated`}, funding ${usd(totals.funding)}: net ${usd(totals.net)} on ${usd(totals.volume)} traded. Open positions add ${usd(unrealized)} unrealized.${best ? ` Best day ${best.day} (${usd(best.net)})` : ""}${worstDay ? `, worst ${worstDay.day} (${usd(worstDay.net)}).` : "."}${totals.fees > Math.abs(totals.realizedPnl) && totals.fees > 0 ? " Fees cost more than trading made: fewer, larger trades or maker orders would help." : ""}`,
         tr: `Gerçekleşen ${usd(totals.realizedPnl)}, ücretler ${totals.fees >= 0 ? `${usd(totals.fees)} ödendi` : `${usd(-totals.fees)} iade`}, fonlama ${usd(totals.funding)}: ${usd(totals.volume)} hacimde net ${usd(totals.net)}. Açık pozisyonlar ${usd(unrealized)} gerçekleşmemiş ekliyor.${best ? ` En iyi gün ${best.day} (${usd(best.net)})` : ""}${worstDay ? `, en kötü ${worstDay.day} (${usd(worstDay.net)}).` : "."}`,

@@ -122,9 +122,12 @@ async function nextOf(ctx: AppContext, intentId: string): Promise<ProposalDecisi
  * wallet stores ONE intent for the proposal's actions and links it back
  * (`intentId`); approving again returns that same intent instead of storing
  * a second one, so a route card signed from a proposal never duplicates.
- * Nothing is signed here: the wallet signs each step it prepares.
+ * Nothing is signed here: the wallet signs each step it prepares. A stored
+ * plan with HyperCore steps needs the signing browser's trade-only key
+ * (`agent`): the dry-run card may show an approve step, the real plan never
+ * guesses a key (AGENT_KEY_REQUIRED without one).
  */
-export async function decide(ctx: AppContext, owner: string, id: string, decision: "approve" | "reject", via: "wallet" | "keeper" = "wallet"): Promise<ProposalDecisionResponse> {
+export async function decide(ctx: AppContext, owner: string, id: string, decision: "approve" | "reject", via: "wallet" | "keeper" = "wallet", options: { readonly agent?: string } = {}): Promise<ProposalDecisionResponse> {
   const proposal = await proposalOf(ctx, owner, id);
   if (decision === "approve" && via === "wallet" && proposal.status === "approved" && proposal.intentId) {
     return { proposal, next: await nextOf(ctx, proposal.intentId), keeper: null };
@@ -143,7 +146,7 @@ export async function decide(ctx: AppContext, owner: string, id: string, decisio
     if (result.intentId) await linkIntent(ctx, next, result.intentId);
     return { proposal: next, next: null, keeper: { executed: result.executed, detail: result.detail } };
   }
-  const plan = await planActions(ctx, owner, proposal.actions, { dryRun: false, metadata: { proposalId: proposal.id, surface: "ely-proposal" } });
+  const plan = await planActions(ctx, owner, proposal.actions, { dryRun: false, metadata: { proposalId: proposal.id, surface: "ely-proposal" }, ...(options.agent ? { agent: options.agent } : {}) });
   const approved: Proposal = { ...proposal, status: "approved", intentId: plan.intent.id };
   await save(ctx, approved);
   await linkIntent(ctx, approved, plan.intent.id);

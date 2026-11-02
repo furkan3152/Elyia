@@ -177,6 +177,7 @@ export class IntentService {
       ...(input.constraints ? { constraints: input.constraints } : {}),
       signer: input.signer,
       ...(input.agent ? { agent: input.agent } : {}),
+      dryRun: input.dryRun,
       ...(input.text ? { text: input.text } : {}),
       source: input.source,
       ...(input.metadata ? { metadata: input.metadata } : {}),

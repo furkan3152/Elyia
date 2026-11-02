@@ -54,13 +54,33 @@ export function commandOf(text: string): Command | null {
 const T = {
   help: {
     en: "I can read your portfolio across HyperCore, HyperEVM and Elysium, protect positions, rebalance, explain your PnL, run what-if shocks, and plan moves you sign. Try: \"what's my HYPE exposure?\", \"protect my positions\", \"what if HYPE drops 20%?\", \"swap 1 HYPE to USDC on Elysium\".",
-    tr: "Portföyünü HyperCore, HyperEVM ve Elysium genelinde okuyabilir, pozisyonlarını koruyabilir, yeniden dengeleyebilir, kâr/zararını açıklayabilir, senaryo şokları çalıştırabilir ve imzalayacağın hamleleri planlayabilirim. Dene: \"HYPE maruziyetim ne?\", \"pozisyonlarımı koru\", \"HYPE %20 düşerse?\", \"Elysium'da 1 HYPE'ı USDC'ye çevir\".",
+    tr: "Portföyünüzü HyperCore, HyperEVM ve Elysium genelinde okuyabilir, pozisyonlarınızı koruyabilir, yeniden dengeleyebilir, kâr/zararınızı açıklayabilir, senaryo şokları çalıştırabilir ve imzalayacağınız hamleleri planlayabilirim. Deneyin: \"HYPE maruziyetim ne?\", \"pozisyonlarımı koru\", \"HYPE %20 düşerse?\", \"Elysium'da 1 HYPE'ı USDC'ye çevir\".",
   },
   none: { en: "Nothing to flag right now.", tr: "Şu an işaretlenecek bir şey yok." },
-  unreadable: { en: "I could not read that as a move or a question. Ask \"help\" for examples.", tr: "Bunu bir hamle ya da soru olarak okuyamadım. Örnekler için \"yardım\" yaz." },
-  proposed: { en: "Proposed: waiting for your signature.", tr: "Önerildi: imzanı bekliyor." },
-  signIn: { en: "Sign in with this wallet to turn this into a proposal you can sign.", tr: "Bunu imzalanabilir bir öneriye çevirmek için bu cüzdanla giriş yap." },
+  unreadable: { en: "I couldn't read that as a move or a question. Type \"help\" for examples.", tr: "Bunu bir hamle ya da soru olarak okuyamadım. Örnekler için \"yardım\" yazın." },
+  proposed: { en: "Proposed: waiting for your signature.", tr: "Önerildi: imzanızı bekliyor." },
+  signIn: { en: "Sign in with this wallet to turn this into a proposal you can sign.", tr: "Bunu imzalanabilir bir öneriye çevirmek için bu cüzdanla giriş yapın." },
 } as const;
+
+/**
+ * What to say when the reader could not read a sentence: the reader's own
+ * localized warning (an unknown word, a negation, a secret) with two
+ * examples, never its internal code ("unknown word: X"). A sentence-length
+ * reason (a route the engine does not run) is shown as it is.
+ */
+export function unreadableText(reading: Pick<ReadResult, "unsupported" | "warnings" | "examples">, locale: Locale): string {
+  const warning = reading.warnings.find((entry) => entry.code === "UNKNOWN_WORD" || entry.code === "NEGATION" || entry.code === "SECRET_REFUSED");
+  const examples = (reading.examples ?? []).slice(0, 2).map((example) => `"${example}"`).join(locale === "tr" ? " ya da " : " or ");
+  if (warning?.code === "SECRET_REFUSED") return warning.message;
+  if (warning) {
+    const lead = warning.code === "UNKNOWN_WORD" ? warning.message.replace(/^I don't know (".*?"), so I read nothing rather than guess\.$/u, "I didn't recognise $1, so I didn't guess what you meant.").replace(/^(".*?") kelimesini bilmiyorum; tahmin etmek yerine hiçbir şey okumadım\.$/u, "$1 kelimesini tanımadım; ne demek istediğinizi tahmin etmedim.") : warning.message;
+    const retry = locale === "tr" ? `Farklı bir kelimeyle tekrar yazar mısınız?${examples ? ` Örneğin: ${examples}.` : ""}` : `Could you say it another way?${examples ? ` For example: ${examples}.` : ""}`;
+    return `${lead} ${retry}`;
+  }
+  const reason = reading.unsupported;
+  if (reason && /\s/u.test(reason) && !/^(unknown word|nothing read)\b/iu.test(reason)) return reason;
+  return T.unreadable[locale];
+}
 
 function money(value: number): string {
   return `$${(Math.round(value * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -168,7 +188,7 @@ export async function runDeterministicTurn(input: DeterministicInput): Promise<D
         const snap = result.data as { netWorthUsd: number; priceLabel: string; exposure: Array<{ underlying: string; net: number; netUsd: number | null; perp: number; spot: number; isCash: boolean }> };
         const rows = command.underlying ? snap.exposure.filter((row) => row.underlying === (command.underlying === "KHYPE" ? "HYPE" : command.underlying)) : snap.exposure.slice(0, 5);
         if (rows.length === 0) {
-          text = locale === "tr" ? `${command.underlying ?? ""} maruziyetin yok. Net değer ${money(snap.netWorthUsd)} (${snap.priceLabel}).` : `No ${command.underlying ?? ""} exposure. Net worth ${money(snap.netWorthUsd)} (${snap.priceLabel} prices).`;
+          text = locale === "tr" ? `${command.underlying ?? ""} maruziyetiniz yok. Net değer ${money(snap.netWorthUsd)} (${snap.priceLabel}).` : `No ${command.underlying ?? ""} exposure. Net worth ${money(snap.netWorthUsd)} (${snap.priceLabel} prices).`;
           break;
         }
         const lines = rows.map((row) => {
@@ -204,7 +224,7 @@ export async function runDeterministicTurn(input: DeterministicInput): Promise<D
         break;
       case "rebalance":
         text = await fromInsights(input, ["rebalance"]);
-        if (text === T.none[locale]) text = locale === "tr" ? "Hedef karışım yok ya da bant içindesin. Hedefi söyle: \"hedef HYPE %50 USD %50\"." : "No target mix set, or you are inside the band. Tell me one: \"target HYPE 50% USD 50%\".";
+        if (text === T.none[locale]) text = locale === "tr" ? "Hedef karışım yok ya da bant içindesiniz. Hedefi söyleyin: \"hedef HYPE %50 USD %50\"." : "No target mix set, or you are inside the band. Tell me one: \"target HYPE 50% USD 50%\".";
         break;
       case "pnl":
         text = await fromInsights(input, ["explain-pnl"]);
@@ -227,7 +247,7 @@ export async function runDeterministicTurn(input: DeterministicInput): Promise<D
 
   const reading = input.reading ?? (await readSentenceFor(input.ctx, { text: input.message, locale, account: input.tools.address }));
   if (reading.status === "needs_input") return { text: reading.questions.map((question) => question.prompt).join("\n"), clarify: reading };
-  if (reading.status !== "ready") return { text: reading.unsupported ?? T.unreadable[locale] };
+  if (reading.status !== "ready") return { text: unreadableText(reading, locale) };
   const goals = reading.goals as unknown as Array<{ t: string; goal?: { what?: string; subject?: { symbol?: string; coin?: string } } }>;
   const queries = goals.filter((goal) => goal.t === "query");
   const rules = goals.filter((goal) => goal.t === "rule");
@@ -245,7 +265,7 @@ export async function runDeterministicTurn(input: DeterministicInput): Promise<D
     }
   }
   if (rules.length > 0) {
-    parts.push(locale === "tr" ? "Bu bir kural: Uyarılar veya Otomasyonlar bölümünden onayla." : "That is a rule: confirm it under Alerts or Automations.");
+    parts.push(locale === "tr" ? "Bu bir kural: Uyarılar veya Otomasyonlar bölümünden onaylayın." : "That is a rule: confirm it under Alerts or Automations.");
     input.tools.drafts.push({ kind: "alert", body: rules });
   }
   if (moves.length > 0) {

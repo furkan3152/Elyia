@@ -14,6 +14,12 @@ import { venueById, venueExecutable, type VenueWord } from "../venues.js";
 export interface ReaderFacts {
   readonly markets: readonly MarketFact[];
   readonly balances?: readonly { readonly network: string; readonly symbol: string; readonly amount: string }[];
+  /**
+   * The networks `balances` covers, when known. A network outside it is
+   * unknown, not empty: the reader never infers "your X is there" from a
+   * partial list (it asks instead). Absent: `balances` covers every network.
+   */
+  readonly balanceNetworks?: readonly string[];
   readonly positions?: readonly { readonly coin: string; readonly side: "long" | "short"; readonly size: string; readonly leverage?: number }[];
   /** Reference USD prices by symbol (HyperCore mainnet mids). */
   readonly prices?: Readonly<Record<string, string>>;

@@ -5,6 +5,7 @@ import { pickedLabel } from "./clarify";
 import { venueLabel, compactAmount } from "./cardModel";
 import { readingLabel, phaseLabel } from "./labels";
 import { RouteCardInline } from "./RouteArtifact";
+import { inlineStates, useCardStates } from "./cardStates";
 import { AVATAR_FOR_PHASE, turnPhase, turnTimeline, visibleChars } from "./timeline";
 import { planning, primaryCard, PLANNING_TOOLS, type ElyTurn, type Reading } from "./turn";
 import { useTurnClock } from "./hooks";
@@ -63,6 +64,8 @@ export function ElyMessage({ turn, phone, opened, onOpenCard, onAnswer, signInHi
   const text = questionsOnly ? (chars > 0 ? (turn.clarify!.questions.length === 1 ? "One question first:" : "A few things first:").slice(0, chars) : "") : turn.text.slice(0, chars);
   const streaming = chars < turn.text.length && chars > 0;
   const primary = primaryCard(turn);
+  const published = useCardStates((state) => state.byKey[turn.id]);
+  const liveStates = primary ? inlineStates(published, primary.card.steps.length, primary.proposal?.status ?? null) : undefined;
   const cardShown = primary !== null && (timeline.cardsAt.at(-1) ?? Infinity) <= now;
   const clarifyShown = turn.clarify?.status === "ready" && timeline.clarifyAt !== null && timeline.clarifyAt <= now;
   const seconds = turn.doneAt ? (turn.doneAt - turn.startedAt) / 1000 : 0;
@@ -121,7 +124,7 @@ export function ElyMessage({ turn, phone, opened, onOpenCard, onAnswer, signInHi
         ) : null}
         {cardShown && primary ? (
           <>
-            <RouteCardInline card={primary.card} onOpen={onOpenCard} compact={phone} opened={opened} />
+            <RouteCardInline card={primary.card} {...(liveStates ? { states: liveStates } : {})} onOpen={onOpenCard} compact={phone} opened={opened} />
             {!primary.proposal && signInHint ? signInHint : null}
           </>
         ) : null}

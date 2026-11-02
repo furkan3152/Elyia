@@ -66,13 +66,20 @@ export async function snapshot(ctx: AppContext, address: string, mode?: Portfoli
   return readPortfolio(ctx, address, modeOf(ctx, mode));
 }
 
-/** Engine dry run of actions for an address. */
-export async function planActions(ctx: AppContext, address: string, actions: readonly IntentActionSpec[], options: { readonly dryRun?: boolean; readonly metadata?: Readonly<Record<string, string>>; readonly signer?: "agent" | "keeper" } = {}): Promise<CreateIntentResponse> {
+/**
+ * Engine dry run of actions for an address. A dry run of HyperCore steps
+ * without `agent` plans with the owner's approved web key on record, or with
+ * an "approve a trade-only key first" step (the engine's dry-run rule), so
+ * the card and the Rule Book verdict always appear. A stored plan
+ * (`dryRun: false`) still needs the signing browser's `agent`.
+ */
+export async function planActions(ctx: AppContext, address: string, actions: readonly IntentActionSpec[], options: { readonly dryRun?: boolean; readonly metadata?: Readonly<Record<string, string>>; readonly signer?: "agent" | "keeper"; readonly agent?: string } = {}): Promise<CreateIntentResponse> {
   return engineFor(ctx).service.create({
     actions,
     accounts: accountsFor(ctx, address),
     environment: ctx.config.mode,
     signer: options.signer ?? "agent",
+    ...(options.agent ? { agent: options.agent } : {}),
     dryRun: options.dryRun ?? true,
     source: "assistant",
     ...(options.metadata ? { metadata: options.metadata } : {}),
@@ -106,7 +113,12 @@ export function routeCardOf(plan: CreateIntentResponse, integratorFee: RouteCard
     feesUsd: intent.summary.totalFeesUsd ?? null,
     notionalUsd: policy.notionalUsd,
     integratorFee,
-    policy: { decision: policy.decision, reasons: policy.reasons.map((reason) => reason.message) },
+    policy: {
+      decision: policy.decision,
+      reasons: policy.reasons.map((reason) => reason.message),
+      // The rule id and its limit, so the model can name the Rule Book rule and its value.
+      details: policy.reasons.map((reason) => ({ rule: reason.rule, outcome: reason.outcome, message: reason.message, ...(reason.limit !== undefined ? { limit: reason.limit } : {}), ...(reason.observed !== undefined ? { observed: reason.observed } : {}) })),
+    },
     warnings: [...new Set([...intent.warnings, ...intent.steps.flatMap((step) => step.warnings ?? [])])].slice(0, 12),
     priceSource: "reference:hypercore-mainnet-mids",
     estimatedSeconds: intent.summary.estimatedSeconds ?? null,

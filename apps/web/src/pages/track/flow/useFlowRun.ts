@@ -33,6 +33,7 @@ import type { RouteStepState } from "../../../topo/RouteCard";
 import { addLeg, saveJourney, type JourneyRecord } from "./journeyStore";
 import type { LocalRequest } from "./localPlanner";
 import { childIdOf, deliveredMessages } from "./orbit";
+import { preflight, type PreflightClient } from "./preflight";
 import { phaseState } from "./routeModel";
 import { hasRoute, planBody, type FlowAsk, type FlowPlan } from "./useFlowPlan";
 
@@ -162,12 +163,16 @@ export function useFlowRun(ask: FlowAsk | null, plan: FlowPlan | null): FlowRun 
 
   const sendEvm = async (request: { readonly chainId: number; readonly to: string; readonly data: string; readonly value: string | bigint; readonly gas?: string }, from: Address): Promise<Hex> => {
       await ensureChain(request.chainId);
+      const value = typeof request.value === "bigint" ? request.value : BigInt(request.value);
+      // Simulate first: a transaction that would revert is never handed to the wallet.
+      const where = Object.values(NETWORKS).find((network) => (network as { chainId?: number }).chainId === request.chainId)?.name ?? `chain ${request.chainId}`;
+      await preflight(getPublicClient(config, { chainId: request.chainId }) as PreflightClient | undefined, { from, to: request.to as Address, data: request.data as Hex, value }, where);
       return sendTransaction(config, {
         account: from,
         chainId: request.chainId,
         to: request.to as Address,
         data: request.data as Hex,
-        value: typeof request.value === "bigint" ? request.value : BigInt(request.value),
+        value,
         ...(request.gas ? { gas: BigInt(request.gas) } : {}),
       });
     };

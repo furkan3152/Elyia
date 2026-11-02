@@ -12,7 +12,7 @@ import { readSentenceFor } from "../intents/language.js";
 import type { AppContext } from "../../context.js";
 import { elysiumNetworkFor, hypercoreNetworkFor } from "../../config.js";
 import { flagOn } from "../admin/index.js";
-import { runDeterministicTurn } from "./deterministic.js";
+import { runDeterministicTurn, unreadableText } from "./deterministic.js";
 import { clientFor, runLlmTurn, type LlmTurnInput } from "./llm.js";
 import { appendToThread, memoryOf, threadOf } from "./memory.js";
 import { recipientsIn, type ToolContext } from "./tools.js";
@@ -64,7 +64,7 @@ export async function chatTurn(input: ChatTurnInput): Promise<ChatDoneEvent> {
   // Clarify answers are typed by the user too (e.g. the recipient the reader asked for).
   const clarifyTexts = (input.clarify?.answers ?? []).map((answer) => answer.text ?? "").filter((text) => text.length > 0);
   const userTexts = [input.message, ...clarifyTexts, ...(thread?.messages ?? []).filter((entry) => entry.role === "user").map((entry) => entry.text)];
-  const tools: ToolContext = { ctx, owner, address: input.address.toLowerCase(), integratorFee: input.integratorFee, proposals: [], drafts: [], cards: [], userRecipients: recipientsIn(userTexts) };
+  const tools: ToolContext = { ctx, owner, address: input.address.toLowerCase(), integratorFee: input.integratorFee, proposals: [], drafts: [], cards: [], userRecipients: recipientsIn(userTexts), calls: [] };
   const stateLine = `[elyia-state] mode=${ctx.config.mode} wallet=${tools.address} signed_in=${input.owner ? "yes" : "no"} elysium=${elysiumNetworkFor(ctx.config.mode)}(${getEvmNetwork(elysiumNetworkFor(ctx.config.mode)).chainId}) hypercore=${hypercoreNetworkFor(ctx.config.mode)} prices=${ctx.config.mode === "testnet" ? "reference" : "market"} risk=${memory?.riskProfile ?? "unknown"} goals=${(memory?.goals ?? []).join("|").slice(0, 200) || "none"} locale=${locale}`;
 
   let text: string;
@@ -82,7 +82,7 @@ export async function chatTurn(input: ChatTurnInput): Promise<ChatDoneEvent> {
     text = clarify.questions.map((question) => question.prompt).join("\n");
     for (const piece of chunks(text)) input.emit("token", { text: piece });
   } else if (reading && reading.status !== "ready") {
-    text = reading.unsupported ?? (locale === "tr" ? "Bu cevaplarla cümleyi tamamlayamadım. Kendi sözlerinle tekrar yaz." : "I could not finish the sentence with those answers. Type it again in your own words.");
+    text = reading.unsupported || reading.warnings.length > 0 ? unreadableText(reading, locale) : locale === "tr" ? "Bu cevaplarla cümleyi tamamlayamadım. Kendi sözlerinizle tekrar yazın." : "I could not finish the sentence with those answers. Type it again in your own words.";
     for (const piece of chunks(text)) input.emit("token", { text: piece });
   } else if (useLlm) {
     try {

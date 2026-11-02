@@ -15,7 +15,7 @@
 import type { Request, RequestHandler, Response } from "express";
 import { API_KEY_HEADER, USAGE_METRICS, type ApiKeyScope, type UsageDay, type UsageMetric } from "@elyia/core/api/developers";
 import type { AppContext } from "../../context.js";
-import { ElyiaHttpError, retryAfterHeader } from "../../http/errors.js";
+import { ElyiaHttpError, retryAfterHeader, retryAfterSeconds } from "../../http/errors.js";
 import { perksFor } from "../herd/perks.js";
 import { sendError } from "../../http/request.js";
 import { docs, PLATFORM_COLLECTIONS } from "../ops/docs.js";
@@ -56,8 +56,11 @@ function presented(req: Request): string | null {
   return value;
 }
 
-function quotaError(metric: string, limit: number, seconds: number): ElyiaHttpError {
-  return new ElyiaHttpError("QUOTA_EXCEEDED", 429, `This key's ${metric} quota (${limit}) is used up. Retry in ${seconds} s or raise the key's quota.`, { metric, limit }, { headers: retryAfterHeader(seconds) });
+/** Daily quotas reset at 00:00 UTC: the header and the message carry the same wait (up to a day). */
+export function quotaError(metric: string, limit: number, seconds: number): ElyiaHttpError {
+  const wait = retryAfterSeconds(seconds, 86_400);
+  const when = metric.endsWith("per day") ? ` It resets at 00:00 UTC, in ${wait} s` : ` Retry in ${wait} s`;
+  return new ElyiaHttpError("QUOTA_EXCEEDED", 429, `This key's ${metric} quota (${limit}) is used up.${when}, or raise the key's quota.`, { metric, limit, retryAfterSeconds: wait }, { headers: retryAfterHeader(wait, 86_400) });
 }
 
 /** The key's quotas, multiplied for Herd holders (balanceOf on chain, cached; never from the client). */

@@ -65,7 +65,7 @@ const AddressParams = z.object({ address: evmAddress });
 const InsightParams = z.object({ address: evmAddress, insightId: z.string().min(5).max(80) });
 const ProposalParams = z.object({ id: z.string().regex(/^prp_[0-9a-f]{24}$/u) });
 const AutomationParams = z.object({ id: z.string().regex(/^aut_[0-9a-f]{20}$/u) });
-const DecisionBody = z.object({ decision: z.enum(["approve", "reject"]), via: z.enum(["wallet", "keeper"]).optional() }).strict();
+const DecisionBody = z.object({ decision: z.enum(["approve", "reject"]), via: z.enum(["wallet", "keeper"]).optional(), agent: evmAddress.optional() }).strict();
 const paramValue = z.union([z.string().max(80), z.number(), z.boolean()]);
 const AutomationBody = z.object({ kind: z.enum(AUTOMATION_KINDS as unknown as [string, ...string[]]), params: z.record(paramValue).optional(), enabled: z.boolean().optional(), keeper: z.boolean().optional() }).strict();
 const AutomationPatch = z.object({ params: z.record(paramValue).optional(), enabled: z.boolean().optional(), keeper: z.boolean().optional() }).strict();
@@ -124,7 +124,7 @@ export async function chatQuota(ctx: AppContext, owner: string): Promise<void> {
   const used = await ctx.store.counters("agent_chat_daily").increment(`${owner}:${day}`, 1, { ttlMs: 2 * 86_400_000 });
   if (used > limit) {
     const seconds = Math.max(1, Math.ceil((Date.parse(`${day}T00:00:00Z`) + 86_400_000 - now) / 1000));
-    throw new ElyiaHttpError("QUOTA_EXCEEDED", 429, `You used today's ${limit} Ely turns. They reset at 00:00 UTC${limit < HERD_HOLDER_PERKS.agentChatPerDay ? `; Herd holders get ${HERD_HOLDER_PERKS.agentChatPerDay}` : ""}.`, { limit }, { headers: retryAfterHeader(seconds) });
+    throw new ElyiaHttpError("QUOTA_EXCEEDED", 429, `You used today's ${limit} Ely turns. They reset at 00:00 UTC${limit < HERD_HOLDER_PERKS.agentChatPerDay ? `; Herd holders get ${HERD_HOLDER_PERKS.agentChatPerDay}` : ""}.`, { limit, retryAfterSeconds: seconds }, { headers: retryAfterHeader(seconds, 86_400) });
   }
 }
 
@@ -213,7 +213,7 @@ export const agentModule: ApiModule = {
       const { id } = parseParams(req, ProposalParams);
       const body = parseBody(req, DecisionBody);
       if (body.via === "keeper") needKeeper(ctx);
-      res.json(await decide(ctx, owner(req), id, body.decision, body.via ?? "wallet"));
+      res.json(await decide(ctx, owner(req), id, body.decision, body.via ?? "wallet", body.agent ? { agent: body.agent } : {}));
     });
 
     router.get("/agent/skills", (_req, res) => {

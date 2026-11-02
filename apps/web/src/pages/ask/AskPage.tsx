@@ -115,7 +115,7 @@ export default function AskPage() {
   if (shown?.kind === "recipe") {
     artifact = <RouteArtifact key={shown.recipe.id} card={shown.recipe.card} proposal={null} source={shown.recipe.source} draftedAt={shown.recipe.savedAt} onClose={closePanel} variant={wide ? "panel" : "sheet"} />;
   } else if (panelTurn && panelPrimary) {
-    artifact = <RouteArtifact key={panelTurn.id} card={panelPrimary.card} proposal={panelPrimary.proposal} source={signSourceOf(panelTurn, panelSentence)} session={token} draftedAt={panelPrimary.at} onClose={closePanel} variant={wide ? "panel" : "sheet"} />;
+    artifact = <RouteArtifact key={panelTurn.id} card={panelPrimary.card} proposal={panelPrimary.proposal} source={signSourceOf(panelTurn, panelSentence)} session={token} draftedAt={panelPrimary.at} stateKey={panelTurn.id} onClose={closePanel} variant={wide ? "panel" : "sheet"} />;
   } else if (panelTurn && panelTurn.doneAt === null && !panelTurn.error) {
     artifact = <ArtifactWaiting onClose={closePanel} />;
   }

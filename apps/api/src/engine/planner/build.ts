@@ -39,7 +39,7 @@ import {
 import type { IntentSigner, VenueQuoteView } from "@elyia/core/api/intents";
 import type { Address } from "viem";
 import { balanceOf } from "../adapters/evmCommon.js";
-import { approvedAgent, WEB_AGENT_NAME } from "../adapters/hypercoreWallet.js";
+import { AGENT_MIN_REMAINING_MS, approvedAgent, WEB_AGENT_NAME } from "../adapters/hypercoreWallet.js";
 import { fromToken, resolveAsset, type ResolvedAsset } from "../assets.js";
 import { runAuction, type AuctionResult } from "../auction.js";
 import type { EngineDeps } from "../deps.js";
@@ -66,9 +66,42 @@ export interface PlanInput {
   readonly constraints?: IntentConstraints;
   readonly signer: IntentSigner;
   readonly agent?: string;
+  /**
+   * A dry run (nothing stored or signed). Only a dry run may plan HyperCore
+   * steps without `agent`: it uses the owner's approved web key on record, or
+   * shows an "approve a trade-only key" step, so the card and the Rule Book
+   * verdict still appear. A stored plan always needs `agent`.
+   */
+  readonly dryRun?: boolean;
   readonly text?: string;
   readonly source: IntentSource;
   readonly metadata?: Readonly<Record<string, string>>;
+}
+
+/** The owner's approved web trade key with the most time left (null: none on record, or the read failed). */
+async function webAgentOnRecord(deps: EngineDeps, network: NetworkKey, owner: string, now: number): Promise<{ readonly address: string; readonly name: string; readonly validUntil: number } | null> {
+  const agents = await deps.core.extraAgents(network, owner).catch(() => []);
+  const usable = agents.filter((entry) => entry.name.startsWith(WEB_AGENT_NAME) && entry.validUntil > now + AGENT_MIN_REMAINING_MS).sort((a, b) => b.validUntil - a.validUntil);
+  return usable[0] ?? null;
+}
+
+/** Dry-run stand-in for the approveAgent step when no key is named: the browser creates the key when the user signs. */
+function pendingAgentStep(network: NetworkKey): PlannedStep {
+  return {
+    protocol: "hypercore-perps",
+    kind: "agent",
+    title: "Approve a trade-only key on HyperCore first (one wallet signature, 30 days)",
+    mode: "wallet",
+    inputs: [],
+    outputs: [],
+    feesUsd: "0",
+    estimatedSeconds: 3,
+    settlement: { kind: "same-network", mechanism: "ledger" },
+    warnings: ["The trade-only key can place and cancel orders but can never withdraw or transfer your funds; revoke it any time."],
+    route: { variant: "approve-agent", slippageBps: 0, params: {} },
+    requestCount: 1,
+    network,
+  };
 }
 
 export interface PlanOutput {
@@ -450,6 +483,17 @@ export class Planner {
         const keeper = agents.find((entry) => entry.name.startsWith(KEEPER_AGENT_NAME) && entry.validUntil > now + 60 * 60 * 1000);
         if (!keeper) throw engineError("KEEPER_DISABLED", "No approved elyia-keeper key is listed for this account; Keeper mode is off.");
         agentSnapshot = { address: keeper.address.toLowerCase() as `0x${string}`, name: keeper.name, validUntil: keeper.validUntil, scope: "keeper" };
+      } else if (!agentAddress && input.dryRun) {
+        // Dry run without a key: the owner's approved web key on record, else an "approve a key first" step.
+        const onRecord = await webAgentOnRecord(deps, network, input.owner, now);
+        if (onRecord) {
+          agentSnapshot = { address: onRecord.address.toLowerCase() as `0x${string}`, name: onRecord.name, validUntil: onRecord.validUntil, scope: "browser" };
+        } else {
+          const id = `s${drafts.length + 1}`;
+          drafts.unshift({ id, network, planned: pendingAgentStep(network), dependsOn: [] });
+          for (const draft of l1) draft.dependsOn.push(id);
+          warnings.push("First, approve a trade-only key on HyperCore (one wallet signature, 30 days). It can trade but never withdraw.");
+        }
       } else {
         if (!agentAddress) throw engineError("AGENT_KEY_REQUIRED", "These HyperCore steps are signed by your trade-only agent key: send its address as `agent`.");
         const approved = await approvedAgent(deps, network, input.owner, agentAddress, now);

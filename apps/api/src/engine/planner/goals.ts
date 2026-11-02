@@ -142,7 +142,8 @@ function triggerParams(goal: TradeGoal, params: Params): { readonly takeProfit?:
 function tradeAction(goal: TradeGoal, environment: NetworkEnvironment): IntentActionSpec {
   const network = layer(environment, "hypercore");
   if (!("coin" in goal.market)) {
-    if (goal.kind === "cancel") throw engineError("INTENT_CLARIFY", "Cancel orders on which market?");
+    // "Cancel all my orders": no market means every open order (the planner fans out from live state).
+    if (goal.kind === "cancel") return { kind: "cancel", network };
     throw engineError("INTENT_CLARIFY", "Close which position?");
   }
   if (goal.market.dex) throw engineError("ROUTE_UNSUPPORTED", "Builder-deployed (HIP-3) perp markets are not traded through intents yet.");

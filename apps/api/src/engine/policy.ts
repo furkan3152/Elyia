@@ -127,12 +127,18 @@ export class PolicyGate {
     };
   }
 
+  /** The Rule Book the gate evaluates an owner's intents with. */
+  ruleBookFor(owner: string): Promise<RuleBook> {
+    return this.books.forOwner(owner.toLowerCase());
+  }
+
   async evaluate(graph: IntentGraph, options: { readonly stage: PolicyStage; readonly stored: boolean; readonly owner: string }): Promise<GateResult> {
     const now = this.deps.clock.now();
     const decisionId = this.decisionId();
     const book = await this.books.forOwner(options.owner);
     const hash = ruleBookHash(book);
-    const live = graph.steps.filter((step) => step.status !== "skipped" && step.status !== "stopped");
+    // Approving the trade-only key is setup, not risk: it never stops a de-risking intent from bypassing the gate.
+    const live = graph.steps.filter((step) => step.status !== "skipped" && step.status !== "stopped" && step.kind !== "agent");
     if (live.length > 0 && live.every(isDerisking)) {
       const evaluation: PolicyEvaluation = { decision: "allow", reasons: [], rules: [], notionalUsdMicros: null, code: null, retryAfterSeconds: null };
       return { evaluation, decisionId, ruleBookHash: hash, summary: { decision: "allow", ruleBookHash: hash, reasons: [], notionalUsd: null, priceSource: PRICE_SOURCE, evaluatedAt: new Date(now).toISOString(), derisking: true } };

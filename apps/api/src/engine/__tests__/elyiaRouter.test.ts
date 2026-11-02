@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { elyiaRouterArtifact } from "@elyia/core/contracts/index";
-import { decodeFunctionData, encodeAbiParameters, encodeFunctionResult, type Hex } from "viem";
-import { bestRoute, ELYIA_ROUTER_ABI, HOP_KIND, probeMappingSlot, routerAllowlist, VIRTUAL_ROUTER } from "../adapters/elyiaRouter.js";
+import { decodeFunctionData, encodeAbiParameters, encodeFunctionResult, parseAbi, type Address, type Hex } from "viem";
+import { allowanceMappingSlot, allowanceSlot, bestRoute, ELYIA_ROUTER_ABI, HOP_KIND, probeMappingSlot, routerAllowlist, VIRTUAL_ROUTER } from "../adapters/elyiaRouter.js";
 import { mappingSlot } from "../adapters/evmCommon.js";
 import type { EngineDeps } from "../deps.js";
 import type { CallRequest, SimulationRequest } from "../ports/evm.js";
@@ -72,5 +72,49 @@ describe("engine: ElyiaRouter venue", () => {
     assert.ok(list.includes("Kalos V3:3"));
     assert.ok(list.includes("Dex Da Costa:2"));
     assert.ok(list.includes("WHYPE:1"));
+  });
+
+  it("quotes a deployed router with eth_call when the RPC has no eth_simulateV1 (a plain fork)", async () => {
+    const ROUTER = "0x70e000000000000000000000000000000000fc49" as Address;
+    const calls: CallRequest[] = [];
+    const deps = {
+      evm: {
+        ...fakeDeps([]).evm,
+        async simulate() {
+          return null;
+        },
+        async call(_network: string, request: CallRequest) {
+          calls.push(request);
+          const { args } = decodeFunctionData({ abi: ELYIA_ROUTER_ABI, data: request.data });
+          const params = (args?.[0] ?? {}) as { routes: Array<{ amountIn: bigint }> };
+          const out = params.routes.reduce((sum, route) => sum + (route.amountIn / 10n ** 12n) * 6n, 0n);
+          return { ok: true as const, data: encodeFunctionResult({ abi: ELYIA_ROUTER_ABI, functionName: "swap", result: out }) };
+        },
+      },
+      clock: { now: () => 1_800_000_000_000 },
+    } as unknown as EngineDeps;
+    const best = await bestRoute(deps, "elysium-testnet", { address: ROUTER, deployed: true, code: null }, hype, usdc, 10n ** 18n, null);
+    assert.equal(best.out, 6_000_000n, "the router venue stays in the auction");
+    const swap = calls.at(-1) as CallRequest;
+    assert.equal(swap.to, ROUTER);
+    assert.equal(swap.value, 10n ** 18n, "native HYPE goes in as msg.value");
+    assert.ok(swap.balances && Object.values(swap.balances)[0]! >= 10n ** 18n, "the dummy sender is funded by override");
+  });
+
+  it("finds an ERC-20 allowance slot by eth_call overrides", async () => {
+    const TOKEN = USDC as Address;
+    const SPENDER = "0x70e000000000000000000000000000000000fc49" as Address;
+    const SLOT = 1n;
+    const allowanceAbi = parseAbi(["function allowance(address owner, address spender) view returns (uint256)"]);
+    const deps = {
+      evm: {
+        async call(_network: string, request: CallRequest) {
+          const { args } = decodeFunctionData({ abi: allowanceAbi, data: request.data });
+          const value = request.storage?.[TOKEN]?.[allowanceSlot(args[0], args[1], SLOT)];
+          return { ok: true as const, data: encodeAbiParameters([{ type: "uint256" }], [value ? BigInt(value) : 0n]) };
+        },
+      },
+    } as unknown as EngineDeps;
+    assert.equal(await allowanceMappingSlot(deps, "elysium-testnet", TOKEN, SPENDER), SLOT);
   });
 });

@@ -20,7 +20,7 @@
  * simulated output. It runs in the auction next to the direct venues.
  */
 import { applySlippage, explorerAddressUrl, NETWORKS, type NetworkKey, type StepAmount } from "@elyia/core";
-import { decodeEventLog, decodeFunctionResult, encodeFunctionData, keccak256, numberToHex, pad, parseAbi, type Address, type Hex } from "viem";
+import { decodeEventLog, decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, numberToHex, pad, parseAbi, type Address, type Hex } from "viem";
 import { V2_FACTORY_ABI, V3_FACTORY_ABI, V3_POOL_ABI } from "../abis.js";
 import { amountOf, assetOfAmount, formatAmount, sameResolved, stepAddress, type ResolvedAsset } from "../assets.js";
 import type { EngineDeps } from "../deps.js";
@@ -312,9 +312,52 @@ async function simulateSwap(deps: EngineDeps, sim: SimulationInput): Promise<big
   } catch {
     return null;
   }
+  // No eth_simulateV1 on this RPC (a plain fork): a deployed router still quotes, with one eth_call and overrides.
+  if (simulated === null && sim.target.deployed) return callSwap(deps, sim, tokenIn, storage, data);
   const last = simulated?.at(-1);
   if (!simulated || !last || simulated.some((call) => call.status !== "success")) return null;
   return decodeFunctionResult({ abi: ELYIA_ROUTER_ABI, functionName: "swap", data: last.returnData }) as bigint;
+}
+
+/** Storage slot of `allowance[owner][spender]` in a nested mapping at `slot` (Solidity layout). */
+export function allowanceSlot(owner: Address, spender: Address, slot: bigint): Hex {
+  return keccak256(encodeAbiParameters([{ type: "address" }, { type: "bytes32" }], [spender, mappingSlot(owner, slot)]));
+}
+
+const allowanceSlots = new Map<string, bigint | null>();
+const ALLOWANCE_ABI = parseAbi(["function allowance(address owner, address spender) view returns (uint256)"]);
+
+/** The allowance mapping slot of `token`, found by eth_call with a storage override per candidate (cached). */
+export async function allowanceMappingSlot(deps: EngineDeps, network: NetworkKey, token: Address, spender: Address): Promise<bigint | null> {
+  const key = `${network}:${token.toLowerCase()}`;
+  if (allowanceSlots.has(key)) return allowanceSlots.get(key) ?? null;
+  const marker = 0x5e1d0a11n;
+  const data = encodeFunctionData({ abi: ALLOWANCE_ABI, functionName: "allowance", args: [SIM_ACCOUNT, spender] });
+  for (const slot of CANDIDATE_SLOTS) {
+    const result = await deps.evm.call(network, { to: token, data, storage: { [token]: { [allowanceSlot(SIM_ACCOUNT, spender, slot)]: pad(numberToHex(marker), { size: 32 }) } } }).catch(() => null);
+    if (!result?.ok || result.data.length < 66) continue;
+    if (BigInt(result.data.slice(0, 66)) === marker) {
+      allowanceSlots.set(key, slot);
+      return slot;
+    }
+  }
+  allowanceSlots.set(key, null);
+  return null;
+}
+
+/** The swap quote as one eth_call from the dummy account: balance and allowance set by storage overrides. */
+async function callSwap(deps: EngineDeps, sim: SimulationInput, tokenIn: Address, storage: Record<string, Record<Hex, Hex>>, data: Hex): Promise<bigint | null> {
+  const overrides: Record<string, Record<Hex, Hex>> = { ...storage };
+  if (!sim.input.native) {
+    const slot = await allowanceMappingSlot(deps, sim.network, tokenIn, sim.target.address);
+    if (slot === null) return null;
+    overrides[tokenIn] = { ...(overrides[tokenIn] ?? {}), [allowanceSlot(SIM_ACCOUNT, sim.target.address, slot)]: pad(numberToHex(sim.amount), { size: 32 }) };
+  }
+  const result = await deps.evm
+    .call(sim.network, { from: SIM_ACCOUNT, to: sim.target.address, data, ...(sim.input.native ? { value: sim.amount } : {}), balances: { [SIM_ACCOUNT]: (sim.input.native ? sim.amount : 0n) + 10n ** 21n }, storage: overrides })
+    .catch(() => null);
+  if (!result?.ok) return null;
+  return decodeFunctionResult({ abi: ELYIA_ROUTER_ABI, functionName: "swap", data: result.data }) as bigint;
 }
 
 /* --------------------------------------------------------------- plan */

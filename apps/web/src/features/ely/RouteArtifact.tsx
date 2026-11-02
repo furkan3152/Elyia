@@ -8,13 +8,14 @@
 import type { Proposal, RouteCard } from "@elyia/core/api/agent";
 import { explorerTxUrl, NETWORKS, type NetworkKey } from "@elyia/core/networks";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Link } from "../../app/routes/Link";
 import { routeHref } from "../../app/routes/routeTable";
 import type { RouteStepState } from "../../topo/RouteCard";
 import { cx, FOCUS_RING } from "../../ui/cx";
 import { cardView, compactAmount, venueLabel, type CardView } from "./cardModel";
+import { useCardStates } from "./cardStates";
 import { drawAvatar, paletteOf } from "./draw";
 import { RouteStrip } from "./RouteStrip";
 import { Glyph, Stamp, type StampTone } from "./ui";
@@ -118,12 +119,18 @@ export interface RouteArtifactProps {
   readonly onClose?: () => void;
   /** "panel": desktop half; "sheet": phone bottom sheet (no header). */
   readonly variant?: "panel" | "sheet";
+  /** Publishes the live leg states under this key (the turn id) for the inline card of the same turn. */
+  readonly stateKey?: string;
 }
 
 type Tab = "route" | "txs" | "rules";
 
-export function RouteArtifact({ card, proposal, source, session = null, draftedAt, onClose, variant = "panel" }: RouteArtifactProps) {
+export function RouteArtifact({ card, proposal, source, session = null, draftedAt, onClose, variant = "panel", stateKey }: RouteArtifactProps) {
   const sign = useCardSign(source, session);
+  const publish = useCardStates((state) => state.publish);
+  useEffect(() => {
+    if (stateKey && sign.states) publish(stateKey, sign.states);
+  }, [stateKey, sign.states, publish]);
   const view = useMemo(() => cardView(card, { route: sign.route, ...(sign.states ? { states: sign.states } : {}) }), [card, sign.route, sign.states]);
   const [tab, setTab] = useState<Tab>("route");
   return (

@@ -13,7 +13,7 @@
 import { DEFAULT_HERD_SETTINGS, HERD_APPLICATION_STATUSES, normalizeXHandle, parseXStatusUrl, type HerdApplication, type HerdApplicationStatus, type HerdApplicationsQuery, type HerdApplicationsResponse, type HerdApplyRequest, type HerdMeResponse, type HerdTask, type HerdTaskCheck, type HerdUsageScore } from "@elyia/core/api/herd";
 import { keccak256, toHex } from "viem";
 import type { AppContext } from "../../context.js";
-import { ElyiaHttpError, retryAfterHeader } from "../../http/errors.js";
+import { ElyiaHttpError, retryAfterHeader, retryAfterSeconds } from "../../http/errors.js";
 import { hmacHex, purposeKey, randomHex } from "../ops/auth/crypto.js";
 import { docs, PLATFORM_COLLECTIONS } from "../ops/docs.js";
 import { herdNetwork, herdRecord, mintedBy } from "./chain.js";
@@ -153,8 +153,8 @@ async function limit(ctx: AppContext, key: string, max: number, windowMs: number
   const window = Math.floor(ctx.clock.now() / windowMs);
   const count = await ctx.store.counters("herd_limits").increment(`${key}:${window}`, 1, { ttlMs: windowMs * 2 });
   if (count > max) {
-    const seconds = Math.max(1, Math.ceil(((window + 1) * windowMs - ctx.clock.now()) / 1000));
-    throw new ElyiaHttpError("RATE_LIMITED", 429, `Too many ${what}. Retry in ${seconds} s.`, { max }, { headers: retryAfterHeader(seconds) });
+    const seconds = retryAfterSeconds(((window + 1) * windowMs - ctx.clock.now()) / 1000, 86_400);
+    throw new ElyiaHttpError("RATE_LIMITED", 429, `Too many ${what}. Retry in ${seconds} s.`, { max }, { headers: retryAfterHeader(seconds, 86_400) });
   }
 }
 

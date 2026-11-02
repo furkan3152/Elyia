@@ -129,8 +129,13 @@ export function notFound(message = "Not found."): ElyiaHttpError {
   return new ElyiaHttpError("NOT_FOUND", 404, message);
 }
 
-export function retryAfterHeader(seconds: number): Readonly<Record<string, string>> {
-  return { "Retry-After": String(Math.max(1, Math.min(3_600, Math.ceil(seconds)))) };
+/** The whole seconds a Retry-After header carries for `seconds` (at least 1, at most `max`). Messages quote this same number. */
+export function retryAfterSeconds(seconds: number, max = 3_600): number {
+  return Math.max(1, Math.min(max, Math.ceil(seconds)));
+}
+
+export function retryAfterHeader(seconds: number, max = 3_600): Readonly<Record<string, string>> {
+  return { "Retry-After": String(retryAfterSeconds(seconds, max)) };
 }
 
 export function rateLimited(message: string, retryAfterSeconds: number): ElyiaHttpError {

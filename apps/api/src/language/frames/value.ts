@@ -382,6 +382,12 @@ function isEcosystem(symbol: string, network: NetworkKey): boolean {
   return familyOf(network) === "elysium" && ["KALOS", "stKALOS", "PERPME"].includes(symbol);
 }
 
+/** True when the balance facts cover every one of `networks` (a partial list proves nothing about the rest). */
+function coversAll(ctx: FrameCtx, networks: readonly string[]): boolean {
+  const covered = ctx.facts.balanceNetworks;
+  return !covered || networks.every((network) => covered.includes(network));
+}
+
 /** Swap network from what holds the tokens; asks when both Elysium and HyperEVM could. */
 function swapNetwork(ctx: FrameCtx, spend: string | undefined, want: string | undefined): NetworkKey | undefined {
   const symbols = [spend, want].filter((symbol): symbol is string => Boolean(symbol) && symbol !== "*stable");
@@ -395,7 +401,7 @@ function swapNetwork(ctx: FrameCtx, spend: string | undefined, want: string | un
     return network;
   }
   if (candidates.length === 0) return undefined;
-  const held = spend && ctx.facts.balances ? candidates.filter((family) => ctx.facts.balances?.some((entry) => entry.network === networkKey(ctx.environment, family) && entry.symbol.toUpperCase() === spend.toUpperCase() && Number(entry.amount) > 0)) : [];
+  const held = spend && ctx.facts.balances && coversAll(ctx, candidates.map((family) => networkKey(ctx.environment, family))) ? candidates.filter((family) => ctx.facts.balances?.some((entry) => entry.network === networkKey(ctx.environment, family) && entry.symbol.toUpperCase() === spend.toUpperCase() && Number(entry.amount) > 0)) : [];
   if (held.length === 1) {
     ctx.clar.assume(ctx.goal, "network", t(`on ${NETWORK_LABEL[held[0] as Family]} (where your ${spend} is)`, `${NETWORK_LABEL[held[0] as Family]} üzerinde (${spend} orada)`), true);
     return networkKey(ctx.environment, held[0] as Family);
@@ -508,7 +514,7 @@ function defaultSource(ctx: FrameCtx, dest: { family: Family; cls?: "spot" | "pe
   const options = dest.family === "hyperevm"
     ? [{ id: "elysium", en: "From Elysium", tr: "Elysium'dan" }, { id: "hypercore-spot", en: "From HyperCore spot", tr: "HyperCore spot'tan" }]
     : [{ id: "hyperevm", en: "From HyperEVM", tr: "HyperEVM'den" }, { id: dest.cls === "perp" ? "hypercore-spot" : "hypercore-perp", en: dest.cls === "perp" ? "From HyperCore spot" : "From HyperCore perps", tr: dest.cls === "perp" ? "HyperCore spot'tan" : "HyperCore perp'ten" }];
-  const held = symbol && ctx.facts.balances
+  const held = symbol && ctx.facts.balances && coversAll(ctx, options.map((option) => networkKey(ctx.environment, placeAnswer(option.id).family as Family)))
     ? options.filter((option) => {
         const place = placeAnswer(option.id);
         const network = networkKey(ctx.environment, place.family as Family);
@@ -576,7 +582,7 @@ function readSend(bag: Bag, ctx: FrameCtx, resolved: ReadonlyMap<string, string>
     network = networkKey(ctx.environment, "elysium");
     ctx.clar.assume(ctx.goal, "network", t("on Elysium (where .ely names live)", "Elysium üzerinde (.ely adlarının ağı)"), false);
   } else {
-    const held = symbol && ctx.facts.balances ? (["elysium", "hyperevm"] as const).filter((family) => ctx.facts.balances?.some((entry) => entry.network === networkKey(ctx.environment, family) && entry.symbol.toUpperCase() === (symbol as string).toUpperCase() && Number(entry.amount) > 0)) : [];
+    const held = symbol && ctx.facts.balances && coversAll(ctx, (["elysium", "hyperevm", "hypercore"] as const).map((family) => networkKey(ctx.environment, family))) ? (["elysium", "hyperevm"] as const).filter((family) => ctx.facts.balances?.some((entry) => entry.network === networkKey(ctx.environment, family) && entry.symbol.toUpperCase() === (symbol as string).toUpperCase() && Number(entry.amount) > 0)) : [];
     if (held.length === 1) {
       network = networkKey(ctx.environment, held[0] as Family);
       ctx.clar.assume(ctx.goal, "network", t(`on ${NETWORK_LABEL[held[0] as Family]} (where your ${symbol} is)`, `${NETWORK_LABEL[held[0] as Family]} üzerinde`), true);

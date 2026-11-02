@@ -259,10 +259,10 @@ async function expandOne(context: Context, action: IntentActionSpec, source: num
       if (cancel.scheduleAt !== undefined || cancel.oid !== undefined || cancel.cloid !== undefined || cancel.twapId !== undefined) {
         return [{ ...base, kind: "cancel", network, destination: network, amount: { t: "none" }, trade }];
       }
-      if (!action.market) throw engineError("INTENT_CLARIFY", "Cancel which orders? Name the market.");
+      // No market: every open order (cancel all), at most 10 per intent.
       const open = await context.deps.core.frontendOpenOrders(network, context.owner);
-      const mine = open.filter((order) => order.coin.toUpperCase() === action.market?.toUpperCase() || order.coin === action.market).slice(0, 10);
-      if (mine.length === 0) throw engineError("INTENT_UNSUPPORTED", `You have no open ${action.market} orders.`);
+      const mine = open.filter((order) => !action.market || order.coin.toUpperCase() === action.market.toUpperCase() || order.coin === action.market).slice(0, 10);
+      if (mine.length === 0) throw engineError("INTENT_UNSUPPORTED", action.market ? `You have no open ${action.market} orders.` : "You have no open orders.");
       return mine.map((order) => ({ ...base, kind: "cancel" as const, network, destination: network, amount: { t: "none" as const }, trade: { market: order.coin, cancel: { oid: order.oid } } }));
     }
     case "leverage":

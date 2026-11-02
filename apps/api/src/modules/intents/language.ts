@@ -11,7 +11,10 @@
 import { LANGUAGE_LIMITS, LANGUAGE_LOCALES, type LanguageAnswer, type LanguageContext, type ParseIntentResponse } from "@elyia/core/api/language";
 import type { Router } from "express";
 import { z } from "zod";
+import type { NetworkKey } from "@elyia/core";
+import { formatEther } from "viem";
 import type { AppContext } from "../../context.js";
+import { elysiumNetworkFor } from "../../config.js";
 import { cachePublicly } from "../../http/request.js";
 import { evmAddress, parseBody, parseQuery } from "../../http/validate.js";
 import { chipsFor, examplesFor, executableOf, readIntent, signerFor, type ReaderFacts, type ReadResult } from "../../language/index.js";
@@ -65,11 +68,31 @@ function within<T>(promise: Promise<T>, fallback: T, ms = FACTS_TIMEOUT_MS): Pro
   return Promise.race([promise.catch(() => fallback), timeout]).finally(() => clearTimeout(timer));
 }
 
-async function accountFacts(ctx: AppContext, account: string): Promise<Pick<ReaderFacts, "positions" | "balances">> {
+/** Native HYPE on the EVM layers (Elysium, HyperEVM); a layer that cannot be read is left out (and not covered). */
+async function evmHype(ctx: AppContext, account: string): Promise<Array<{ readonly network: string; readonly symbol: string; readonly amount: string }>> {
+  const keys = [elysiumNetworkFor(ctx.config.mode), `hyperevm-${ctx.config.mode}` as NetworkKey];
+  const reads = await Promise.all(
+    keys.map(async (key) => {
+      try {
+        const wei = await ctx.chains.client(key).getBalance({ address: account as `0x${string}` });
+        return { network: key, symbol: "HYPE", amount: formatEther(wei) };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return reads.filter((entry): entry is { network: NetworkKey; symbol: string; amount: string } => entry !== null);
+}
+
+async function accountFacts(ctx: AppContext, account: string): Promise<Pick<ReaderFacts, "positions" | "balances" | "balanceNetworks">> {
   const network = `hypercore-${ctx.config.mode}` as const;
   const info = ctx.hyperliquid.info(network);
-  const [perps, spot] = await Promise.all([info.clearinghouseState(account).catch(() => null), info.spotClearinghouseState(account).catch(() => null)]);
+  const [perps, spot, evm] = await Promise.all([info.clearinghouseState(account).catch(() => null), info.spotClearinghouseState(account).catch(() => null), within(evmHype(ctx, account), [])]);
+  const evmHeld = evm.filter((entry) => Number(entry.amount) > 0);
+  // Only HYPE is read on the EVM layers: other symbols there stay unknown, so the reader asks rather than guess.
+  const coreBalances = spot ? spot.balances.filter((entry) => Number(entry.total) > 0).map((entry) => ({ network, symbol: entry.coin, amount: entry.total })) : [];
   return {
+    ...(spot || evm.length > 0 ? { balances: [...coreBalances, ...evmHeld], balanceNetworks: [...(spot ? [network] : []), ...evm.map((entry) => entry.network)] } : {}),
     ...(perps
       ? {
           positions: perps.assetPositions
@@ -77,7 +100,6 @@ async function accountFacts(ctx: AppContext, account: string): Promise<Pick<Read
             .map((entry) => ({ coin: entry.position.coin, side: Number(entry.position.szi) > 0 ? ("long" as const) : ("short" as const), size: entry.position.szi.replace(/^-/u, ""), leverage: entry.position.leverage.value })),
         }
       : {}),
-    ...(spot ? { balances: spot.balances.filter((entry) => Number(entry.total) > 0).map((entry) => ({ network, symbol: entry.coin, amount: entry.total })) } : {}),
   };
 }
 
@@ -122,11 +144,15 @@ export async function readSentenceFor(ctx: AppContext, body: SentenceRequest): P
     body.account ? within(accountFacts(ctx, body.account), {}) : Promise.resolve({}),
   ]);
   const client = contextFacts(body.context);
+  // The client's balances (any network) and the account's read ones together: neither replaces the other.
+  const { balanceNetworks, ...read } = account as Pick<ReaderFacts, "positions" | "balances" | "balanceNetworks">;
+  const balances = client.balances ? { balances: [...client.balances, ...(read.balances ?? [])] } : read.balances ? { balances: read.balances, ...(balanceNetworks ? { balanceNetworks } : {}) } : {};
   const facts: Partial<ReaderFacts> = {
     ...(markets.length > 0 ? { markets } : {}),
     ...(Object.keys(prices).length > 0 ? { prices } : {}),
     ...client,
-    ...account,
+    ...read,
+    ...balances,
     now: ctx.clock.now(),
   };
   return readIntent(body.text, {
