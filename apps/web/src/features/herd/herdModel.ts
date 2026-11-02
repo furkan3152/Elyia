@@ -332,3 +332,12 @@ export function short(value: string | null | undefined): string {
   if (!value) return "—";
   return value.length > 14 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
 }
+
+/** Withdraw destinations: the treasury and the owner, listed once each (one entry when they are the same wallet). */
+export function withdrawOptions(treasury: string | null | undefined, owner: string | null | undefined): readonly (readonly [string, string])[] {
+  const out: (readonly [string, string])[] = [];
+  const same = Boolean(treasury && owner && treasury.toLowerCase() === owner.toLowerCase());
+  if (treasury) out.push([treasury, same ? `Treasury = owner ${short(treasury)}` : `Treasury ${short(treasury)}`]);
+  if (owner && !same) out.push([owner, `Owner ${short(owner)}`]);
+  return out;
+}

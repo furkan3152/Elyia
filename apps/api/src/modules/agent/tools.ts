@@ -309,6 +309,10 @@ export interface ToolOutcome {
   readonly summary: string;
 }
 
+function isRefusal(value: unknown): value is { ok: false; code: string; message: string } {
+  return typeof value === "object" && value !== null && (value as { ok?: unknown }).ok === false && typeof (value as { code?: unknown }).code === "string";
+}
+
 /** Validates and runs one tool call. Errors become `{ ok: false, code, message }` (never provider text). */
 export async function runAgentTool(name: string, input: unknown, tc: ToolContext): Promise<ToolOutcome> {
   const tool = AGENT_TOOLS.find((candidate) => candidate.name === name);
@@ -320,6 +324,8 @@ export async function runAgentTool(name: string, input: unknown, tc: ToolContext
   }
   try {
     const data = await tool.run(parsed.data as never, tc);
+    // A tool that refuses returns `{ ok: false, code, message }`: report it as a refusal, never as success.
+    if (isRefusal(data)) return { ok: false, content: JSON.stringify(data), summary: `${name} refused: ${data.code}` };
     const text = JSON.stringify({ ok: true, data });
     return { ok: true, content: text.length > 20_000 ? `${text.slice(0, 20_000)}…` : text, summary: `${name} ok` };
   } catch (error) {

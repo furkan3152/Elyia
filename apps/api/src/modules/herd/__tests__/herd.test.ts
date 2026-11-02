@@ -487,3 +487,21 @@ describe("herd deployed: chain reads, perks, prepared txs, raffle", () => {
     assert.equal(typeof drawWinners, "function");
   });
 });
+
+describe("herd: mint dashboard", () => {
+  it("labels team and collab mints by their bucket in recent mints, matching byPhase", async () => {
+    const { dashboardOf } = await import("../indexer.js");
+    const base = { owner: "0x1", partnerTag: null, txHash: "0xaa" } as const;
+    const tokens = [
+      { ...base, tokenId: 1, minter: "0x1", phase: "closed" as const, bucket: "team" as const, priceWei: "0", block: 10 },
+      { ...base, tokenId: 2, minter: "0x2", phase: "wl" as const, bucket: null, priceWei: "3000000000000000000", block: 11 },
+      { ...base, tokenId: 3, minter: "0x3", phase: "wl" as const, bucket: "collab" as const, priceWei: "0", block: 12 },
+    ];
+    const view = dashboardOf(tokens as never);
+    assert.deepEqual(view.byPhase, { wl: 1, public: 0, collab: 1, team: 1 });
+    const label = (id: number) => { const row = view.recent.find((entry) => entry.tokenId === id)!; return row.bucket ?? row.phase; };
+    assert.equal(label(1), "team");
+    assert.equal(label(2), "wl");
+    assert.equal(label(3), "collab");
+  });
+});

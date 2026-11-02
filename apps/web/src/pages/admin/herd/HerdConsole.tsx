@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import { useAccount } from "wagmi";
 
 import { downloadExport, useHerdAdmin, useHerdAudit, useHerdDashboard, useHerdOverview, type HerdOverview } from "../../../features/herd/herdApi";
-import { allocationProblem, formatHype, formatUsd6, parseHype, parseWalletList, partnerTagProblem, PHASE_INDEX, PHASE_LABEL, short, timeline, toLocalInput, unixSeconds } from "../../../features/herd/herdModel";
+import { allocationProblem, formatHype, formatUsd6, parseHype, parseWalletList, partnerTagProblem, PHASE_INDEX, PHASE_LABEL, short, timeline, toLocalInput, unixSeconds, withdrawOptions } from "../../../features/herd/herdModel";
 import { describeError } from "../../../lib/api";
 import { Button } from "../../../ui/Button";
 import { cx } from "../../../ui/cx";
@@ -575,7 +575,7 @@ function Operations({ config, owner }: { readonly config: HerdConfigResponse | u
             label="To"
             value={withdrawTarget ?? ""}
             onChange={setWithdrawTo}
-            options={[...(admin?.treasury ? [[admin.treasury, `Treasury ${short(admin.treasury)}`] as const] : []), ...(admin?.owner ? [[admin.owner, `Owner ${short(admin.owner)}`] as const] : [])]}
+            options={withdrawOptions(admin?.treasury, admin?.owner)}
           />
           <HerdTx label="Prepare withdraw" functionName="withdraw" args={withdrawTarget && !ZERO.test(withdrawTarget) ? [withdrawTarget] : "No owner or treasury read yet."} disabled={blocked} confirm="WITHDRAW" />
         </Card>
@@ -754,7 +754,7 @@ function Dashboard() {
                 <b className="w-16 font-mono text-ink tnum">#{mint.tokenId}</b>
                 <span className="font-mono text-ink-2">{short(mint.to)}</span>
                 <span className="flex-1" />
-                <Pill tone="mute">{mint.phase ?? "—"}</Pill>
+                <Pill tone="mute">{mint.bucket ?? mint.phase ?? "—"}</Pill>
                 <span className="font-mono text-ink tnum">{formatHype(mint.priceWei)}</span>
               </li>
             ))}

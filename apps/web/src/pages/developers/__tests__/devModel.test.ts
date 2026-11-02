@@ -90,7 +90,11 @@ describe("webhooks", () => {
   });
   it("accepts https receivers only (localhost while developing)", () => {
     assert.equal(webhookUrlProblem("https://acme.app/hooks"), null);
-    assert.equal(webhookUrlProblem("http://localhost:3000/h"), null);
+    // The API refuses these (public HTTPS only), so the form must too.
+    for (const local of ["http://localhost:3000/h", "http://127.0.0.1:9911/h", "https://localhost/h", "https://127.0.0.1/h", "https://10.0.0.8/h", "https://192.168.1.2/h", "https://169.254.169.254/latest", "https://[::1]/h", "https://box.local/h"]) {
+      assert.ok(webhookUrlProblem(local), local);
+    }
+    assert.equal(webhookUrlProblem("https://8.8.8.8/h"), null);
     assert.ok(webhookUrlProblem("http://acme.app/h"));
     assert.ok(webhookUrlProblem("https://u:p@acme.app/h"));
     assert.ok(webhookUrlProblem("acme"));

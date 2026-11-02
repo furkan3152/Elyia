@@ -16,7 +16,7 @@
  */
 import { elysiumNetworkFor, hypercoreNetworkFor } from "../../config.js";
 import type { AgentMemory, Insight, ShockScenario } from "@elyia/core/api/agent";
-import type { IntentActionSpec, NetworkEnvironment } from "@elyia/core";
+import { DEFAULT_RULE_BOOK, type IntentActionSpec, type NetworkEnvironment } from "@elyia/core";
 import type { BalanceLine, PerpPositionView, PortfolioHistory, PortfolioSnapshot } from "@elyia/core/api/portfolio";
 
 export interface FundingCandidate {
@@ -120,6 +120,9 @@ function protectInsight(position: PerpPositionView, memory: AgentMemory, network
   };
 }
 
+/** Largest idle-cash deposit Ely drafts: 98% of the default Rule Book's per-intent cap (USDC priced near $1). */
+export const IDLE_CASH_MAX_USDC = Math.floor(Number(DEFAULT_RULE_BOOK.caps?.perIntentUsd ?? "25000") * 0.98);
+
 export function computeInsights(input: InsightInput): { readonly insights: Insight[]; readonly shocks: ShockScenario[] } {
   const { snapshot, memory, environment } = input;
   const elysium = elysiumNetworkFor(environment);
@@ -216,15 +219,17 @@ export function computeInsights(input: InsightInput): { readonly insights: Insig
   // Idle cash sweeper.
   const idleUsdc = walletAmount(snapshot, "elysium", "USDC");
   if (environment === "testnet" && idleUsdc >= 10) {
-    const amount = Math.floor(idleUsdc * 0.9 * 100) / 100;
+    // 90% keeps a buffer; the deposit also stays under the Rule Book's per-intent cap (USDC at ~$1), or the
+    // one-tap sign flow would only ever show "refused".
+    const amount = Math.floor(Math.min(idleUsdc * 0.9, IDLE_CASH_MAX_USDC) * 100) / 100;
     out.push({
       id: id("idle-cash", "usdc"),
       kind: "idle-cash",
       severity: "info",
       title: { en: `${usd(idleUsdc)} USDC sits idle on Elysium`, tr: `Elysium'da ${usd(idleUsdc)} USDC boşta bekliyor` },
       explanation: {
-        en: `The Cheshire USDC vault is the verified ERC-4626 venue for USDC on Elysium. Its yield is not measured by Elyia yet, so no APY is promised. Depositing 90% (${amount} USDC) keeps a 10% buffer.`,
-        tr: `Cheshire USDC kasası, Elysium'da USDC için doğrulanmış ERC-4626 alanı. Getirisi Elyia tarafından henüz ölçülmedi; APY vaadi yok. %90'ını (${amount} USDC) yatırmak %10 tampon bırakır.`,
+        en: `The Cheshire USDC vault is the verified ERC-4626 venue for USDC on Elysium. Its yield is not measured by Elyia yet, so no APY is promised. ${amount < Math.floor(idleUsdc * 0.9 * 100) / 100 ? `Depositing ${amount} USDC stays under your Rule Book's per-intent cap; sign again for the rest.` : `Depositing 90% (${amount} USDC) keeps a 10% buffer.`}`,
+        tr: `Cheshire USDC kasası, Elysium'da USDC için doğrulanmış ERC-4626 alanı. Getirisi Elyia tarafından henüz ölçülmedi; APY vaadi yok. ${amount < Math.floor(idleUsdc * 0.9 * 100) / 100 ? `${amount} USDC yatırmak Kural Kitabı'nın işlem başı sınırının altında kalır; kalanı için yeniden imzala.` : `%90'ını (${amount} USDC) yatırmak %10 tampon bırakır.`}`,
       },
       figures: { idleUsdc: round(idleUsdc), depositUsdc: amount, venue: "cheshire", apyPct: null },
       actions: [{ kind: "deposit", network: elysium, from: "USDC", amount: amount.toFixed(2), protocol: "cheshire" }],

@@ -156,6 +156,17 @@ export function shortEvent(type: string): string {
 }
 
 /** Only https receivers (or localhost while developing) are accepted. */
+/** Hostnames the API refuses outright: localhost names, loopback, private, link-local and CGNAT literals. */
+function isLocalHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/gu, "");
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) return true;
+  if (host === "::1" || host === "::" || /^f[cd][0-9a-f]{2}:/u.test(host) || /^fe80:/u.test(host)) return true;
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u.exec(host);
+  if (!v4) return false;
+  const [a, b] = [Number(v4[1]), Number(v4[2])];
+  return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
+}
+
 export function webhookUrlProblem(url: string): string | null {
   let parsed: URL;
   try {
@@ -163,8 +174,10 @@ export function webhookUrlProblem(url: string): string | null {
   } catch {
     return "Enter a full URL, like https://example.com/hooks/elyia.";
   }
-  if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1"))) return "Webhooks are delivered to https URLs only.";
+  // Mirrors the API's SSRF guard (public HTTPS only, no dev exception), so the form never offers a URL the server refuses.
+  if (parsed.protocol !== "https:") return "Webhooks are delivered to https URLs only.";
   if (parsed.username || parsed.password) return "The URL must not carry credentials.";
+  if (isLocalHost(parsed.hostname)) return "Use a public address: Elyia never delivers to localhost or private networks.";
   return null;
 }
 

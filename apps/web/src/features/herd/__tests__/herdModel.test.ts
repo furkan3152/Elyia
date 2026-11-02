@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { HerdConfigResponse, HerdMeResponse, HerdProofResponse } from "@elyia/core/api/herd";
-import { allocationProblem, countdown, evidenceProblem, formatHype, mintCard, mintError, parseHype, parseWalletList, raiseTips, shareIntent, timeline, unixSeconds, valueToSend, wlStep, type MintInput } from "../herdModel";
+import { allocationProblem, countdown, evidenceProblem, formatHype, mintCard, mintError, parseHype, parseWalletList, raiseTips, shareIntent, timeline, unixSeconds, valueToSend, withdrawOptions, wlStep, type MintInput } from "../herdModel";
 
 const NOW = Date.parse("2026-11-10T12:00:00Z");
 const WALLET = "0x00000000000000000000000000000000000000a1";
@@ -176,5 +176,19 @@ describe("herd model helpers", () => {
     assert.equal(unixSeconds("2026-11-09T18:00"), Date.parse("2026-11-09T18:00:00Z") / 1000);
     assert.equal(allocationProblem({ team: 111, wl: 1611, collab: 0, public: 1611 }, 3333), null);
     assert.match(allocationProblem({ team: 111, wl: 1611, collab: 100, public: 1611 }, 3333) ?? "", /3433/u);
+  });
+});
+
+describe("withdraw options", () => {
+  it("lists the treasury and the owner once each, never the same wallet twice", () => {
+    const a = "0xF39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    const same = withdrawOptions(a, a.toLowerCase());
+    assert.equal(same.length, 1);
+    assert.match(same[0]![1], /Treasury = owner/u);
+    const both = withdrawOptions(a, "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
+    assert.equal(both.length, 2);
+    assert.equal(new Set(both.map((option) => option[0].toLowerCase())).size, 2);
+    assert.equal(withdrawOptions(null, a).length, 1);
+    assert.equal(withdrawOptions(null, null).length, 0);
   });
 });

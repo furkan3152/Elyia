@@ -189,7 +189,7 @@ export function dashboardOf(tokens: readonly TokenDoc[]): Pick<HerdDashboardResp
   const recent: HerdMintEvent[] = [...tokens]
     .sort((a, b) => b.block - a.block || b.tokenId - a.tokenId)
     .slice(0, 25)
-    .map((token) => ({ tokenId: token.tokenId, to: token.minter ?? token.owner, phase: token.phase, priceWei: token.priceWei, block: token.block, txHash: token.txHash }));
+    .map((token) => ({ tokenId: token.tokenId, to: token.minter ?? token.owner, phase: token.phase, bucket: token.bucket ?? null, priceWei: token.priceWei, block: token.block, txHash: token.txHash }));
   const topHolders = [...holders.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 10).map(([address, count]) => ({ address, count }));
   return { minted: tokens.length, byPhase, revenueWei: revenue.toString(), holders: holders.size, recent, topHolders };
 }

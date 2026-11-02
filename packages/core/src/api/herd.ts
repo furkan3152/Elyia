@@ -457,6 +457,8 @@ export interface HerdMintEvent {
   readonly tokenId: number;
   readonly to: string;
   readonly phase: HerdPhase | null;
+  /** "team" (TeamMinted) or "collab" (CollabMinted) when the mint came from that bucket, else null. */
+  readonly bucket?: "team" | "collab" | null;
   readonly priceWei: string;
   readonly block: number;
   readonly txHash: string;

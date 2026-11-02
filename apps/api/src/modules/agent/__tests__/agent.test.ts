@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { hypercore } from "@elyia/core";
+import { DEFAULT_RULE_BOOK, hypercore } from "@elyia/core";
 import type { PortfolioSnapshot } from "@elyia/core/api/portfolio";
 import type { Proposal } from "@elyia/core/api/agent";
 import { recoverTypedDataAddress, type Hex } from "viem";
@@ -15,7 +15,7 @@ import { agentActions, recipientsIn, runAgentTool } from "../tools.js";
 import { goalsToActions } from "../../../engine/planner/goals.js";
 import { readText } from "../../../language/reader.js";
 import type { GoalItem } from "@elyia/core";
-import { computeInsights, priceText, shocks } from "../insights.js";
+import { computeInsights, IDLE_CASH_MAX_USDC, priceText, shocks } from "../insights.js";
 import { keeperGuard, keeperOf, openKeeperKey, prepareKeeper, revokeKeeper, sealedKeyAddress, setKill, signWithKey, tradeOnlyReducing, type KeeperRecord } from "../keeper.js";
 import { defaultMemory, memoryOf } from "../memory.js";
 
@@ -90,6 +90,16 @@ describe("agent: deterministic insights", () => {
     assert.deepEqual(byKind("gas-top-up")?.actions[0], { kind: "bridge", network: "hyperevm-testnet", toNetwork: "elysium-testnet", from: "HYPE", amount: "0.1000" });
     assert.equal(byKind("idle-cash")?.actions[0]?.protocol, "cheshire");
     assert.equal(byKind("idle-cash")?.figures.apyPct, null, "no APY is promised");
+    // A large idle balance is drafted under the Rule Book's per-intent cap, never above it.
+    const rich = snapshotFixture() as unknown as { layers: Array<{ layer: string; lines: Array<{ asset: string; amount: string; usd: number | null }> }> };
+    const usdcLine = rich.layers.find((layer) => layer.layer === "elysium")!.lines.find((line) => line.asset === "USDC")!;
+    usdcLine.amount = "41740.22";
+    usdcLine.usd = 41_740.22;
+    const big = computeInsights({ snapshot: rich as unknown as PortfolioSnapshot, memory, triggers: new Map(), history: null, funding: [], environment: "testnet" }).insights.find((insight) => insight.kind === "idle-cash");
+    assert.ok(big, "idle-cash insight");
+    assert.equal(Number(big.actions[0]?.amount), IDLE_CASH_MAX_USDC);
+    assert.ok(IDLE_CASH_MAX_USDC < Number(DEFAULT_RULE_BOOK.caps?.perIntentUsd));
+    assert.match(big.explanation.en, /per-intent cap/u);
     assert.equal(byKind("dust-sweep")?.figures.lines, 1);
     const harvest = byKind("funding-harvest");
     assert.equal(harvest?.paper, true);
@@ -169,7 +179,23 @@ describe("agent: chained moves", () => {
     assert.match(outcome.content, /RECIPIENT_NOT_FROM_USER/u);
     const proposed = await runAgentTool("propose_intent", { title: "Send", explanation: "Send 1 HYPE", actions: [{ kind: "transfer", network: "elysium-testnet", from: "HYPE", amount: "1", recipient: stranger }] }, tools);
     assert.match(proposed.content, /RECIPIENT_NOT_FROM_USER/u);
+    assert.equal(outcome.ok, false, "a guard refusal is not reported as success");
+    assert.equal(proposed.ok, false, "a guard refusal is not reported as success");
+    assert.match(proposed.summary, /refused: RECIPIENT_NOT_FROM_USER/u);
     assert.equal(tools.proposals.length, 0);
+  });
+
+  it("counts a recipient typed into a clarify answer as typed by the user", async () => {
+    const recipient = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
+    const offline = createContext(testConfig({ ELYIA_SESSION_SECRET: "s".repeat(40) }), { store: new MemoryStore(), fetch: async () => { throw new Error("offline"); } });
+    const events: Array<{ event: string; data: unknown }> = [];
+    await chatTurn({ ctx: offline, owner: OWNER, address: OWNER, message: "send 0.1 HYPE on elysium", threadId: null, locale: "en", integratorFee: null, clarify: { answers: [{ question: "g0.recipient", text: recipient }] }, emit: (event, data) => events.push({ event, data }) });
+    const results = events.filter((entry) => entry.event === "tool_result").map((entry) => entry.data as { name: string; ok: boolean; summary: string });
+    const proposeResult = results.find((result) => result.name === "propose_intent");
+    assert.ok(proposeResult, JSON.stringify(events.map((entry) => entry.event)));
+    assert.doesNotMatch(proposeResult.summary, /RECIPIENT_NOT_FROM_USER/u);
+    assert.equal(proposeResult.ok, true, proposeResult.summary);
+    assert.ok(events.some((entry) => entry.event === "proposal"), "a proposal is emitted");
   });
 
   it("re-points chain links when a question sits between the moves", () => {

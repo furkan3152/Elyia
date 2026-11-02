@@ -61,7 +61,9 @@ export async function chatTurn(input: ChatTurnInput): Promise<ChatDoneEvent> {
   const threadId = thread?.id ?? input.threadId ?? null;
   input.emit("thread", { threadId, mode, model: null });
 
-  const userTexts = [input.message, ...(thread?.messages ?? []).filter((entry) => entry.role === "user").map((entry) => entry.text)];
+  // Clarify answers are typed by the user too (e.g. the recipient the reader asked for).
+  const clarifyTexts = (input.clarify?.answers ?? []).map((answer) => answer.text ?? "").filter((text) => text.length > 0);
+  const userTexts = [input.message, ...clarifyTexts, ...(thread?.messages ?? []).filter((entry) => entry.role === "user").map((entry) => entry.text)];
   const tools: ToolContext = { ctx, owner, address: input.address.toLowerCase(), integratorFee: input.integratorFee, proposals: [], drafts: [], cards: [], userRecipients: recipientsIn(userTexts) };
   const stateLine = `[elyia-state] mode=${ctx.config.mode} wallet=${tools.address} signed_in=${input.owner ? "yes" : "no"} elysium=${elysiumNetworkFor(ctx.config.mode)}(${getEvmNetwork(elysiumNetworkFor(ctx.config.mode)).chainId}) hypercore=${hypercoreNetworkFor(ctx.config.mode)} prices=${ctx.config.mode === "testnet" ? "reference" : "market"} risk=${memory?.riskProfile ?? "unknown"} goals=${(memory?.goals ?? []).join("|").slice(0, 200) || "none"} locale=${locale}`;
 
